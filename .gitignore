@@ -1,0 +1,57 @@
+# rxmuk - .gitignore
+
+# System files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# PHP
+composer.lock
+vendor/
+.env
+
+# Database
+*.sql.zip
+*.backup
+*.bak
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# OS
+.AppleDouble
+.LSOverride
+*.bak
+*.swp
+
+# Environment specific
+config/Database.php.local
+public/install.php
+
+# Cache
+*.cache
+.cache/
+
+# Session files
+session/
+
+# SSL Certificates
+*.pem
+*.crt
+*.key
+
+# Large files & temporary data
+full_diagnostic.php
+*.xlsx
+

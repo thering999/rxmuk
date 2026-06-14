@@ -1,0 +1,94 @@
+/* General Styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Bootstrap Overrides */
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.table {
+    border-collapse: collapse;
+}
+
+.table thead th {
+    border-bottom: 2px solid #ddd;
+    font-weight: 600;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid #eee;
+}
+
+/* Utilities */
+.text-center {
+    text-align: center;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .file-item {
+        flex-direction: column;
+    }
+    
+    .file-actions {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .file-actions .btn {
+        flex: 1;
+    }
+}

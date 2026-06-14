@@ -1,0 +1,22 @@
+# docker-compose.override.yml
+# Copy this file to docker-compose.override.yml for local development overrides
+# This file is automatically loaded by docker-compose if it exists
+
+# Example: Change ports for local development
+version: '3.8'
+
+services:
+  app:
+    ports:
+      - "8000:80"  # Use 8000 instead of 80 if port 80 is in use
+    environment:
+      APP_DEBUG: "true"
+      # Add any additional development environment variables
+
+  db:
+    ports:
+      - "3307:3306"  # Use 3307 instead of 3306 if port 3306 is in use
+
+  phpmyadmin:
+    ports:
+      - "8081:80"  # Use 8081 instead of 8080
