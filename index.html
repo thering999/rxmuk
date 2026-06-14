@@ -1135,6 +1135,7 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตัวกรอง</button>
+                        <button class="btn btn-primary" onclick="exportDrugCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออกข้อมูล (CSV)</button>
                     </div>
 
                     <div class="table-container">
@@ -1172,6 +1173,7 @@
                         <select id="district-month-select" class="select-control" style="min-width: 250px;">
                             <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
                         </select>
+                        <button class="btn btn-primary" onclick="exportDistrictCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3); margin-left: 10px;">📤 ส่งออกข้อมูล (CSV)</button>
                     </div>
                 </div>
 
@@ -1251,6 +1253,7 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตัวกรอง</button>
+                        <button class="btn btn-primary" onclick="exportHospCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออกข้อมูล (CSV)</button>
                     </div>
 
                     <div class="table-container">
@@ -2183,6 +2186,158 @@
                     handleSend();
                 }
             });
+        }
+
+        // CSV Export Helper with UTF-8 BOM for Thai encoding
+        function downloadCSV(filename, csvContent) {
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function exportDrugCSV() {
+            const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
+            const monthVal = document.getElementById('drug-month-select').value;
+
+            let txs = rawTransactions;
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+
+            const drugAgg = {};
+            txs.forEach(t => {
+                if (!drugAgg[t.didstd]) {
+                    drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, amount: 0, price: 0, cost: 0, abc: "C" };
+                }
+                drugAgg[t.didstd].amount += t.amount;
+                drugAgg[t.didstd].price += t.price;
+                drugAgg[t.didstd].cost += t.cost;
+            });
+
+            let list = Object.values(drugAgg).map(d => {
+                d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
+                return d;
+            });
+
+            if (searchVal) {
+                list = list.filter(d => d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal));
+            }
+            list.sort((a, b) => b.price - a.price);
+
+            let csv = "รหัสยามาตรฐาน (DID/STD 24 หลัก),ชื่อทางการค้า / ชื่อสามัญทางยา,จำนวนจ่ายสะสม,ราคารวมสะสม (บาท),ต้นทุนสะสม (บาท),ระดับผลกระทบมูลค่า (ABC Class)\n";
+            list.forEach(d => {
+                csv += `"${d.didstd}","${d.name.replace(/"/g, '""')}",${d.amount},${d.price},${d.cost},"${d.abc}"\n`;
+            });
+
+            const filename = `drug_breakdown_${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
+            downloadCSV(filename, csv);
+        }
+
+        function exportDistrictCSV() {
+            const monthVal = document.getElementById('district-month-select').value;
+
+            let txs = rawTransactions;
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+
+            const districtAgg = {};
+            baseDistricts.forEach(d => {
+                districtAgg[d.code] = { code: d.code, name: d.name, count: 0, budget: 0 };
+            });
+
+            txs.forEach(t => {
+                const code = t.amphurCode || "4901";
+                if (!districtAgg[code]) {
+                    districtAgg[code] = { code, name: t.amphurName || `อำเภอ ${code}`, count: 0, budget: 0 };
+                }
+                districtAgg[code].count++;
+                districtAgg[code].budget += t.price;
+            });
+
+            const list = Object.values(districtAgg).sort((a,b) => b.budget - a.budget);
+            const totalBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
+
+            let csv = "รหัสอำเภอ,ชื่ออำเภอ,จำนวนบริการ (ครั้ง),มูลค่าราคารวมจ่าย (บาท),สัดส่วนเปอร์เซ็นต์\n";
+            list.forEach(d => {
+                const percent = ((d.budget / totalBudget) * 100).toFixed(1);
+                csv += `"${d.code}","${d.name}",${d.count},${d.budget},"${percent}%"\n`;
+            });
+
+            const filename = `district_breakdown_${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
+            downloadCSV(filename, csv);
+        }
+
+        function exportHospCSV() {
+            const searchVal = document.getElementById('hosp-search').value.toLowerCase();
+            const monthVal = document.getElementById('hosp-month-select').value;
+
+            let txs = rawTransactions;
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+
+            const hospAgg = {};
+            txs.forEach(t => {
+                if (!hospAgg[t.hospcode]) {
+                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                }
+                hospAgg[t.hospcode].count++;
+                hospAgg[t.hospcode].amount += t.amount;
+                hospAgg[t.hospcode].budget += t.price;
+            });
+
+            let list = Object.values(hospAgg);
+            if (searchVal) {
+                list = list.filter(h => h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal));
+            }
+            list.sort((a,b) => b.budget - a.budget);
+
+            let csv = "รหัสหน่วยบริการ (Hospcode),ชื่อสถานบริการสาธารณสุข,จำนวนยอดสแกนจ่ายยา (ครั้ง),ปริมาณยาสะสม,มูลค่าราคารวมสะสม (บาท),คุณภาพข้อมูลผ่านเกณฑ์\n";
+            list.forEach(h => {
+                csv += `"${h.hospcode}","${h.name.replace(/"/g, '""')}",${h.count},${h.amount},${h.budget},"${h.qc}"\n`;
+            });
+
+            const filename = `hospital_breakdown_${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
+            downloadCSV(filename, csv);
+        }
+
+        // Offline bot reply fallback helper
+        function getLocalBotReply(text) {
+            const query = text.toLowerCase();
+            if (query.includes('s_tmp_drug_opd') || query.includes('ตาราง') || query.includes('field') || query.includes('ฟิลด์')) {
+                return `ตาราง **s_tmp_drug_opd** เป็นตารางนำเข้าข้อมูลยาชั่วคราว มีฟิลด์สำคัญดังนี้:
+- \`import_id\`: ID การอัปโหลด
+- \`hospcode\`: รหัสสถานบริการ 5 หลัก
+- \`pid\`: รหัสผู้ป่วย (Patient ID)
+- \`date_serv\`: วันที่รับบริการ
+- \`didstd\`: รหัสยามาตรฐาน 24 หลัก
+- \`dname\`: ชื่อยา
+- \`amount\`: จำนวนที่จ่าย
+- \`price\`: ราคายา
+- \`cost\`: ราคาทุน`;
+            }
+            if (query.includes('sql') || query.includes('คำสั่ง') || query.includes('ลบ')) {
+                return `คำสั่ง SQL สำหรับลบข้อมูลซ้ำซ้อนในตาราง \`s_tmp_drug_opd\` (กรองเอาตัวล่าสุดเก็บไว้):
+\`\`\`sql
+DELETE t1 FROM s_tmp_drug_opd t1
+INNER JOIN s_tmp_drug_opd t2 
+WHERE t1.id < t2.id 
+  AND t1.hospcode = t2.hospcode 
+  AND t1.pid = t2.pid 
+  AND t1.date_serv = t2.date_serv 
+  AND t1.didstd = t2.didstd;
+\`\`\``;
+            }
+            return `ขออภัยครับ คีย์ Gemini API ของคุณยังไม่ได้ตั้งค่า หรือตั้งค่าไม่ถูกต้อง ทำให้ระบบจำลองออฟไลน์ทำงานแทนคำถามทั่วไปครับ คุณสามารถแนะนำคำสั่ง SQL หรือสอบถามเกี่ยวกับข้อมูลยา 43 แฟ้มของมุกดาหารได้ครับ`;
         }
     </script>
 </body>
