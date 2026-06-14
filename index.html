@@ -2154,30 +2154,28 @@
                     const reader = new FileReader();
                     reader.onload = function(evt) {
                         try {
-                            const text = evt.target.result;
-                            // Check for replacement character \uFFFD (garbled characters indicating UTF-8 decoding failure)
-                            if (text.includes('\uFFFD') || text.includes('')) {
-                                // Re-read as Windows-874 (TIS-620)
-                                const tisReader = new FileReader();
-                                tisReader.onload = function(tisEvt) {
-                                    try {
-                                        const tisText = tisEvt.target.result;
-                                        const rows = parseCSV(tisText);
-                                        parseAndProcess(rows, "CSV (TIS-620)");
-                                    } catch (err) {
-                                        showError(err);
-                                    }
-                                };
-                                tisReader.readAsText(file, 'windows-874');
-                            } else {
-                                const rows = parseCSV(text);
-                                parseAndProcess(rows, "CSV (UTF-8)");
+                            const arrayBuffer = evt.target.result;
+                            let text = '';
+                            let encoding = 'UTF-8';
+                            
+                            // Try decoding as UTF-8 first
+                            try {
+                                const decoder = new TextDecoder('utf-8', { fatal: true });
+                                text = decoder.decode(arrayBuffer);
+                            } catch (utf8Err) {
+                                // Fallback to Windows-874 (TIS-620)
+                                const decoder874 = new TextDecoder('windows-874');
+                                text = decoder874.decode(arrayBuffer);
+                                encoding = 'Windows-874 (TIS-620)';
                             }
+                            
+                            const rows = parseCSV(text);
+                            parseAndProcess(rows, `CSV (${encoding})`);
                         } catch (err) {
                             showError(err);
                         }
                     };
-                    reader.readAsText(file, 'UTF-8');
+                    reader.readAsArrayBuffer(file);
                 } else {
                     const reader = new FileReader();
                     reader.onload = function(evt) {
@@ -2186,7 +2184,7 @@
                             const workbook = XLSX.read(data, {type: 'array'});
                             const firstSheetName = workbook.SheetNames[0];
                             const worksheet = workbook.Sheets[firstSheetName];
-                            const rows = XLSX.utils.sheet_to_json(worksheet);
+                            const rows = XLSX.utils.sheet_to_json(worksheet, {raw: false, defval: ''});
                             parseAndProcess(rows, firstSheetName);
                         } catch (err) {
                             showError(err);
@@ -2302,7 +2300,7 @@
                     return;
                 }
 
-                const didstd = row[didstdKey] || 'N/A';
+                const didstd = row[didstdKey] !== undefined ? String(row[didstdKey]).trim() : 'N/A';
                 const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
                 const amount = parseFloat(row[amountKey]) || 1;
                 const price = parseFloat(row[priceKey]) || (amount * 5);
