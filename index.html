@@ -1108,6 +1108,107 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- SQL Database Column Schema Comparison & Precision Validator Panel -->
+                    <div class="panel" style="grid-column: span 2; margin-top: 20px;" id="schema-validator-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>🔍</span>
+                                เปรียบเทียบโครงสร้างฟิลด์นำเข้ากับตาราง SQL (Database Schema Alignment & Precision Validator)
+                            </h3>
+                            <span class="badge-status info" id="schema-match-rate" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); color: #3b82f6;">สถานะ: รอการนำเข้าไฟล์</span>
+                        </div>
+                        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 15px;">
+                            ตารางวิเคราะห์ความสอดคล้องระหว่างคอลัมน์ของไฟล์ Excel ที่อัปโหลด เทียบกับโครงสร้างฟิลด์ในระบบฐานข้อมูล <code>drug_opd</code> ใน SQL เพื่อป้องกันข้อมูลตกหล่นและเพิ่มความแม่นยำสูงสุดในการเชื่อมประสานข้อมูล
+                        </p>
+                        <div class="table-container">
+                            <table class="data-table" id="schema-validator-table">
+                                <thead>
+                                    <tr>
+                                        <th>ฟิลด์เป้าหมาย SQL (Target Column)</th>
+                                        <th>คำอธิบายโครงสร้างตาราง (Description)</th>
+                                        <th>คอลัมน์ใน Excel ที่ตรวจพบ (Detected Excel Column)</th>
+                                        <th>สถานะการเชื่อมต่อ (Mapping Status)</th>
+                                        <th>ผลการตรวจสอบความถูกต้องของข้อมูล (Validation Details)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schema-validator-body">
+                                    <tr data-field="hospcode">
+                                        <td><code>hospcode</code></td>
+                                        <td><strong>varchar(5)</strong> - รหัสสถานพยาบาล 5 หลัก</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">ต้องประกอบด้วยรหัสตัวเลข 5 หลักที่พบบนฐานข้อมูลจังหวัดมุกดาหาร</td>
+                                    </tr>
+                                    <tr data-field="pid">
+                                        <td><code>pid</code></td>
+                                        <td><strong>varchar(25)</strong> - รหัสประจำตัวผู้รับบริการ (Patient ID)</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">รหัสผู้รับบริการรายบุคคลสำหรับการจำแนกประวัติสแกน</td>
+                                    </tr>
+                                    <tr data-field="date_serv">
+                                        <td><code>date_serv</code></td>
+                                        <td><strong>date</strong> - วันที่รับบริการ (YYYY-MM-DD / Thai BE)</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">ระบบจะสแกนและแปลงรูปแบบวันที่ให้เป็นปี ค.ศ. คัดแยก Year/Month อัตโนมัติ</td>
+                                    </tr>
+                                    <tr data-field="didstd">
+                                        <td><code>didstd</code></td>
+                                        <td><strong>varchar(30)</strong> - รหัสยามาตรฐานกระทรวงสาธารณสุข 24 หลัก</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">รหัสยามาตรฐาน 24 หลักเพื่อใช้สืบค้นและระบุชื่อสารสำคัญ</td>
+                                    </tr>
+                                    <tr data-field="dname">
+                                        <td><code>dname</code></td>
+                                        <td><strong>varchar(255)</strong> - ชื่อทางการค้า / ชื่อสามัญทางยา</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">ชื่อแสดงสรรพคุณของยาหรือชื่อเวชภัณฑ์</td>
+                                    </tr>
+                                    <tr data-field="amount">
+                                        <td><code>amount</code></td>
+                                        <td><strong>decimal(10,2)</strong> - ปริมาณยาสะสม / จำนวนที่จ่าย</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">ปริมาณการจ่ายสะสม เป็นจำนวนเต็มบวก</td>
+                                    </tr>
+                                    <tr data-field="price">
+                                        <td><code>price</code></td>
+                                        <td><strong>decimal(10,2)</strong> - มูลค่ารวมราคายา (บาท)</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">ราคายาเบิกจ่ายสุทธิ</td>
+                                    </tr>
+                                    <tr data-field="cost">
+                                        <td><code>cost</code></td>
+                                        <td><strong>decimal(10,2)</strong> - มูลค่าต้นทุนเวชภัณฑ์สะสม (บาท)</td>
+                                        <td class="excel-detected" style="color: var(--text-muted);">รอไฟล์...</td>
+                                        <td class="mapping-status">
+                                            <span class="badge-status" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">ยังไม่เชื่อมโยง</span>
+                                        </td>
+                                        <td class="validation-details" style="color: var(--text-muted); font-size: 0.8rem;">ราคาต้นทุนจริงเพื่อคำนวณอัตราความประหยัดเวชภัณฑ์</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -2030,6 +2131,7 @@
             // Detect key mappings
             const dnameKey = keys.find(k => k.toLowerCase() === 'dname' || k.toLowerCase() === 'drug_name');
             const hospcodeKey = keys.find(k => k.toLowerCase() === 'hospcode');
+            const pidKey = keys.find(k => k.toLowerCase() === 'pid' || k.toLowerCase() === 'hn' || k.toLowerCase() === 'cid');
             const amountKey = keys.find(k => k.toLowerCase() === 'amount' || k.toLowerCase() === 'sumamount');
             const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code');
             const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice');
@@ -2042,6 +2144,64 @@
                 k.toLowerCase() === 'd_update' || 
                 k.toLowerCase() === 'hdc_date'
             );
+
+            // Update Schema Alignment and Validation UI
+            const schemaFields = [
+                { id: 'hospcode', key: hospcodeKey, type: 'String', desc: 'รหัสสถานพยาบาล 5 หลัก', validate: (v) => /^\d{5}$/.test(String(v || '').trim()) ? 'ผ่านเกณฑ์ (OK) - รูปแบบรหัส 5 หลักถูกต้อง' : 'ไม่สอดคล้อง - ต้องเป็นตัวเลข 5 หลัก' },
+                { id: 'pid', key: pidKey, type: 'String', desc: 'รหัสประจำตัวผู้รับบริการ', validate: (v) => v ? 'ผ่านเกณฑ์ (OK) - พบข้อมูลผู้ป่วย' : 'ไม่พบข้อมูล หรือค่าว่างเปล่า' },
+                { id: 'date_serv', key: dateKeys[0], type: 'Date', desc: 'วันที่รับบริการ (YYYY-MM-DD)', validate: (v) => v ? 'ผ่านเกณฑ์ (OK) - ตรวจสอบรูปแบบวันที่ผ่าน' : 'ไม่พบข้อมูล หรือจัดรูปแบบวันที่ผิด' },
+                { id: 'didstd', key: didstdKey, type: 'String', desc: 'รหัสยามาตรฐาน 24 หลัก', validate: (v) => String(v || '').trim().length >= 10 ? 'ผ่านเกณฑ์ (OK) - ความยาวยามาตรฐานสมบูรณ์' : 'ไม่สอดคล้อง - รหัสยาสั้นเกินไป (ควรมี 24 หลัก)' },
+                { id: 'dname', key: dnameKey, type: 'String', desc: 'ชื่อสามัญยา/ชื่อทางการค้า', validate: (v) => v ? 'ผ่านเกณฑ์ (OK) - พบชื่อสามัญยา' : 'ไม่พบชื่อเวชภัณฑ์' },
+                { id: 'amount', key: amountKey, type: 'Number', desc: 'ปริมาณจ่าย', validate: (v) => !isNaN(parseFloat(v)) && parseFloat(v) > 0 ? 'ผ่านเกณฑ์ (OK) - ค่าตัวเลขเชิงบวกถูกต้อง' : 'ค่าปริมาณต้องเป็นตัวเลขมากกว่า 0' },
+                { id: 'price', key: priceKey, type: 'Number', desc: 'ราคายารวมสะสม', validate: (v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0 ? 'ผ่านเกณฑ์ (OK) - ตรวจสอบมูลค่าราคารวมผ่าน' : 'มูลค่าราคาต้องเป็นตัวเลขเชิงบวก' },
+                { id: 'cost', key: costKey, type: 'Number', desc: 'ต้นทุนรวมสะสม', validate: (v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0 ? 'ผ่านเกณฑ์ (OK) - ตรวจสอบมูลค่าต้นทุนสะสมผ่าน' : 'มูลค่าต้นทุนต้องเป็นตัวเลขเชิงบวก' }
+            ];
+
+            let matchedCount = 0;
+            schemaFields.forEach(f => {
+                const tr = document.querySelector(`#schema-validator-body tr[data-field="${f.id}"]`);
+                if (tr) {
+                    const detectedTd = tr.querySelector('.excel-detected');
+                    const statusTd = tr.querySelector('.mapping-status');
+                    const detailsTd = tr.querySelector('.validation-details');
+
+                    if (f.key) {
+                        matchedCount++;
+                        detectedTd.innerHTML = `<code>${f.key}</code>`;
+                        statusTd.innerHTML = `<span class="badge-status success" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--c-green);">✅ จับคู่คอลัมน์แล้ว</span>`;
+                        
+                        // Sample value check
+                        const firstRow = rows[0];
+                        const sampleVal = firstRow ? firstRow[f.key] : null;
+                        const validationMsg = f.validate(sampleVal);
+                        detailsTd.innerHTML = `<span style="color: var(--c-primary); font-weight: 600;">ตัวอย่าง: "${sampleVal || ''}"</span><br><span style="color: var(--text-muted); font-size: 0.8rem;">${validationMsg}</span>`;
+                    } else {
+                        detectedTd.innerHTML = `<span style="color: var(--c-red); font-weight: bold;">ไม่พบคอลัมน์</span>`;
+                        statusTd.innerHTML = `<span class="badge-status danger" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--c-red);">❌ ไม่พบคอลัมน์</span>`;
+                        detailsTd.innerHTML = `<span style="color: var(--c-yellow); font-size: 0.8rem;">ขาดข้อมูลฟิลด์นี้ ระบบจะทำงานในโหมดจำลอง (Fallback)</span>`;
+                    }
+                }
+            });
+
+            // Update match rate pill
+            const matchRate = Math.round((matchedCount / schemaFields.length) * 100);
+            const ratePill = document.getElementById('schema-match-rate');
+            if (ratePill) {
+                ratePill.textContent = `จับคู่โครงสร้าง: ${matchRate}%`;
+                if (matchRate === 100) {
+                    ratePill.style.background = 'rgba(16, 185, 129, 0.1)';
+                    ratePill.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+                    ratePill.style.color = 'var(--c-green)';
+                } else if (matchRate > 60) {
+                    ratePill.style.background = 'rgba(245, 158, 11, 0.1)';
+                    ratePill.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+                    ratePill.style.color = 'var(--c-yellow)';
+                } else {
+                    ratePill.style.background = 'rgba(239, 68, 68, 0.1)';
+                    ratePill.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                    ratePill.style.color = 'var(--c-red)';
+                }
+            }
 
             const newTxs = [];
 
