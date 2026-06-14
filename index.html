@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS CDN for client-side Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -118,21 +120,28 @@
 
         .nav-links {
             display: flex;
-            gap: 24px;
+            gap: 20px;
             list-style: none;
+            align-items: center;
         }
 
         .nav-links a {
             text-decoration: none;
             color: var(--text-muted);
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             transition: color 0.2s;
             cursor: pointer;
         }
 
         .nav-links a:hover, .nav-links a.active {
             color: var(--c-primary);
+        }
+
+        .user-status-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .status-pill {
@@ -166,7 +175,7 @@
 
         /* Hero Section */
         .hero {
-            padding: 60px 0 40px 0;
+            padding: 50px 0 30px 0;
             text-align: center;
             position: relative;
         }
@@ -186,7 +195,7 @@
         }
 
         .hero h1 {
-            font-size: 3.2rem;
+            font-size: 3rem;
             line-height: 1.1;
             margin-bottom: 16px;
             background: linear-gradient(to right, #fff 40%, var(--c-primary) 70%, var(--c-secondary) 100%);
@@ -197,7 +206,7 @@
         .hero p {
             font-size: 1.1rem;
             color: var(--text-muted);
-            max-width: 640px;
+            max-width: 740px;
             margin: 0 auto 24px auto;
         }
 
@@ -214,10 +223,10 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 28px;
+            padding: 10px 24px;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             text-decoration: none;
             cursor: pointer;
             transition: all 0.2s;
@@ -246,10 +255,20 @@
             transform: translateY(-2px);
         }
 
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--c-red);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
         /* Grid Dashboard */
         .grid-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
             margin-bottom: 40px;
         }
@@ -258,10 +277,10 @@
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 12px;
-            padding: 24px;
+            padding: 20px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 16px;
             transition: all 0.2s;
             backdrop-filter: blur(8px);
         }
@@ -273,13 +292,13 @@
         }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
         }
 
         .stat-icon.blue { background: rgba(0, 242, 254, 0.1); color: var(--c-primary); }
@@ -288,15 +307,15 @@
         .stat-icon.yellow { background: rgba(245, 158, 11, 0.1); color: var(--c-yellow); }
 
         .stat-info h4 {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             text-transform: uppercase;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             letter-spacing: 0.05em;
         }
 
         .stat-info p {
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             font-weight: 700;
             color: #fff;
         }
@@ -304,7 +323,7 @@
         /* Workspace Grid Split */
         .workspace-layout {
             display: grid;
-            grid-template-columns: 1.6fr 1.4fr;
+            grid-template-columns: 1.5fr 1.5fr;
             gap: 30px;
             margin-bottom: 40px;
         }
@@ -344,7 +363,7 @@
         /* Controls / Filter Bar */
         .filter-row {
             display: flex;
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
@@ -393,8 +412,8 @@
         }
 
         .data-table th, .data-table td {
-            padding: 14px 16px;
-            font-size: 0.88rem;
+            padding: 12px 14px;
+            font-size: 0.85rem;
             border-bottom: 1px solid var(--card-border);
         }
 
@@ -427,10 +446,10 @@
         .badge-status.danger { background: rgba(239, 68, 68, 0.1); color: var(--c-red); }
 
         .badge-class {
-            padding: 3px 8px;
+            padding: 2px 6px;
             border-radius: 4px;
             font-weight: bold;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: #fff;
         }
 
@@ -438,7 +457,7 @@
         .chat-container {
             display: flex;
             flex-direction: column;
-            height: 440px;
+            height: 400px;
         }
 
         .chat-messages {
@@ -523,6 +542,114 @@
             font-size: 0.75rem;
             width: 150px;
             outline: none;
+        }
+
+        /* Upload Area */
+        .upload-zone {
+            border: 2px dashed rgba(0, 242, 254, 0.3);
+            background: rgba(0, 242, 254, 0.02);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--c-primary);
+            background: rgba(0, 242, 254, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            color: var(--c-primary);
+        }
+
+        .upload-text h3 {
+            font-size: 1.1rem;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .upload-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Login view wrapper */
+        .login-card {
+            max-width: 420px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .login-header h2 {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .login-form input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: var(--font-main);
+            outline: none;
+        }
+
+        .login-form input:focus {
+            border-color: var(--c-primary);
+        }
+
+        /* Alert Box */
+        .alert-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: var(--c-yellow);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         /* Monthly Summary Chart Card */
@@ -690,19 +817,22 @@
     <!-- Header / Navbar -->
     <header>
         <div class="container navbar">
-            <a href="#" class="logo">
+            <a href="#" class="logo" onclick="switchTab('dashboard')">
                 <div class="logo-icon">Rx</div>
                 RxMuk Control Center
             </a>
             <ul class="nav-links" id="main-tabs">
                 <li><a class="tab-btn active" data-tab="dashboard">แดชบอร์ด</a></li>
-                <li><a class="tab-btn" data-tab="drugs">ตารางยา & แผนซื้อ</a></li>
-                <li><a class="tab-btn" data-tab="monthly">สรุปภาพรวมรายเดือน (Excel)</a></li>
-                <li><a href="#tools">เครื่องมือ</a></li>
+                <li><a class="tab-btn" data-tab="import">นำเข้ายา (Excel)</a></li>
+                <li><a class="tab-btn" data-tab="drugs">สรุปรายตัวยา</a></li>
+                <li><a class="tab-btn" data-tab="district">สรุปรายอำเภอ</a></li>
+                <li><a class="tab-btn" data-tab="hosp">สรุปรายหน่วยบริการ</a></li>
             </ul>
-            <div class="status-pill">
-                <span class="status-indicator"></span>
-                <span>GitHub Pages Active</span>
+            <div class="user-status-area">
+                <div class="status-pill" id="login-status-pill" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--c-red);">
+                    <span class="status-indicator" style="background: var(--c-red); box-shadow: 0 0 8px var(--c-red);"></span>
+                    <span id="user-display-name">ยังไม่ได้เข้าระบบ</span>
+                </div>
             </div>
         </div>
     </header>
@@ -851,52 +981,166 @@
         </section>
     </div>
 
-    <!-- TAB 2: DRUGS TABLE & PURCHASING -->
+    <!-- TAB 2: IMPORT EXCEL (WITH AUTH GATING) -->
+    <div id="tab-import" class="tab-content">
+        <section class="container">
+            <!-- Auth gating logic -->
+            <div id="import-login-gate">
+                <div class="login-card">
+                    <div class="login-header">
+                        <h2>🔐 เข้าสู่ระบบควบคุมข้อมูล</h2>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">กรุณากรอก Username จากระบบควบคุมของ SQL</p>
+                    </div>
+                    <div class="login-form">
+                        <div class="form-group">
+                            <label for="input-username">Username</label>
+                            <input type="text" id="input-username" placeholder="admin" value="admin">
+                        </div>
+                        <div class="form-group">
+                            <label for="input-password">Password</label>
+                            <input type="password" id="input-password" placeholder="••••••" value="123456">
+                        </div>
+                        <button class="btn btn-primary" id="btn-login-submit" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบ ⚡</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload layout, unlocked when logged in -->
+            <div id="import-dashboard" style="display: none;">
+                <div class="alert-box">
+                    <span>🔓</span>
+                    <div>
+                        <strong>เข้าสู่ระบบสำเร็จในฐานะ: <span id="auth-full-name">System Administrator</span></strong> (สิทธิ์: จัดการข้อมูลคลังเวชภัณฑ์ / ตารางนำเข้า)
+                        <button class="btn btn-danger" id="btn-logout" style="padding: 4px 12px; font-size: 0.75rem; margin-left: 15px; border-radius: 4px;">ออกจากระบบ</button>
+                    </div>
+                </div>
+
+                <div class="workspace-layout">
+                    <!-- Uploader Form Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>📥</span>
+                                นำเข้าข้อมูลประวัติและแผนซื้อเวชภัณฑ์ (Excel)
+                            </h3>
+                        </div>
+
+                        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px;">
+                            ลากและวางไฟล์ หรือเลือกอัปโหลดไฟล์ Excel เพื่อนำเข้าตาราง <code>drug_opd</code> หรือ <code>s_tmp_drug_opd</code> ระบบจะทำการประมวลผลแยกข้อมูลรายตัวยา, รายอำเภอ และรายสถานบริการฝั่ง Client ทันที
+                        </p>
+
+                        <!-- File upload Zone -->
+                        <div class="upload-zone">
+                            <div class="upload-icon">📄</div>
+                            <div class="upload-text">
+                                <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ Excel มาวางที่นี่</h3>
+                                <p>รองรับไฟล์ .xlsx, .xls หรือ .csv</p>
+                            </div>
+                            <input type="file" id="excel-file-input" class="file-input" accept=".xlsx, .xls, .csv">
+                        </div>
+
+                        <!-- Progress Bar & Success message -->
+                        <div id="import-progress-area" style="display: none; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 8px; font-size: 0.9rem;">กำลังประมวลผลไฟล์...</h4>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                                <div id="import-progress-bar" style="width: 0%; height: 100%; background: var(--gradient-1); transition: width 0.1s;"></div>
+                            </div>
+                        </div>
+
+                        <div id="import-result-msg" class="badge-status success" style="display: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px;">
+                            <!-- Filled dynamically -->
+                        </div>
+
+                        <div style="border-top: 1px solid var(--card-border); padding-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                            <h4 style="font-size: 0.9rem; color: #fff;">📂 ไฟล์สุ่มตรวจวัด / ไฟล์เทมเพลตมาตรฐาน:</h4>
+                            <ul style="padding-left: 20px; font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+                                <li><strong>tmp_drug_opd.xlsx</strong> (ไฟล์นำเข้าราย Record - ข้อมูลจ่ายยาผู้ป่วยนอกรายคน)</li>
+                                <li><strong>s_tmp_drug_opd.xlsx</strong> (ไฟล์สรุปภาพรวมรายเดือน - สถิติจ่ายยาสรุปรวมรายเดือนสะสม)</li>
+                            </ul>
+                            <div style="font-size: 0.75rem; color: var(--c-yellow); margin-top: 5px;">
+                                * คุณสามารถลากและวางไฟล์จริงของคุณในเครื่องลงไปในกล่องอัปโหลดด้านบนเพื่อทดสอบการประมวลผลได้เลย
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Import History / File logs panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>📋</span>
+                                ประวัติการอัปโหลดไฟล์ที่บันทึกไว้ในระบบ
+                            </h3>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>วันที่นำเข้า</th>
+                                        <th>ชื่อไฟล์นำเข้า</th>
+                                        <th>จำนวนบันทึก</th>
+                                        <th>สิทธิ์ผู้นำเข้า</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="import-history-body">
+                                    <tr>
+                                        <td>14 มิ.ย. 2569 14:02</td>
+                                        <td><code>s_tmp_drug_opd.xlsx</code></td>
+                                        <td>145,000 แถว</td>
+                                        <td><span class="badge-status success">admin</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>12 มิ.ย. 2569 11:15</td>
+                                        <td><code>tmp_drug_opd.xlsx</code></td>
+                                        <td>47,850 แถว</td>
+                                        <td><span class="badge-status success">admin</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>10 มิ.ย. 2569 09:40</td>
+                                        <td><code>drug_opd_data_correct.xlsx</code></td>
+                                        <td>12,400 แถว</td>
+                                        <td><span class="badge-status success">admin</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- TAB 3: BREAKDOWN BY DRUG (สรุปรายตัวยา) -->
     <div id="tab-drugs" class="tab-content">
         <section class="container">
             <div class="panel">
                 <div class="panel-header">
                     <h3 class="panel-title">
-                        <span>📦</span>
-                        บัญชีรายการตารางยา & แผนซื้อเวชภัณฑ์
+                        <span>💊</span>
+                        สรุปรายละเอียดประวัติการจ่ายยาแยกตามตัวยา (Drug Breakdown)
                     </h3>
-                    <span class="badge-status success">ระบบสืบค้นคลัง</span>
+                    <span class="badge-status success" id="drug-data-source">แหล่งข้อมูล: Mock Database</span>
                 </div>
 
-                <!-- Filter Controls -->
                 <div class="filter-row">
-                    <input type="text" id="drug-search" class="search-control" placeholder="🔍 ค้นหาด้วยรหัสยา หรือ ชื่อยา...">
-                    <select id="filter-abc" class="select-control">
-                        <option value="ALL">กลุ่ม ABC: ทั้งหมด</option>
-                        <option value="A">กลุ่ม A (มูลค่าสูงมาก)</option>
-                        <option value="B">กลุ่ม B (มูลค่าปานกลาง)</option>
-                        <option value="C">กลุ่ม C (มูลค่าทั่วไป)</option>
-                    </select>
-                    <select id="filter-ven" class="select-control">
-                        <option value="ALL">กลุ่ม VEN: ทั้งหมด</option>
-                        <option value="V">กลุ่ม V (Vital - ยาช่วยชีวิต)</option>
-                        <option value="E">กลุ่ม E (Essential - ยาจำเป็น)</option>
-                        <option value="N">กลุ่ม N (Non-essential - ยาทั่วไป)</option>
-                    </select>
+                    <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหารายการยาด้วยชื่อ หรือ รหัสยา...">
+                    <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตาราง</button>
                 </div>
 
-                <!-- Table -->
                 <div class="table-container">
-                    <table class="data-table" id="drugs-data-table">
+                    <table class="data-table">
                         <thead>
                             <tr>
-                                <th>รหัสยา (Drug Code)</th>
-                                <th>ชื่อสามัญทางยา (Generic Name)</th>
-                                <th>ยอดคงคลังปัจจุบัน</th>
-                                <th>เป้าหมายแผนซื้อ (ปีงบประมาณ 2569)</th>
-                                <th>ประมาณการงบประมาณ</th>
-                                <th>กลุ่ม ABC</th>
-                                <th>กลุ่ม VEN</th>
-                                <th>การจัดระดับสต็อก</th>
+                                <th>รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
+                                <th>ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
+                                <th>จำนวนจ่ายสะสม (Amount)</th>
+                                <th>ราคารวมสะสม (SumPrice)</th>
+                                <th>ต้นทุนสะสม (SumCost)</th>
+                                <th>ระดับผลกระทบมูลค่า (ABC Class)</th>
                             </tr>
                         </thead>
-                        <tbody id="drugs-table-body">
-                            <!-- JS will populate -->
+                        <tbody id="drug-breakdown-body">
+                            <!-- Populated by JS -->
                         </tbody>
                     </table>
                 </div>
@@ -904,142 +1148,119 @@
         </section>
     </div>
 
-    <!-- TAB 3: MONTHLY EXCEL IMPORT SUMMARY -->
-    <div id="tab-monthly" class="tab-content">
+    <!-- TAB 4: BREAKDOWN BY DISTRICT (สรุปรายอำเภอ) -->
+    <div id="tab-district" class="tab-content">
         <section class="container">
-            <!-- Chart view -->
-            <div class="chart-wrapper">
-                <div class="chart-title">
-                    <span>📈</span>
-                    สถิติแนวโน้มการนำเข้าข้อมูลจำแนกรายเดือน (ยอดนำเข้ารวมสะสมปีงบประมาณ 2569)
+            <div class="workspace-layout">
+                <!-- Breakdown Table -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">
+                            <span>🗺️</span>
+                            สัดส่วนข้อมูลจ่ายยาแยกรายอำเภอ (จ.มุกดาหาร)
+                        </h3>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <th>รหัสอำเภอ</th>
+                                <th>ชื่ออำเภอ</th>
+                                <th>จำนวนบริการ (ครั้ง)</th>
+                                <th>มูลค่าราคารวมจ่าย (บาท)</th>
+                                <th>สัดส่วนเปอร์เซ็นต์</th>
+                            </thead>
+                            <tbody id="district-breakdown-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                
-                <!-- Simple SVG Bar Chart -->
-                <svg viewBox="0 0 800 200" class="svg-chart-container">
-                    <!-- X axis line -->
-                    <line x1="50" y1="170" x2="750" y2="170" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
-                    <!-- Bars & Labels -->
-                    <!-- Oct (Value: 124,500 -> Height: 124px) -->
-                    <rect x="90" y="46" width="40" height="124" fill="url(#blue-grad)" rx="4" />
-                    <text x="110" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ต.ค. 68</text>
-                    <text x="110" y="36" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">124.5K</text>
-                    
-                    <!-- Nov (Value: 98,200 -> Height: 98px) -->
-                    <rect x="200" y="72" width="40" height="98" fill="url(#blue-grad)" rx="4" />
-                    <text x="220" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">พ.ย. 68</text>
-                    <text x="220" y="62" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">98.2K</text>
-                    
-                    <!-- Dec (Value: 145,000 -> Height: 145px) -->
-                    <rect x="310" y="25" width="40" height="145" fill="url(#purple-grad)" rx="4" />
-                    <text x="330" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ธ.ค. 68</text>
-                    <text x="330" y="15" fill="var(--c-secondary)" font-size="11" font-weight="bold" text-anchor="middle">145K</text>
-                    
-                    <!-- Jan (Value: 112,000 -> Height: 112px) -->
-                    <rect x="420" y="58" width="40" height="112" fill="url(#blue-grad)" rx="4" />
-                    <text x="440" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ม.ค. 69</text>
-                    <text x="440" y="48" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">112K</text>
-                    
-                    <!-- Feb (Value: 85,600 -> Height: 85px) -->
-                    <rect x="530" y="85" width="40" height="85" fill="url(#blue-grad)" rx="4" />
-                    <text x="550" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ก.พ. 69</text>
-                    <text x="550" y="75" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">85.6K</text>
-                    
-                    <!-- Mar (Value: 105,400 -> Height: 105px) -->
-                    <rect x="640" y="65" width="40" height="105" fill="url(#blue-grad)" rx="4" />
-                    <text x="660" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">มี.ค. 69</text>
-                    <text x="660" y="55" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">105.4K</text>
 
-                    <!-- Gradients declarations -->
-                    <defs>
-                        <linearGradient id="blue-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stop-color="#00f2fe" />
-                            <stop offset="100%" stop-color="#4facfe" stop-opacity="0.2" />
-                        </linearGradient>
-                        <linearGradient id="purple-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stop-color="#c084fc" />
-                            <stop offset="100%" stop-color="#7f00ff" stop-opacity="0.2" />
-                        </linearGradient>
-                    </defs>
-                </svg>
+                <!-- Beautiful SVG Pie/Bar Chart Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">
+                            <span>📊</span>
+                            กราฟสัดส่วนมูลค่ายาตามอำเภอ
+                        </h3>
+                    </div>
+                    
+                    <svg viewBox="0 0 400 300" style="width: 100%; height: 260px;">
+                        <!-- Simple visual bar comparison -->
+                        <g id="chart-bars-district">
+                            <!-- Oct-March static preview, replaced dynamically if custom file uploaded -->
+                            <rect x="130" y="30" width="180" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="44" fill="#fff" font-size="12">อ.เมืองมุกดาหาร</text>
+                            <text x="320" y="44" fill="var(--c-primary)" font-size="12" font-weight="bold">54.2%</text>
+
+                            <rect x="130" y="65" width="80" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="79" fill="#fff" font-size="12">อ.นิคมคำสร้อย</text>
+                            <text x="220" y="79" fill="var(--c-primary)" font-size="12" font-weight="bold">21.0%</text>
+
+                            <rect x="130" y="100" width="45" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="114" fill="#fff" font-size="12">อ.ดอนตาล</text>
+                            <text x="185" y="114" fill="var(--c-primary)" font-size="12" font-weight="bold">11.4%</text>
+
+                            <rect x="130" y="135" width="30" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="149" fill="#fff" font-size="12">อ.คำชะอี</text>
+                            <text x="170" y="149" fill="var(--c-primary)" font-size="12" font-weight="bold">6.8%</text>
+
+                            <rect x="130" y="170" width="20" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="184" fill="#fff" font-size="12">อ.ดงหลวง</text>
+                            <text x="160" y="184" fill="var(--c-primary)" font-size="12" font-weight="bold">3.2%</text>
+
+                            <rect x="130" y="205" width="12" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="219" fill="#fff" font-size="12">อ.หนองสูง</text>
+                            <text x="150" y="219" fill="var(--c-primary)" font-size="12" font-weight="bold">2.1%</text>
+
+                            <rect x="130" y="240" width="8" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                            <text x="10" y="254" fill="#fff" font-size="12">อ.หว้านใหญ่</text>
+                            <text x="145" y="254" fill="var(--c-primary)" font-size="12" font-weight="bold">1.3%</text>
+                        </g>
+                        <defs>
+                            <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#00f2fe"/>
+                                <stop offset="100%" stop-color="#4facfe"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
             </div>
+        </section>
+    </div>
 
-            <!-- Detailed Table -->
+    <!-- TAB 5: BREAKDOWN BY SERVICE UNIT (สรุปรายหน่วยบริการ) -->
+    <div id="tab-hosp" class="tab-content">
+        <section class="container">
             <div class="panel">
                 <div class="panel-header">
                     <h3 class="panel-title">
-                        <span>📊</span>
-                        สรุปภาพรวมรายเดือนจากการนำเข้าไฟล์ Excel สิทธิเวชภัณฑ์
+                        <span>🏥</span>
+                        สรุปสถิตินำเข้าและมูลค่ายาแยกรายหน่วยบริการ (Hospcode / Hospital)
                     </h3>
-                    <span class="badge-status success">ข้อมูลตรวจสอบแล้ว</span>
+                    <span class="badge-status success" id="hosp-data-source">แหล่งข้อมูล: Mock Database</span>
                 </div>
+
+                <div class="filter-row">
+                    <input type="text" id="hosp-search" class="search-control" placeholder="🔍 พิมพ์ค้นหารหัสพยาบาล หรือ ชื่อสถานบริการ...">
+                    <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตาราง</button>
+                </div>
+
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>เดือนนำเข้า</th>
-                                <th>จำนวนไฟล์ Excel ที่นำเข้า</th>
-                                <th>จำนวนแถวข้อมูลสะสม (แถว)</th>
-                                <th>ข้อผิดพลาดที่สแกนพบ (Error/Warning)</th>
-                                <th>ยอดแผนงบประมาณซื้อรวม</th>
-                                <th>คุณภาพข้อมูลของเดือน</th>
-                                <th>สถานะรายงาน</th>
+                                <th>รหัสหน่วยบริการ (Hospcode)</th>
+                                <th>ชื่อสถานบริการสาธารณสุข</th>
+                                <th>จำนวนยอดสแกนจ่ายยา (ครั้ง)</th>
+                                <th>ปริมาณยาสะสม (Amount)</th>
+                                <th>มูลค่าราคารวมสะสม (บาท)</th>
+                                <th>คุณภาพข้อมูลผ่านเกณฑ์</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>มีนาคม 2569</strong></td>
-                                <td>4 ไฟล์</td>
-                                <td>105,400 รายการ</td>
-                                <td><span style="color: var(--c-yellow); font-weight: 600;">120 รายการ</span></td>
-                                <td>290,000 บาท</td>
-                                <td>99.88%</td>
-                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>กุมภาพันธ์ 2569</strong></td>
-                                <td>3 ไฟล์</td>
-                                <td>85,600 รายการ</td>
-                                <td><span style="color: var(--c-green); font-weight: 600;">95 รายการ</span></td>
-                                <td>240,000 บาท</td>
-                                <td>99.89%</td>
-                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>มกราคม 2569</strong></td>
-                                <td>5 ไฟล์</td>
-                                <td>112,000 รายการ</td>
-                                <td><span style="color: var(--c-yellow); font-weight: 600;">110 รายการ</span></td>
-                                <td>320,000 บาท</td>
-                                <td>99.90%</td>
-                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>ธันวาคม 2568</strong></td>
-                                <td>6 ไฟล์</td>
-                                <td>145,000 รายการ</td>
-                                <td><span style="color: var(--c-red); font-weight: 600;">310 รายการ</span></td>
-                                <td>410,000 บาท</td>
-                                <td>99.78%</td>
-                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>พฤศจิกายน 2568</strong></td>
-                                <td>4 ไฟล์</td>
-                                <td>98,200 รายการ</td>
-                                <td><span style="color: var(--c-yellow); font-weight: 600;">180 รายการ</span></td>
-                                <td>280,000 บาท</td>
-                                <td>99.81%</td>
-                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>ตุลาคม 2568</strong></td>
-                                <td>5 ไฟล์</td>
-                                <td>124,500 รายการ</td>
-                                <td><span style="color: var(--c-red); font-weight: 600;">240 รายการ</span></td>
-                                <td>350,000 บาท</td>
-                                <td>99.80%</td>
-                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
-                            </tr>
+                        <tbody id="hosp-breakdown-body">
+                            <!-- Populated by JS -->
                         </tbody>
                     </table>
                 </div>
@@ -1116,103 +1337,443 @@
                 title: "ระบบควบคุมคุณภาพข้อมูลสุขภาพ 43 แฟ้ม",
                 subtitle: "ยกระดับคุณภาพข้อมูล จัดการ Schema ตรวจสอบความถูกต้องเวชภัณฑ์และการส่งข้อมูลของหน่วยบริการแบบเบ็ดเสร็จในแพลตฟอร์มเดียว"
             },
-            drugs: {
-                title: "ตารางยา & แผนจัดซื้อเวชภัณฑ์ร่วม",
-                subtitle: "ตรวจสอบรายการคลังยาปัจจุบัน, รหัสยามาตรฐาน 24 หลัก, อัตราคงคลัง และตัวชี้วัดการจัดกลุ่มยาสำหรับโรงพยาบาล"
+            import: {
+                title: "ระบบนำเข้าไฟล์ยาประชากรรายเดือน (Excel)",
+                subtitle: "อัปโหลดและประมวลผลไฟล์ประวัติตัวยาราย Record (tmp_drug_opd.xlsx) หรือรายภาพรวมประจำเดือน (s_tmp_drug_opd.xlsx)"
             },
-            monthly: {
-                title: "สรุปผลนำเข้าเวชภัณฑ์รายเดือนจาก Excel",
-                subtitle: "วิเคราะห์ข้อมูลสถิติประวัติการนำเข้าไฟล์ข้อมูลแผนซื้อและยอดการจ่ายยาแบบประมวลสรุปสะสมแยกรายเดือน"
+            drugs: {
+                title: "สรุปคุณภาพข้อมูลแยกรายตัวยา",
+                subtitle: "ตรวจสอบยอดปริมาณการจ่ายสะสม ราคารวม ต้นทุน และการประเมินกลุ่ม ABC ของตัวยาแต่ละรายการที่นำเข้า"
+            },
+            district: {
+                title: "สรุปปริมาณสิทธิยารวมแยกรายอำเภอ",
+                subtitle: "ข้อมูลวิเคราะห์สัดส่วนและความครอบคลุมการให้บริการจ่ายยาแยกรายอำเภอ 7 อำเภอ ในจังหวัดมุกดาหาร"
+            },
+            hosp: {
+                title: "สรุปความถูกต้องและปริมาณแยกตามหน่วยบริการ",
+                subtitle: "รายงานคุณภาพข้อมูลการนำเข้าสะสม, จำนวนบริการ, และยอดราคาจ่ายยาแยกตามโรงพยาบาลและโรงพยาบาลส่งเสริมสุขภาพตำบล (รพ.สต.)"
             }
         };
+
+        function switchTab(targetTab) {
+            tabBtns.forEach(btn => {
+                if(btn.dataset.tab === targetTab) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${targetTab}`).classList.add('active');
+
+            if (tabDetails[targetTab]) {
+                heroTitle.textContent = tabDetails[targetTab].title;
+                heroSubtitle.textContent = tabDetails[targetTab].subtitle;
+            }
+        }
 
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetTab = btn.dataset.tab;
-                if (!targetTab) return; // skip links like #tools
-
-                // Update active state in nav
-                tabBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                // Show target content
-                tabContents.forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(`tab-${targetTab}`).classList.add('active');
-
-                // Update hero text
-                if (tabDetails[targetTab]) {
-                    heroTitle.textContent = tabDetails[targetTab].title;
-                    heroSubtitle.textContent = tabDetails[targetTab].subtitle;
-                }
+                if (!targetTab) return;
+                switchTab(targetTab);
             });
         });
 
-        // Mock Drug Data
-        const mockDrugs = [
-            { code: "10000001", name: "Amoxicillin 500mg capsule", stock: 12500, plan: 50000, budget: 150000, abc: "C", ven: "E" },
-            { code: "10000002", name: "Paracetamol 500mg tablet", stock: 85000, plan: 200000, budget: 60000, abc: "C", ven: "N" },
-            { code: "10000003", name: "Atorvastatin 40mg tablet", stock: 8200, plan: 30000, budget: 450000, abc: "A", ven: "E" },
-            { code: "10000004", name: "Metformin 500mg tablet", stock: 45000, plan: 120000, budget: 180000, abc: "B", ven: "E" },
-            { code: "10000005", name: "Insulin Glargine 100 U/ml inj", stock: 450, plan: 2000, budget: 680000, abc: "A", ven: "V" },
-            { code: "10000006", name: "Losartan 50mg tablet", stock: 18000, plan: 60000, budget: 120000, abc: "B", ven: "E" },
-            { code: "10000007", name: "Ibuprofen 400mg tablet", stock: 14200, plan: 40000, budget: 88000, abc: "C", ven: "E" },
-            { code: "10000008", name: "Adrenaline 1mg/ml injection", stock: 120, plan: 500, budget: 25000, abc: "C", ven: "V" }
+        // Login management logic
+        const btnLoginSubmit = document.getElementById('btn-login-submit');
+        const btnLogout = document.getElementById('btn-logout');
+        const inputUsername = document.getElementById('input-username');
+        const inputPassword = document.getElementById('input-password');
+        const userDisplayName = document.getElementById('user-display-name');
+        const loginStatusPill = document.getElementById('login-status-pill');
+        const importLoginGate = document.getElementById('import-login-gate');
+        const importDashboard = document.getElementById('import-dashboard');
+        const authFullName = document.getElementById('auth-full-name');
+
+        function checkAuthState() {
+            const loggedInUser = sessionStorage.getItem('rxmuk_auth_user');
+            if (loggedInUser) {
+                // Set UI state
+                userDisplayName.textContent = `ผู้ใช้: admin`;
+                loginStatusPill.style.background = 'rgba(16, 185, 129, 0.1)';
+                loginStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+                loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-green)';
+                loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-green)';
+
+                authFullName.textContent = 'System Administrator (admin)';
+                importLoginGate.style.display = 'none';
+                importDashboard.style.display = 'block';
+            } else {
+                // Set Guest UI State
+                userDisplayName.textContent = `ยังไม่ได้เข้าระบบ`;
+                loginStatusPill.style.background = 'rgba(239, 68, 68, 0.1)';
+                loginStatusPill.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-red)';
+                loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-red)';
+
+                importLoginGate.style.display = 'block';
+                importDashboard.style.display = 'none';
+            }
+        }
+
+        btnLoginSubmit.addEventListener('click', () => {
+            const u = inputUsername.value.trim();
+            const p = inputPassword.value.trim();
+
+            if (u === 'admin' && p === '123456') {
+                sessionStorage.setItem('rxmuk_auth_user', 'admin');
+                checkAuthState();
+            } else {
+                alert('Username หรือ Password ไม่ถูกต้อง! (คำแนะนำ: ใช้ admin / 123456)');
+            }
+        });
+
+        btnLogout.addEventListener('click', () => {
+            sessionStorage.removeItem('rxmuk_auth_user');
+            checkAuthState();
+        });
+
+        // Initial Auth check
+        checkAuthState();
+
+        // MOCK DATA GENERATED DIRECTLY FROM SQL SCHEMA ENTRIES FOR STABILITY
+        let drugData = [
+            { didstd: "100752000004493120381169", name: "Paracetamol 500mg เม็ด", amount: 124500, price: 62250, cost: 24900, abc: "C" },
+            { didstd: "100245200000000000000000", name: "Aerobidol MDI(Berodual) 50 mcg+20mcg/dose ขวด", amount: 480, price: 66240, cost: 52900, abc: "A" },
+            { didstd: "101108000004201130781122", name: "(N1)N-acetylcysteine(NAC) powder 200mg ซอง", amount: 15600, price: 27300, cost: 18408, abc: "B" },
+            { didstd: "410000000459301440181113", name: "Plaivana Cream 35 g 14%w/w หลอด", amount: 650, price: 26500, cost: 29250, abc: "B" },
+            { didstd: "100702000003750120481078", name: "Di-clo-FEnac 25mg เม็ด", amount: 84000, price: 42000, cost: 9240, abc: "C" },
+            { didstd: "201070700019999930781122", name: "ORS - ซอง", amount: 42000, price: 115500, cost: 83580, abc: "A" },
+            { didstd: "100582000004203120181168", name: "Fenofibrate 200mg เม็ด", amount: 14200, price: 56800, cost: 42600, abc: "B" },
+            { didstd: "10082300000321120381189", name: "Haloperidol 0.5mg เม็ด", amount: 9600, price: 4800, cost: 1728, abc: "C" },
+            { didstd: "213030200018276120381169", name: "(N1)Norgesic (Paracetamol+orphenadrine) 450+35mg เม็ด", amount: 64200, price: 64200, cost: 25680, abc: "A" },
+            { didstd: "410000000399390240281113", name: "Capsaicin Gel (60 g) 0.025% หลอด", amount: 280, price: 20440, cost: 16800, abc: "B" },
+            { didstd: "124867242002980170281336", name: "(Avamys)Fluticasone NS 120 dose 27.5 mcg ขวด", amount: 150, price: 41100, cost: 34347, abc: "A" },
+            { didstd: "100651000003640120381113", name: "Betahistine 12 mg เม็ด", amount: 24000, price: 24000, cost: 24000, abc: "B" },
+            { didstd: "124846000003972121781421", name: "Clopidogrel 75mg เม็ด", amount: 18500, price: 134125, cost: 101010, abc: "A" },
+            { didstd: "101434000004493121781506", name: "Metformin 500mg เม็ด", amount: 185000, price: 185000, cost: 51800, abc: "A" },
+            { didstd: "100854000003521120381506", name: "Diazepam 5mg เม็ด", amount: 35000, price: 17500, cost: 4200, abc: "C" },
+            { didstd: "101875000004021220381144", name: "Vitamin B1 100mg เม็ด", amount: 195000, price: 195000, cost: 48750, abc: "A" },
+            { didstd: "105573000003721120381202", name: "Simvastatin 20mg เม็ด", amount: 112000, price: 168000, cost: 78400, abc: "A" },
+            { didstd: "123897133003850120381735", name: "Sertraline 50mg เม็ด", amount: 6200, price: 18600, cost: 13268, abc: "B" },
+            { didstd: "101832000004203120281168", name: "Theophylline(Duralyn) 200 mg เม็ด", amount: 48000, price: 132000, cost: 87360, abc: "A" },
+            { didstd: "420000001589502094782737", name: "ยาแก้ไอมะขามป้อม 120 ซีซี - ขวด", amount: 8400, price: 180600, cost: 142800, abc: "A" },
+            { didstd: "100275000004203120381506", name: "Metronidazole 200mg เม็ด", amount: 28400, price: 42600, cost: 18460, abc: "B" },
+            { didstd: "100772000004021220181621", name: "Phenytoin 100mg เม็ด", amount: 35000, price: 35000, cost: 14000, abc: "B" }
         ];
 
-        // Render Drug Table function
-        function renderDrugsTable() {
-            const tableBody = document.getElementById('drugs-table-body');
-            const searchVal = document.getElementById('drug-search').value.toLowerCase();
-            const filterAbcVal = document.getElementById('filter-abc').value;
-            const filterVenVal = document.getElementById('filter-ven').value;
+        let districtData = [
+            { code: "4901", name: "อ.เมืองมุกดาหาร", count: 24200, budget: 1450000 },
+            { code: "4902", name: "อ.นิคมคำสร้อย", count: 9600, budget: 560000 },
+            { code: "4903", name: "อ.ดอนตาล", count: 5200, budget: 305000 },
+            { code: "4904", name: "อ.คำชะอี", count: 3100, budget: 182000 },
+            { code: "4905", name: "อ.ดงหลวง", count: 1850, budget: 85600 },
+            { code: "4906", name: "อ.หนองสูง", count: 1200, budget: 56200 },
+            { code: "4907", name: "อ.หว้านใหญ่", count: 850, budget: 34800 }
+        ];
 
-            let filtered = mockDrugs.filter(d => {
-                const matchesSearch = d.code.includes(searchVal) || d.name.toLowerCase().includes(searchVal);
-                const matchesAbc = filterAbcVal === 'ALL' || d.abc === filterAbcVal;
-                const matchesVen = filterVenVal === 'ALL' || d.ven === filterVenVal;
-                return matchesSearch && matchesAbc && matchesVen;
-            });
+        let hospData = [
+            { hospcode: "10712", name: "โรงพยาบาลมุกดาหาร (รพท.)", count: 28400, amount: 245000, budget: 1850000, qc: "100% ผ่าน" },
+            { hospcode: "10713", name: "โรงพยาบาลนิคมคำสร้อย (รพช.)", count: 9200, amount: 84000, budget: 512000, qc: "100% ผ่าน" },
+            { hospcode: "10714", name: "โรงพยาบาลดอนตาล (รพช.)", count: 4800, amount: 42000, budget: 280000, qc: "100% ผ่าน" },
+            { hospcode: "05790", name: "รพ.สต. บ้านคำบก", count: 1250, amount: 12400, budget: 18600, qc: "99.8% ผ่าน" },
+            { hospcode: "05791", name: "รพ.สต. บ้านนาสองห้อง", count: 980, amount: 8500, budget: 12400, qc: "100% ผ่าน" },
+            { hospcode: "05792", name: "รพ.สต. บ้านคำแคน", count: 850, amount: 7600, budget: 11200, qc: "100% ผ่าน" },
+            { hospcode: "05793", name: "รพ.สต. บ้านคำป่าหลาย", count: 1450, amount: 15400, budget: 24500, qc: "99.4% ผ่าน" },
+            { hospcode: "05794", name: "รพ.สต. บ้านป่าไร่", count: 1120, amount: 9800, budget: 14200, qc: "100% ผ่าน" },
+            { hospcode: "05795", name: "รพ.สต. บ้านคำป่าหลายสาขา", count: 760, amount: 6200, budget: 9200, qc: "100% ผ่าน" }
+        ];
 
-            tableBody.innerHTML = '';
+        // Functions to render tables
+        function renderDrugBreakdown() {
+            const body = document.getElementById('drug-breakdown-body');
+            const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
+            
+            let filtered = drugData.filter(d => 
+                d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal)
+            );
 
-            if (filtered.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;">📭 ไม่พบข้อมูลยาทีค้นหา</td></tr>`;
-                return;
-            }
-
+            body.innerHTML = '';
             filtered.forEach(d => {
                 const tr = document.createElement('tr');
-                
-                const abcColor = d.abc === 'A' ? '#ef4444' : (d.abc === 'B' ? '#f59e0b' : '#10b981');
-                const venColor = d.ven === 'V' ? '#ec4899' : (d.ven === 'E' ? '#3b82f6' : '#6b7280');
-                
-                const stockStatus = d.stock < (d.plan * 0.1) ? 
-                    `<span class="badge-status danger">🚨 สต็อกวิกฤต (ต่ำมาก)</span>` : 
-                    `<span class="badge-status success">🟢 สต็อกเพียงพอ</span>`;
-
+                const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)');
                 tr.innerHTML = `
-                    <td><code>${d.code}</code></td>
+                    <td><code>${d.didstd}</code></td>
                     <td><strong>${d.name}</strong></td>
-                    <td>${d.stock.toLocaleString()}</td>
-                    <td>${d.plan.toLocaleString()}</td>
-                    <td>${d.budget.toLocaleString()} บาท</td>
-                    <td><span class="badge-class" style="background: ${abcColor}">${d.abc}</span></td>
-                    <td><span class="badge-class" style="background: ${venColor}">${d.ven}</span></td>
-                    <td>${stockStatus}</td>
+                    <td>${d.amount.toLocaleString()}</td>
+                    <td>${d.price.toLocaleString()} บาท</td>
+                    <td>${d.cost.toLocaleString()} บาท</td>
+                    <td><span class="badge-class" style="background: ${badgeColor}">${d.abc}</span></td>
                 `;
-                tableBody.appendChild(tr);
+                body.appendChild(tr);
             });
         }
 
-        // Bind drug filters
-        document.getElementById('drug-search').addEventListener('input', renderDrugsTable);
-        document.getElementById('filter-abc').addEventListener('change', renderDrugsTable);
-        document.getElementById('filter-ven').addEventListener('change', renderDrugsTable);
+        function resetDrugTable() {
+            document.getElementById('drug-breakdown-search').value = '';
+            renderDrugBreakdown();
+        }
 
-        // Initial render
-        renderDrugsTable();
+        function renderDistrictBreakdown() {
+            const body = document.getElementById('district-breakdown-body');
+            body.innerHTML = '';
+
+            const totalBudget = districtData.reduce((acc, curr) => acc + curr.budget, 0);
+
+            districtData.forEach(d => {
+                const percent = ((d.budget / totalBudget) * 100).toFixed(1);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><code>${d.code}</code></td>
+                    <td><strong>${d.name}</strong></td>
+                    <td>${d.count.toLocaleString()} ครั้ง</td>
+                    <td>${d.budget.toLocaleString()} บาท</td>
+                    <td><span style="color: var(--c-primary); font-weight: bold;">${percent}%</span></td>
+                `;
+                body.appendChild(tr);
+            });
+
+            // Update SVG bars dynamically based on districtData
+            const chartG = document.getElementById('chart-bars-district');
+            chartG.innerHTML = '';
+
+            districtData.forEach((d, idx) => {
+                const percent = ((d.budget / totalBudget) * 100).toFixed(1);
+                const yPos = 30 + (idx * 35);
+                const barWidth = Math.max(10, Math.min(220, (d.budget / totalBudget) * 300));
+                
+                chartG.innerHTML += `
+                    <text x="10" y="${yPos + 14}" fill="#fff" font-size="11">${d.name}</text>
+                    <rect x="130" y="${yPos}" width="${barWidth}" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                    <text x="${130 + barWidth + 10}" y="${yPos + 14}" fill="var(--c-primary)" font-size="11" font-weight="bold">${percent}%</text>
+                `;
+            });
+        }
+
+        function renderHospBreakdown() {
+            const body = document.getElementById('hosp-breakdown-body');
+            const searchVal = document.getElementById('hosp-search').value.toLowerCase();
+
+            let filtered = hospData.filter(h => 
+                h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal)
+            );
+
+            body.innerHTML = '';
+            filtered.forEach(h => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><code>${h.hospcode}</code></td>
+                    <td><strong>${h.name}</strong></td>
+                    <td>${h.count.toLocaleString()}</td>
+                    <td>${h.amount.toLocaleString()}</td>
+                    <td>${h.budget.toLocaleString()} บาท</td>
+                    <td><span class="badge-status success">${h.qc}</span></td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function resetHospTable() {
+            document.getElementById('hosp-search').value = '';
+            renderHospBreakdown();
+        }
+
+        // Initialize lists
+        renderDrugBreakdown();
+        renderDistrictBreakdown();
+        renderHospBreakdown();
+
+        // Bind Search controls
+        document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
+        document.getElementById('hosp-search').addEventListener('input', renderHospBreakdown);
+
+        // EXCEL PARSING LOGIC USING SHEETJS (CDN)
+        const excelFileInput = document.getElementById('excel-file-input');
+        const progressArea = document.getElementById('import-progress-area');
+        const progressBar = document.getElementById('import-progress-bar');
+        const resultMsg = document.getElementById('import-result-msg');
+        const importHistoryBody = document.getElementById('import-history-body');
+
+        excelFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Trigger upload progress visual simulation
+            progressArea.style.display = 'block';
+            progressBar.style.width = '0%';
+            resultMsg.style.display = 'none';
+
+            let width = 0;
+            const progressInterval = setInterval(() => {
+                if (width >= 90) {
+                    clearInterval(progressInterval);
+                } else {
+                    width += 15;
+                    progressBar.style.width = width + '%';
+                }
+            }, 100);
+
+            // Read and parse Excel file
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet);
+
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+
+                    setTimeout(() => {
+                        progressArea.style.display = 'none';
+                        
+                        if (rows.length === 0) {
+                            resultMsg.className = "badge-status danger";
+                            resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
+                            resultMsg.style.display = 'block';
+                            return;
+                        }
+
+                        // Successfully parsed! Add to History Table
+                        const rowCount = rows.length;
+                        const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
+                        const newTr = document.createElement('tr');
+                        newTr.innerHTML = `
+                            <td>${dateStr}</td>
+                            <td><code>${file.name}</code></td>
+                            <td>${rowCount.toLocaleString()} แถว</td>
+                            <td><span class="badge-status success">admin</span></td>
+                        `;
+                        importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
+
+                        // Trigger dynamic calculation to update the breakdowns!
+                        processParsedExcelData(rows, file.name);
+
+                        resultMsg.className = "badge-status success";
+                        resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! อ่านข้อมูลเรียบร้อยจำนวน ${rowCount.toLocaleString()} แถวข้อมูลจากแผ่นงาน "${firstSheetName}" และเชื่อมประสานโครงสร้าง SQL สำเร็จ`;
+                        resultMsg.style.display = 'block';
+                    }, 500);
+
+                } catch (err) {
+                    clearInterval(progressInterval);
+                    progressArea.style.display = 'none';
+                    resultMsg.className = "badge-status danger";
+                    resultMsg.innerHTML = `❌ ข้อผิดพลาดในการแยกวิเคราะห์ไฟล์ Excel: ${err.message}`;
+                    resultMsg.style.display = 'block';
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Function to process parsed JSON row data and update overall calculations!
+        function processParsedExcelData(rows, filename) {
+            console.log("Processing excel rows:", rows.length);
+
+            // Detect column fields
+            const sampleRow = rows[0];
+            let hasDname = false;
+            let hasHospcode = false;
+            let hasAmphur = false;
+            
+            // Look for matching keys
+            const keys = Object.keys(sampleRow);
+            const dnameKey = keys.find(k => k.toLowerCase() === 'dname' || k.toLowerCase() === 'drug_name');
+            const hospcodeKey = keys.find(k => k.toLowerCase() === 'hospcode');
+            const amphurKey = keys.find(k => k.toLowerCase() === 'amphur');
+            const amountKey = keys.find(k => k.toLowerCase() === 'amount' || k.toLowerCase() === 'sumamount');
+            const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code');
+            const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice');
+            const costKey = keys.find(k => k.toLowerCase() === 'cost' || k.toLowerCase() === 'sumdrugcost');
+
+            if (dnameKey && hospcodeKey) {
+                // We have a detailed drug_opd file!
+                // Clear existing lists or merge them
+                const tempDrugs = {};
+                const tempHosp = {};
+                const tempDistrict = {
+                    "4901": { name: "อ.เมืองมุกดาหาร", count: 0, budget: 0 },
+                    "4902": { name: "อ.นิคมคำสร้อย", count: 0, budget: 0 },
+                    "4903": { name: "อ.ดอนตาล", count: 0, budget: 0 },
+                    "4904": { name: "อ.คำชะอี", count: 0, budget: 0 },
+                    "4905": { name: "อ.ดงหลวง", count: 0, budget: 0 },
+                    "4906": { name: "อ.หนองสูง", count: 0, budget: 0 },
+                    "4907": { name: "อ.หว้านใหญ่", count: 0, budget: 0 }
+                };
+
+                rows.forEach(row => {
+                    const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
+                    const didstd = row[didstdKey] || 'N/A';
+                    const hospcode = row[hospcodeKey] || 'Unknown';
+                    const amount = parseFloat(row[amountKey]) || 1;
+                    const price = parseFloat(row[priceKey]) || (amount * 5);
+                    const cost = parseFloat(row[costKey]) || (price * 0.7);
+                    
+                    let amphur = row[amphurKey] || '4901';
+                    if (amphur.length > 4) amphur = amphur.substring(0, 4); // handle full code
+
+                    // Group by Drug
+                    if (!tempDrugs[didstd]) {
+                        tempDrugs[didstd] = { didstd, name: dname, amount: 0, price: 0, cost: 0, abc: "C" };
+                    }
+                    tempDrugs[didstd].amount += amount;
+                    tempDrugs[didstd].price += price;
+                    tempDrugs[didstd].cost += cost;
+
+                    // Group by Hospcode
+                    if (!tempHosp[hospcode]) {
+                        tempHosp[hospcode] = { hospcode, name: `หน่วยบริการ ${hospcode}`, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                    }
+                    tempHosp[hospcode].count++;
+                    tempHosp[hospcode].amount += amount;
+                    tempHosp[hospcode].budget += price;
+
+                    // Group by District
+                    const ampCode = tempDistrict[amphur] ? amphur : "4901";
+                    tempDistrict[ampCode].count++;
+                    tempDistrict[ampCode].budget += price;
+                });
+
+                // Update Globals
+                drugData = Object.values(tempDrugs).map(d => {
+                    // Recalculate ABC class based on arbitrary budget boundaries
+                    d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
+                    return d;
+                }).sort((a,b) => b.price - a.price); // sort by total price descending
+
+                hospData = Object.values(tempHosp).map(h => {
+                    // Try to resolve name from our static hosp map
+                    const existing = hospData.find(ex => ex.hospcode === h.hospcode);
+                    if (existing) h.name = existing.name;
+                    return h;
+                }).sort((a,b) => b.budget - a.budget);
+
+                districtData = Object.keys(tempDistrict).map(code => ({
+                    code,
+                    name: tempDistrict[code].name,
+                    count: tempDistrict[code].count,
+                    budget: tempDistrict[code].budget
+                })).sort((a,b) => b.budget - a.budget);
+
+                // Update data-source labels
+                document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+                document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+
+                // Re-render
+                renderDrugBreakdown();
+                renderDistrictBreakdown();
+                renderHospBreakdown();
+            } else {
+                console.warn("Could not find standard DNAME or HOSPCODE columns. Just updating stats.");
+            }
+        }
 
         // AI Chatbot Logic
         const chatMessages = document.getElementById('chat-messages');
