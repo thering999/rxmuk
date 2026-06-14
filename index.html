@@ -1025,22 +1025,22 @@
                         <div class="panel-header">
                             <h3 class="panel-title">
                                 <span>📥</span>
-                                นำเข้าข้อมูลประวัติและแผนซื้อเวชภัณฑ์ (Excel)
+                                นำเข้าข้อมูลประวัติและสถิติจ่ายยา (CSV / Excel)
                             </h3>
                         </div>
 
                         <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px;">
-                            ลากและวางไฟล์ หรือเลือกอัปโหลดไฟล์ Excel เพื่อนำเข้าตาราง <code>drug_opd</code> หรือ <code>s_tmp_drug_opd</code> ระบบจะทำการประมวลผลแยกข้อมูลรายตัวยา, รายอำเภอ และรายสถานบริการฝั่ง Client ทันที
+                            ลากและวางไฟล์ หรือเลือกอัปโหลดไฟล์เพื่อนำเข้าตาราง <code>tmp_drug_opd</code> หรือ <code>s_tmp_drug_opd</code> (แนะนำไฟล์รูปแบบ <strong>.csv</strong> เพื่อความรวดเร็วในการประมวลผลข้อมูลปริมาณแสนเรคคอร์ดแบบ Real-time โดยไม่ติดขัด)
                         </p>
 
                         <!-- File upload Zone -->
                         <div class="upload-zone">
                             <div class="upload-icon">📄</div>
                             <div class="upload-text">
-                                <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ Excel มาวางที่นี่</h3>
-                                <p>รองรับไฟล์ .xlsx, .xls หรือ .csv</p>
+                                <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ CSV / Excel มาวางที่นี่</h3>
+                                <p>รองรับไฟล์ .csv (แนะนำ), .xlsx หรือ .xls</p>
                             </div>
-                            <input type="file" id="excel-file-input" class="file-input" accept=".xlsx, .xls, .csv">
+                            <input type="file" id="excel-file-input" class="file-input" accept=".csv, .xlsx, .xls">
                         </div>
 
                         <!-- Clear Data Utility -->
@@ -2032,7 +2032,51 @@
         }
 
         // ----------------------------------------------------
-        // EXCEL PARSING LOGIC USING SHEETJS (CDN)
+        // CUSTOM LIGHTWEIGHT CSV PARSER
+        // ----------------------------------------------------
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/);
+            if (lines.length === 0) return [];
+            
+            // Parse headers
+            const headers = splitCSVLine(lines[0]);
+            const rows = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const values = splitCSVLine(line);
+                const row = {};
+                headers.forEach((h, index) => {
+                    const cleanHeader = h.trim().replace(/^"|"$/g, '');
+                    row[cleanHeader] = values[index] !== undefined ? values[index] : '';
+                });
+                rows.push(row);
+            }
+            return rows;
+        }
+
+        function splitCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim().replace(/^"|"$/g, ''));
+            return result;
+        }
+
+        // ----------------------------------------------------
+        // EXCEL & CSV PARSING LOGIC
         // ----------------------------------------------------
         const excelFileInput = document.getElementById('excel-file-input');
         const progressArea = document.getElementById('import-progress-area');
@@ -2060,60 +2104,96 @@
                     }
                 }, 100);
 
-                // Read and parse Excel file
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    try {
-                        const data = new Uint8Array(evt.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'});
-                        
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const rows = XLSX.utils.sheet_to_json(worksheet);
+                // Read and parse file (CSV or Excel)
+                const isCSV = file.name.toLowerCase().endsWith('.csv');
 
-                        clearInterval(progressInterval);
-                        progressBar.style.width = '100%';
+                function parseAndProcess(rows, sheetName) {
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
 
-                        setTimeout(() => {
-                            progressArea.style.display = 'none';
-                            
-                            if (rows.length === 0) {
-                                resultMsg.className = "badge-status danger";
-                                resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
-                                resultMsg.style.display = 'block';
-                                return;
-                            }
-
-                            // Successfully parsed! Add to History Table
-                            const rowCount = rows.length;
-                            const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
-                            const newTr = document.createElement('tr');
-                            newTr.innerHTML = `
-                                <td>${dateStr}</td>
-                                <td><code>${file.name}</code></td>
-                                <td>${rowCount.toLocaleString()} แถว</td>
-                                <td><span class="badge-status success">admin</span></td>
-                            `;
-                            importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
-
-                            // Trigger dynamic calculation to update the breakdowns!
-                            processParsedExcelData(rows, file.name);
-
-                            resultMsg.className = "badge-status success";
-                            resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! อ่านข้อมูลเรียบร้อยจำนวน ${rowCount.toLocaleString()} แถวข้อมูลจากแผ่นงาน "${firstSheetName}" และเชื่อมประสานโครงสร้าง SQL สำเร็จ`;
-                            resultMsg.style.display = 'block';
-                        }, 500);
-
-                    } catch (err) {
-                        clearInterval(progressInterval);
+                    setTimeout(() => {
                         progressArea.style.display = 'none';
-                        resultMsg.className = "badge-status danger";
-                        resultMsg.innerHTML = `❌ ข้อผิดพลาดในการแยกวิเคราะห์ไฟล์ Excel: ${err.message}`;
-                        resultMsg.style.display = 'block';
-                    }
-                };
+                        
+                        if (!rows || rows.length === 0) {
+                            resultMsg.className = "badge-status danger";
+                            resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
+                            resultMsg.style.display = 'block';
+                            return;
+                        }
 
-                reader.readAsArrayBuffer(file);
+                        // Successfully parsed! Add to History Table
+                        const rowCount = rows.length;
+                        const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
+                        const newTr = document.createElement('tr');
+                        newTr.innerHTML = `
+                            <td>${dateStr}</td>
+                            <td><code>${file.name}</code></td>
+                            <td>${rowCount.toLocaleString()} แถว</td>
+                            <td><span class="badge-status success">admin</span></td>
+                        `;
+                        importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
+
+                        // Trigger dynamic calculation to update the breakdowns!
+                        processParsedExcelData(rows, file.name, dateStr);
+
+                        resultMsg.className = "badge-status success";
+                        resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! อ่านข้อมูลเรียบร้อยจำนวน ${rowCount.toLocaleString()} แถวข้อมูลจากแหล่งข้อมูล "${sheetName}" และบันทึกเวลาอัปโหลดสำเร็จ`;
+                        resultMsg.style.display = 'block';
+                    }, 500);
+                }
+
+                function showError(err) {
+                    clearInterval(progressInterval);
+                    progressArea.style.display = 'none';
+                    resultMsg.className = "badge-status danger";
+                    resultMsg.innerHTML = `❌ ข้อผิดพลาดในการแยกวิเคราะห์ไฟล์: ${err.message}`;
+                    resultMsg.style.display = 'block';
+                }
+
+                if (isCSV) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        try {
+                            const text = evt.target.result;
+                            // Check for replacement character \uFFFD (garbled characters indicating UTF-8 decoding failure)
+                            if (text.includes('\uFFFD') || text.includes('')) {
+                                // Re-read as Windows-874 (TIS-620)
+                                const tisReader = new FileReader();
+                                tisReader.onload = function(tisEvt) {
+                                    try {
+                                        const tisText = tisEvt.target.result;
+                                        const rows = parseCSV(tisText);
+                                        parseAndProcess(rows, "CSV (TIS-620)");
+                                    } catch (err) {
+                                        showError(err);
+                                    }
+                                };
+                                tisReader.readAsText(file, 'windows-874');
+                            } else {
+                                const rows = parseCSV(text);
+                                parseAndProcess(rows, "CSV (UTF-8)");
+                            }
+                        } catch (err) {
+                            showError(err);
+                        }
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        try {
+                            const data = new Uint8Array(evt.target.result);
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            const firstSheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[firstSheetName];
+                            const rows = XLSX.utils.sheet_to_json(worksheet);
+                            parseAndProcess(rows, firstSheetName);
+                        } catch (err) {
+                            showError(err);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
             });
         }
 
@@ -2188,7 +2268,8 @@
         }
 
         // Process parsed JSON row data and replace rawTransactions!
-        function processParsedExcelData(rows, filename) {
+        function processParsedExcelData(rows, filename, uploadTimeStr) {
+            const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
             const keys = Object.keys(rows[0] || {});
             
             // Detect key mappings (English, Thai, substrings)
@@ -2241,7 +2322,8 @@
                     month: monthStr,
                     amount,
                     price,
-                    cost
+                    cost,
+                    uploadTime: uploadTime
                 });
             });
 
@@ -2759,7 +2841,7 @@
 
             info.textContent = `แสดง ${txs.length.toLocaleString()} รายการ (ตามตัวกรองของแท็บ "${prefix}")`;
 
-            const cols = ['ปี-เดือน','อำเภอ','หน่วยบริการ (Hospcode)','ชื่อสถานบริการ','รหัสยา (DID)','ชื่อยา','จำนวน','ราคา (฿)','ต้นทุน (฿)'];
+            const cols = ['ปี-เดือน','อำเภอ','หน่วยบริการ (Hospcode)','ชื่อสถานบริการ','รหัสยา (DID)','ชื่อยา','จำนวน','ราคา (฿)','ต้นทุน (฿)','เวลาที่นำเข้า'];
             let html = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
 
             const slice = txs.slice(0, 2000);   // cap at 2000 rows for DOM perf
@@ -2774,11 +2856,12 @@
                     <td>${(t.amount || 0).toLocaleString()}</td>
                     <td>${(t.price || 0).toLocaleString()}</td>
                     <td>${(t.cost || 0).toLocaleString()}</td>
+                    <td style="font-size:0.78rem;color:var(--text-muted);">${t.uploadTime || 'ข้อมูลจำลอง'}</td>
                 </tr>`;
             });
 
             if (txs.length > 2000) {
-                html += `<tr><td colspan="9" style="text-align:center;color:var(--c-yellow);padding:12px;">⚠️ แสดงเฉพาะ 2,000 แถวแรกจาก ${txs.length.toLocaleString()} รายการทั้งหมด — กด "ส่งออก CSV" เพื่อรับข้อมูลทั้งหมด</td></tr>`;
+                html += `<tr><td colspan="10" style="text-align:center;color:var(--c-yellow);padding:12px;">⚠️ แสดงเฉพาะ 2,000 แถวแรกจาก ${txs.length.toLocaleString()} รายการทั้งหมด — กด "ส่งออก CSV" เพื่อรับข้อมูลทั้งหมด</td></tr>`;
             }
 
             html += '</tbody>';
@@ -2789,9 +2872,9 @@
         function exportRawModalCSV() {
             const txs = _rawModalData;
             if (!txs.length) return;
-            let csv = 'ปี-เดือน,อำเภอ,รหัสหน่วยบริการ,ชื่อสถานบริการ,รหัสยา(DID),ชื่อยา,จำนวน,ราคา(บาท),ต้นทุน(บาท)\n';
+            let csv = 'ปี-เดือน,อำเภอ,รหัสหน่วยบริการ,ชื่อสถานบริการ,รหัสยา(DID),ชื่อยา,จำนวน,ราคา(บาท),ต้นทุน(บาท),เวลาที่นำเข้า\n';
             txs.forEach(t => {
-                csv += `"${t.month||''}","${t.amphurName||''}","${t.hospcode||''}","${(t.hospname||'').replace(/"/g,'""')}","${t.didstd||''}","${(t.dname||'').replace(/"/g,'""')}",${t.amount||0},${t.price||0},${t.cost||0}\n`;
+                csv += `"${t.month||''}","${t.amphurName||''}","${t.hospcode||''}","${(t.hospname||'').replace(/"/g,'""')}","${t.didstd||''}","${(t.dname||'').replace(/"/g,'""')}",${t.amount||0},${t.price||0},${t.cost||0},"${t.uploadTime || 'ข้อมูลจำลอง'}"\n`;
             });
             downloadCSV(`raw_data_export_${new Date().toISOString().slice(0,10)}.csv`, csv);
         }
