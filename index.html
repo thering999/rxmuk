@@ -1577,6 +1577,29 @@
         // Global Transaction Log
         let rawTransactions = [];
 
+        // Check if hospital is government (excl. clinics, private hospitals, private clinics)
+        function isGovtHospCode(hospcode) {
+            let name = "";
+            if (typeof MUKDAHAN_HOSPITALS !== 'undefined' && MUKDAHAN_HOSPITALS[hospcode]) {
+                name = MUKDAHAN_HOSPITALS[hospcode].hosname;
+            } else {
+                const match = baseHospitals.find(h => h.hospcode === hospcode);
+                if (match) name = match.name;
+            }
+            if (!name) return true;
+            
+            const n = name.toLowerCase();
+            if (n.includes('คลินิก') || 
+                n.includes('สหคลินิก') || 
+                n.includes('อินเตอร์เนชั่นแนล') || 
+                n.includes('เอกชน') || 
+                n.includes('บจก.') || 
+                n.includes('บริษัท')) {
+                return false;
+            }
+            return true;
+        }
+
         // Resolve Hospital Info from user's hospitals_db.js
         function getHospitalInfo(hospcode) {
             if (typeof MUKDAHAN_HOSPITALS !== 'undefined' && MUKDAHAN_HOSPITALS[hospcode]) {
@@ -1622,7 +1645,7 @@
             // Map mock hospital codes from MUKDAHAN_HOSPITALS keys!
             let hospKeys = [];
             if (typeof MUKDAHAN_HOSPITALS !== 'undefined') {
-                hospKeys = Object.keys(MUKDAHAN_HOSPITALS).slice(0, 25);
+                hospKeys = Object.keys(MUKDAHAN_HOSPITALS).filter(isGovtHospCode).slice(0, 25);
             }
             if (hospKeys.length === 0) {
                 hospKeys = baseHospitals.map(h => h.hospcode);
@@ -2149,9 +2172,15 @@
             const newTxs = [];
 
             rows.forEach(row => {
+                const hospcode = String(row[hospcodeKey] || 'Unknown').trim();
+                
+                // Exclude clinics and private hospitals completely
+                if (!isGovtHospCode(hospcode)) {
+                    return;
+                }
+
                 const didstd = row[didstdKey] || 'N/A';
                 const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
-                const hospcode = String(row[hospcodeKey] || 'Unknown').trim();
                 const amount = parseFloat(row[amountKey]) || 1;
                 const price = parseFloat(row[priceKey]) || (amount * 5);
                 const cost = parseFloat(row[costKey]) || (price * 0.7);
