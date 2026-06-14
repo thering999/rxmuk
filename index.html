@@ -997,11 +997,11 @@
                     <div class="login-form">
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label for="input-username">Username</label>
-                            <input type="text" id="input-username" placeholder="admin" value="admin">
+                            <input type="text" id="input-username" placeholder="ระบุ Username" value="">
                         </div>
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label for="input-password">Password</label>
-                            <input type="password" id="input-password" placeholder="••••••" value="123456">
+                            <input type="password" id="input-password" placeholder="••••••" value="">
                         </div>
                         <button class="btn btn-primary" id="btn-login-submit" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบ ⚡</button>
                     </div>
@@ -1127,15 +1127,31 @@
                         <span class="badge-status success" id="drug-data-source">แหล่งข้อมูล: Mock Database</span>
                     </div>
 
-                    <div class="filter-row">
-                        <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหารายการยาด้วยชื่อ หรือ รหัสยา...">
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                        <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหาเร็ว..." style="flex: 1 1 200px;">
                         
-                        <select id="drug-month-select" class="select-control">
-                            <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        <select id="drug-year-select" class="select-control" style="flex: 1 1 120px;">
+                            <option value="all">📅 ทุกปี</option>
                         </select>
 
-                        <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตัวกรอง</button>
-                        <button class="btn btn-primary" onclick="exportDrugCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออกข้อมูล (CSV)</button>
+                        <select id="drug-month-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">📅 ทุกช่วงเวลา/เดือน</option>
+                        </select>
+
+                        <select id="drug-district-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">🗺️ ทุกอำเภอ</option>
+                        </select>
+
+                        <select id="drug-hosp-select" class="select-control" style="flex: 1 1 180px;">
+                            <option value="all">🏥 ทุกหน่วยบริการ</option>
+                        </select>
+
+                        <select id="drug-item-select" class="select-control" style="flex: 1 1 180px;">
+                            <option value="all">💊 ทุกรายการยา</option>
+                        </select>
+
+                        <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportDrugCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
 
                     <div class="table-container">
@@ -1168,12 +1184,28 @@
         <section class="container">
             <div class="secured-content">
                 <div class="panel" style="margin-bottom: 20px;">
-                    <div class="filter-row" style="margin-bottom: 0;">
-                        <label for="district-month-select" style="font-weight: 600; color: #fff; margin-right: 10px;">📅 ตัวกรองประจำเดือนข้อมูล:</label>
-                        <select id="district-month-select" class="select-control" style="min-width: 250px;">
-                            <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 0;">
+                        <select id="district-year-select" class="select-control" style="flex: 1 1 120px;">
+                            <option value="all">📅 ทุกปี</option>
                         </select>
-                        <button class="btn btn-primary" onclick="exportDistrictCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3); margin-left: 10px;">📤 ส่งออกข้อมูล (CSV)</button>
+
+                        <select id="district-month-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">📅 ทุกช่วงเวลา/เดือน</option>
+                        </select>
+
+                        <select id="district-district-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">🗺️ ทุกอำเภอ</option>
+                        </select>
+
+                        <select id="district-hosp-select" class="select-control" style="flex: 1 1 180px;">
+                            <option value="all">🏥 ทุกหน่วยบริการ</option>
+                        </select>
+
+                        <select id="district-item-select" class="select-control" style="flex: 1 1 180px;">
+                            <option value="all">💊 ทุกรายการยา</option>
+                        </select>
+
+                        <button class="btn btn-primary" onclick="exportDistrictCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -1245,15 +1277,31 @@
                         <span class="badge-status success" id="hosp-data-source">แหล่งข้อมูล: Mock Database</span>
                     </div>
 
-                    <div class="filter-row">
-                        <input type="text" id="hosp-search" class="search-control" placeholder="🔍 พิมพ์ค้นหารหัสพยาบาล หรือ ชื่อสถานบริการ...">
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                        <input type="text" id="hosp-search" class="search-control" placeholder="🔍 ค้นหาเร็ว..." style="flex: 1 1 200px;">
                         
-                        <select id="hosp-month-select" class="select-control">
-                            <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        <select id="hosp-year-select" class="select-control" style="flex: 1 1 120px;">
+                            <option value="all">📅 ทุกปี</option>
                         </select>
 
-                        <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตัวกรอง</button>
-                        <button class="btn btn-primary" onclick="exportHospCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออกข้อมูล (CSV)</button>
+                        <select id="hosp-month-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">📅 ทุกช่วงเวลา/เดือน</option>
+                        </select>
+
+                        <select id="hosp-district-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">🗺️ ทุกอำเภอ</option>
+                        </select>
+
+                        <select id="hosp-hosp-select" class="select-control" style="flex: 1 1 180px;">
+                            <option value="all">🏥 ทุกหน่วยบริการ</option>
+                        </select>
+
+                        <select id="hosp-item-select" class="select-control" style="flex: 1 1 180px;">
+                            <option value="all">💊 ทุกรายการยา</option>
+                        </select>
+
+                        <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportHospCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
 
                     <div class="table-container">
@@ -1538,44 +1586,148 @@
         // Initialize transaction database
         rawTransactions = generateMockTransactions();
 
-        // Dynamically get unique months in database to populate dropdowns
-        function populateMonthSelectors() {
-            const months = [...new Set(rawTransactions.map(t => t.month))].sort();
-            const selectors = ['drug-month-select', 'district-month-select', 'hosp-month-select'];
+        // Dynamically get unique years, months, districts, hospitals, and drugs to populate all dropdowns
+        function populateAllFilterDropdowns() {
+            // Extract unique values
+            const years = [...new Set(rawTransactions.map(t => t.month ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
+            const months = [...new Set(rawTransactions.map(t => t.month))].filter(Boolean).sort();
             
-            selectors.forEach(id => {
-                const select = document.getElementById(id);
-                if (!select) return;
-                const currentVal = select.value;
-                select.innerHTML = '<option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>';
-                
-                months.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.textContent = getThaiMonthYearName(m);
-                    select.appendChild(opt);
-                });
+            // Districts
+            const districts = [...new Set(rawTransactions.map(t => JSON.stringify({ code: t.amphurCode, name: t.amphurName })))].map(str => JSON.parse(str)).sort((a, b) => a.code.localeCompare(b.code));
+            
+            // Hospitals
+            const hospitals = [];
+            const seenHosp = new Set();
+            rawTransactions.forEach(t => {
+                if (t.hospcode && !seenHosp.has(t.hospcode)) {
+                    seenHosp.add(t.hospcode);
+                    hospitals.push({ code: t.hospcode, name: t.hospname });
+                }
+            });
+            hospitals.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Drugs
+            const drugs = [];
+            const seenDrugs = new Set();
+            rawTransactions.forEach(t => {
+                if (t.didstd && !seenDrugs.has(t.didstd)) {
+                    seenDrugs.add(t.didstd);
+                    drugs.push({ code: t.didstd, name: t.dname });
+                }
+            });
+            drugs.sort((a, b) => a.name.localeCompare(b.name));
 
-                if (months.includes(currentVal)) {
-                    select.value = currentVal;
-                } else {
-                    select.value = 'all';
+            const suffixList = ['drug', 'district', 'hosp'];
+
+            suffixList.forEach(prefix => {
+                // Populate Years
+                const ySelect = document.getElementById(`${prefix}-year-select`);
+                if (ySelect) {
+                    const curr = ySelect.value;
+                    ySelect.innerHTML = '<option value="all">📅 ทุกปี</option>';
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = `ปี ${parseInt(y) + 543}`;
+                        ySelect.appendChild(opt);
+                    });
+                    ySelect.value = years.includes(curr) ? curr : 'all';
+                }
+
+                // Populate Months
+                const mSelect = document.getElementById(`${prefix}-month-select`);
+                if (mSelect) {
+                    const curr = mSelect.value;
+                    mSelect.innerHTML = '<option value="all">📅 ทุกช่วงเวลา/เดือน</option>';
+                    months.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = getThaiMonthYearName(m);
+                        mSelect.appendChild(opt);
+                    });
+                    mSelect.value = months.includes(curr) ? curr : 'all';
+                }
+
+                // Populate Districts
+                const dSelect = document.getElementById(`${prefix}-district-select`);
+                if (dSelect) {
+                    const curr = dSelect.value;
+                    dSelect.innerHTML = '<option value="all">🗺️ ทุกอำเภอ</option>';
+                    districts.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.code;
+                        opt.textContent = d.name;
+                        dSelect.appendChild(opt);
+                    });
+                    dSelect.value = districts.map(x => x.code).includes(curr) ? curr : 'all';
+                }
+
+                // Populate Hosp
+                const hSelect = document.getElementById(`${prefix}-hosp-select`);
+                if (hSelect) {
+                    const curr = hSelect.value;
+                    hSelect.innerHTML = '<option value="all">🏥 ทุกหน่วยบริการ</option>';
+                    hospitals.forEach(h => {
+                        const opt = document.createElement('option');
+                        opt.value = h.code;
+                        opt.textContent = `${h.code} - ${h.name}`;
+                        hSelect.appendChild(opt);
+                    });
+                    hSelect.value = hospitals.map(x => x.code).includes(curr) ? curr : 'all';
+                }
+
+                // Populate Items
+                const iSelect = document.getElementById(`${prefix}-item-select`);
+                if (iSelect) {
+                    const curr = iSelect.value;
+                    iSelect.innerHTML = '<option value="all">💊 ทุกรายการยา</option>';
+                    drugs.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.code;
+                        opt.textContent = d.name;
+                        iSelect.appendChild(opt);
+                    });
+                    iSelect.value = drugs.map(x => x.code).includes(curr) ? curr : 'all';
                 }
             });
         }
 
-        // Render functions for breakdown tables with month and search filters
+        // Shared dynamic filter resolver
+        function getFilteredTransactions(prefix) {
+            let txs = rawTransactions;
+            
+            const yearVal = document.getElementById(`${prefix}-year-select`) ? document.getElementById(`${prefix}-year-select`).value : 'all';
+            const monthVal = document.getElementById(`${prefix}-month-select`) ? document.getElementById(`${prefix}-month-select`).value : 'all';
+            const districtVal = document.getElementById(`${prefix}-district-select`) ? document.getElementById(`${prefix}-district-select`).value : 'all';
+            const hospVal = document.getElementById(`${prefix}-hosp-select`) ? document.getElementById(`${prefix}-hosp-select`).value : 'all';
+            const itemVal = document.getElementById(`${prefix}-item-select`) ? document.getElementById(`${prefix}-item-select`).value : 'all';
+
+            if (yearVal !== 'all') {
+                txs = txs.filter(t => t.month && t.month.startsWith(yearVal));
+            }
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+            if (districtVal !== 'all') {
+                txs = txs.filter(t => t.amphurCode === districtVal);
+            }
+            if (hospVal !== 'all') {
+                txs = txs.filter(t => t.hospcode === hospVal);
+            }
+            if (itemVal !== 'all') {
+                txs = txs.filter(t => t.didstd === itemVal);
+            }
+            return txs;
+        }
+
+        // Render functions for breakdown tables with comprehensive dynamic filters
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
             if(!body) return;
             const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
-            const monthVal = document.getElementById('drug-month-select').value;
 
             // Filter transactions
-            let txs = rawTransactions;
-            if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
-            }
+            let txs = getFilteredTransactions('drug');
 
             // Aggregate by Drug
             const drugAgg = {};
@@ -1625,20 +1777,20 @@
 
         function resetDrugTable() {
             document.getElementById('drug-breakdown-search').value = '';
+            document.getElementById('drug-year-select').value = 'all';
             document.getElementById('drug-month-select').value = 'all';
+            document.getElementById('drug-district-select').value = 'all';
+            document.getElementById('drug-hosp-select').value = 'all';
+            document.getElementById('drug-item-select').value = 'all';
             renderDrugBreakdown();
         }
 
         function renderDistrictBreakdown() {
             const body = document.getElementById('district-breakdown-body');
             if(!body) return;
-            const monthVal = document.getElementById('district-month-select').value;
 
             // Filter transactions
-            let txs = rawTransactions;
-            if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
-            }
+            let txs = getFilteredTransactions('district');
 
             // Aggregate by District
             const districtAgg = {};
@@ -1695,13 +1847,9 @@
             const body = document.getElementById('hosp-breakdown-body');
             if(!body) return;
             const searchVal = document.getElementById('hosp-search').value.toLowerCase();
-            const monthVal = document.getElementById('hosp-month-select').value;
 
             // Filter transactions
-            let txs = rawTransactions;
-            if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
-            }
+            let txs = getFilteredTransactions('hosp');
 
             // Aggregate by Hospital
             const hospAgg = {};
@@ -1746,7 +1894,11 @@
 
         function resetHospTable() {
             document.getElementById('hosp-search').value = '';
+            document.getElementById('hosp-year-select').value = 'all';
             document.getElementById('hosp-month-select').value = 'all';
+            document.getElementById('hosp-district-select').value = 'all';
+            document.getElementById('hosp-hosp-select').value = 'all';
+            document.getElementById('hosp-item-select').value = 'all';
             renderHospBreakdown();
         }
 
@@ -1922,13 +2074,17 @@
             // Update global transactions
             rawTransactions = newTxs;
 
-            // Re-populate monthly selectors
-            populateMonthSelectors();
+            // Re-populate all selectors
+            populateAllFilterDropdowns();
 
-            // Reset filters to All and re-render everything
-            document.getElementById('drug-month-select').value = 'all';
-            document.getElementById('district-month-select').value = 'all';
-            document.getElementById('hosp-month-select').value = 'all';
+            // Reset all filters to 'all'
+            const suffixList = ['drug', 'district', 'hosp'];
+            suffixList.forEach(prefix => {
+                ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
+                    const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                    if (el) el.value = 'all';
+                });
+            });
 
             document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
             document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
@@ -1955,11 +2111,11 @@
                         <div class="login-form">
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label>Username</label>
-                                <input type="text" class="input-lock-username" placeholder="admin" value="admin" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
+                                <input type="text" class="input-lock-username" placeholder="ระบุ Username" value="" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
                             </div>
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label>Password</label>
-                                <input type="password" class="input-lock-password" placeholder="••••••" value="123456" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
+                                <input type="password" class="input-lock-password" placeholder="••••••" value="" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
                             </div>
                             <button class="btn btn-primary btn-lock-login" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบเพื่อปลดล็อก ⚡</button>
                         </div>
@@ -1980,7 +2136,7 @@
                         sessionStorage.setItem('rxmuk_auth_user', 'admin');
                         checkAuthState();
                     } else {
-                        alert('Username หรือ Password ไม่ถูกต้อง! (คำแนะนำ: ใช้ admin / 123456)');
+                        alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                     }
                 });
             });
@@ -2046,7 +2202,7 @@
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
                 } else {
-                    alert('Username หรือ Password ไม่ถูกต้อง! (คำแนะนำ: ใช้ admin / 123456)');
+                    alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                 }
             });
         }
@@ -2064,15 +2220,25 @@
 
         // Initialize selectors & data
         rawTransactions = generateMockTransactions();
-        populateMonthSelectors();
+        populateAllFilterDropdowns();
         renderDrugBreakdown();
         renderDistrictBreakdown();
         renderHospBreakdown();
 
-        // Bind events to dropdown monthly filters
-        document.getElementById('drug-month-select').addEventListener('change', renderDrugBreakdown);
-        document.getElementById('district-month-select').addEventListener('change', renderDistrictBreakdown);
-        document.getElementById('hosp-month-select').addEventListener('change', renderHospBreakdown);
+        // Bind change events to all 5 dropdown filters for drug, district, and hosp
+        const suffixList = ['drug', 'district', 'hosp'];
+        suffixList.forEach(prefix => {
+            ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
+                const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                if (el) {
+                    el.addEventListener('change', () => {
+                        if (prefix === 'drug') renderDrugBreakdown();
+                        if (prefix === 'district') renderDistrictBreakdown();
+                        if (prefix === 'hosp') renderHospBreakdown();
+                    });
+                }
+            });
+        });
 
         // Bind input searches
         document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
@@ -2205,12 +2371,10 @@
 
         function exportDrugCSV() {
             const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
+            const yearVal = document.getElementById('drug-year-select').value;
             const monthVal = document.getElementById('drug-month-select').value;
 
-            let txs = rawTransactions;
-            if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
-            }
+            let txs = getFilteredTransactions('drug');
 
             const drugAgg = {};
             txs.forEach(t => {
@@ -2237,17 +2401,15 @@
                 csv += `"${d.didstd}","${d.name.replace(/"/g, '""')}",${d.amount},${d.price},${d.cost},"${d.abc}"\n`;
             });
 
-            const filename = `drug_breakdown_${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
+            const filename = `drug_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
             downloadCSV(filename, csv);
         }
 
         function exportDistrictCSV() {
+            const yearVal = document.getElementById('district-year-select').value;
             const monthVal = document.getElementById('district-month-select').value;
 
-            let txs = rawTransactions;
-            if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
-            }
+            let txs = getFilteredTransactions('district');
 
             const districtAgg = {};
             baseDistricts.forEach(d => {
@@ -2272,18 +2434,16 @@
                 csv += `"${d.code}","${d.name}",${d.count},${d.budget},"${percent}%"\n`;
             });
 
-            const filename = `district_breakdown_${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
+            const filename = `district_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
             downloadCSV(filename, csv);
         }
 
         function exportHospCSV() {
             const searchVal = document.getElementById('hosp-search').value.toLowerCase();
+            const yearVal = document.getElementById('hosp-year-select').value;
             const monthVal = document.getElementById('hosp-month-select').value;
 
-            let txs = rawTransactions;
-            if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
-            }
+            let txs = getFilteredTransactions('hosp');
 
             const hospAgg = {};
             txs.forEach(t => {
@@ -2306,7 +2466,7 @@
                 csv += `"${h.hospcode}","${h.name.replace(/"/g, '""')}",${h.count},${h.amount},${h.budget},"${h.qc}"\n`;
             });
 
-            const filename = `hospital_breakdown_${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
+            const filename = `hospital_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
             downloadCSV(filename, csv);
         }
 
