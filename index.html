@@ -1780,34 +1780,51 @@
             // Map mock hospital codes from MUKDAHAN_HOSPITALS keys!
             let hospKeys = [];
             if (typeof MUKDAHAN_HOSPITALS !== 'undefined') {
-                hospKeys = Object.keys(MUKDAHAN_HOSPITALS).filter(isGovtHospCode).slice(0, 25);
+                hospKeys = Object.keys(MUKDAHAN_HOSPITALS).filter(isGovtHospCode);
             }
             if (hospKeys.length === 0) {
                 hospKeys = baseHospitals.map(h => h.hospcode);
             }
 
-            baseDrugs.forEach((d, dIdx) => {
-                months.forEach((m, mIdx) => {
-                    const factor = 0.5 + (mIdx * 0.12) + ((dIdx % 3) * 0.15);
-                    const amount = Math.round((d.abc === 'A' ? 3000 : (d.abc === 'B' ? 1200 : 500)) * factor);
-                    const price = Math.round(amount * (d.abc === 'A' ? 25 : (d.abc === 'B' ? 8 : 1.5)));
-                    const cost = Math.round(price * 0.72);
+            hospKeys.forEach((hospcode, hIdx) => {
+                const hInfo = getHospitalInfo(hospcode);
+                
+                // Each hospital gets a subset of drugs
+                // For main hospitals (e.g. Mukdahan Hospital 10712, and district hospitals 11113-11118), assign most of the drugs (16 drugs)
+                // For sub-district health promotion hospitals (รพ.สต.), assign 6 drugs
+                const isMainHosp = hospcode === "10712" || (parseInt(hospcode) >= 11113 && parseInt(hospcode) <= 11118);
+                const drugCountToSelect = isMainHosp ? 18 : 6;
+                
+                // Select a deterministic set of drugs based on hospital index to keep mock data stable
+                const selectedDrugs = [];
+                for (let i = 0; i < drugCountToSelect; i++) {
+                    const drugIdx = (hIdx + i) % baseDrugs.length;
+                    selectedDrugs.push(baseDrugs[drugIdx]);
+                }
 
-                    const hospcode = hospKeys[dIdx % hospKeys.length];
-                    const hInfo = getHospitalInfo(hospcode);
+                selectedDrugs.forEach((d, dIdx) => {
+                    months.forEach((m, mIdx) => {
+                        // Main hospital has much higher volume
+                        const volumeMultiplier = isMainHosp ? (hospcode === "10712" ? 12 : 4) : 1;
+                        const factor = (0.6 + (mIdx * 0.08) + ((dIdx % 3) * 0.12)) * volumeMultiplier;
+                        
+                        const amount = Math.round((d.abc === 'A' ? 2500 : (d.abc === 'B' ? 1000 : 400)) * factor);
+                        const price = Math.round(amount * (d.abc === 'A' ? 25 : (d.abc === 'B' ? 8 : 1.5)));
+                        const cost = Math.round(price * 0.72);
 
-                    list.push({
-                        didstd: d.didstd,
-                        dname: d.name,
-                        hospcode: hospcode,
-                        hospname: hInfo.hosname,
-                        amphurCode: hInfo.amp_code,
-                        amphurName: hInfo.amp_name,
-                        date: `${m}-01`,
-                        month: m,
-                        amount: amount,
-                        price: price,
-                        cost: cost
+                        list.push({
+                            didstd: d.didstd,
+                            dname: d.name,
+                            hospcode: hospcode,
+                            hospname: hInfo.hosname,
+                            amphurCode: hInfo.amp_code,
+                            amphurName: hInfo.amp_name,
+                            date: `${m}-${String(1 + (dIdx % 28)).padStart(2, '0')}`, // Spread dates throughout the month
+                            month: m,
+                            amount: amount,
+                            price: price,
+                            cost: cost
+                        });
                     });
                 });
             });
