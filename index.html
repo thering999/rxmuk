@@ -125,9 +125,10 @@
         .nav-links a {
             text-decoration: none;
             color: var(--text-muted);
-            font-weight: 500;
-            font-size: 0.9rem;
+            font-weight: 600;
+            font-size: 0.95rem;
             transition: color 0.2s;
+            cursor: pointer;
         }
 
         .nav-links a:hover, .nav-links a.active {
@@ -165,7 +166,7 @@
 
         /* Hero Section */
         .hero {
-            padding: 80px 0 60px 0;
+            padding: 60px 0 40px 0;
             text-align: center;
             position: relative;
         }
@@ -181,29 +182,32 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .hero h1 {
-            font-size: 3.5rem;
+            font-size: 3.2rem;
             line-height: 1.1;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             background: linear-gradient(to right, #fff 40%, var(--c-primary) 70%, var(--c-secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .hero p {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             color: var(--text-muted);
             max-width: 640px;
-            margin: 0 auto 32px auto;
+            margin: 0 auto 24px auto;
         }
 
-        .hero-btns {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
+        /* Tabs Panels */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .btn {
@@ -309,9 +313,6 @@
             .workspace-layout {
                 grid-template-columns: 1fr;
             }
-            .hero h1 {
-                font-size: 2.5rem;
-            }
         }
 
         /* Panel Wrapper */
@@ -322,6 +323,7 @@
             padding: 28px;
             backdrop-filter: blur(12px);
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
         }
 
         .panel-header {
@@ -339,6 +341,46 @@
             gap: 10px;
         }
 
+        /* Controls / Filter Bar */
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-control {
+            flex-grow: 1;
+            min-width: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #fff;
+            font-family: var(--font-main);
+            outline: none;
+        }
+
+        .search-control:focus {
+            border-color: var(--c-primary);
+        }
+
+        .select-control {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #fff;
+            font-family: var(--font-main);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .select-control option {
+            background: var(--bg-color);
+            color: #fff;
+        }
+
         /* Table Monitor */
         .table-container {
             overflow-x: auto;
@@ -351,15 +393,15 @@
         }
 
         .data-table th, .data-table td {
-            padding: 12px 16px;
-            font-size: 0.85rem;
+            padding: 14px 16px;
+            font-size: 0.88rem;
             border-bottom: 1px solid var(--card-border);
         }
 
         .data-table th {
             color: var(--text-muted);
             font-weight: 600;
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.2);
         }
 
         .data-table tbody tr {
@@ -367,7 +409,7 @@
         }
 
         .data-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.03);
         }
 
         .badge-status {
@@ -384,11 +426,19 @@
         .badge-status.warning { background: rgba(245, 158, 11, 0.1); color: var(--c-yellow); }
         .badge-status.danger { background: rgba(239, 68, 68, 0.1); color: var(--c-red); }
 
+        .badge-class {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #fff;
+        }
+
         /* AI Chatbot Section */
         .chat-container {
             display: flex;
             flex-direction: column;
-            height: 480px;
+            height: 440px;
         }
 
         .chat-messages {
@@ -405,7 +455,7 @@
         }
 
         .chat-bubble {
-            max-width: 80%;
+            max-width: 85%;
             padding: 12px 16px;
             border-radius: 12px;
             font-size: 0.85rem;
@@ -475,8 +525,28 @@
             outline: none;
         }
 
-        .key-input:focus {
-            border-color: var(--c-primary);
+        /* Monthly Summary Chart Card */
+        .chart-wrapper {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            margin-bottom: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .svg-chart-container {
+            width: 100%;
+            height: 200px;
+            margin-top: 10px;
         }
 
         /* Tools Downloads Grid */
@@ -624,10 +694,11 @@
                 <div class="logo-icon">Rx</div>
                 RxMuk Control Center
             </a>
-            <ul class="nav-links">
-                <li><a href="#" class="active">แดชบอร์ด</a></li>
+            <ul class="nav-links" id="main-tabs">
+                <li><a class="tab-btn active" data-tab="dashboard">แดชบอร์ด</a></li>
+                <li><a class="tab-btn" data-tab="drugs">ตารางยา & แผนซื้อ</a></li>
+                <li><a class="tab-btn" data-tab="monthly">สรุปภาพรวมรายเดือน (Excel)</a></li>
                 <li><a href="#tools">เครื่องมือ</a></li>
-                <li><a href="https://thering999.github.io/hdc_opendata/" target="_blank">HDC Open Data</a></li>
             </ul>
             <div class="status-pill">
                 <span class="status-indicator"></span>
@@ -642,146 +713,339 @@
             <span style="color: var(--c-primary);">✨</span>
             <span>ระบบวิเคราะห์และคัดกรอง 43 แฟ้ม จังหวัดมุกดาหาร</span>
         </div>
-        <h1>ระบบควบคุมคุณภาพข้อมูลสุขภาพ 43 แฟ้ม</h1>
-        <p>ยกระดับคุณภาพข้อมูล จัดการ Schema ตรวจสอบความถูกต้องเวชภัณฑ์และการส่งข้อมูลของหน่วยบริการแบบเบ็ดเสร็จในแพลตฟอร์มเดียว</p>
-        <div class="hero-btns">
-            <a href="#ai-box" class="btn btn-primary">⚡ พูดคุยกับ RxMuk AI</a>
-            <a href="#tools" class="btn btn-secondary">📥 ดาวน์โหลดเครื่องมือ</a>
-        </div>
+        <h1 id="hero-title">ระบบควบคุมคุณภาพข้อมูลสุขภาพ 43 แฟ้ม</h1>
+        <p id="hero-subtitle">ยกระดับคุณภาพข้อมูล จัดการ Schema ตรวจสอบความถูกต้องเวชภัณฑ์และการส่งข้อมูลของหน่วยบริการแบบเบ็ดเสร็จในแพลตฟอร์มเดียว</p>
     </section>
 
-    <!-- Stats Grid -->
-    <section class="container grid-stats">
-        <div class="stat-card">
-            <div class="stat-icon blue">📊</div>
-            <div class="stat-info">
-                <h4>Import Engine Status</h4>
-                <p>Ready (v1.0.0)</p>
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+        <!-- Stats Grid -->
+        <section class="container grid-stats">
+            <div class="stat-card">
+                <div class="stat-icon blue">📊</div>
+                <div class="stat-info">
+                    <h4>Import Engine Status</h4>
+                    <p>Ready (v1.0.0)</p>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon purple">🔑</div>
-            <div class="stat-info">
-                <h4>Data Checking Rules</h4>
-                <p>43 Schemas</p>
+            <div class="stat-card">
+                <div class="stat-icon purple">🔑</div>
+                <div class="stat-info">
+                    <h4>Data Checking Rules</h4>
+                    <p>43 Schemas</p>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon green">🏥</div>
-            <div class="stat-info">
-                <h4>Verified Tables</h4>
-                <p>32 Tables</p>
+            <div class="stat-card">
+                <div class="stat-icon green">🏥</div>
+                <div class="stat-info">
+                    <h4>Verified Tables</h4>
+                    <p>32 Tables</p>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon yellow">🤖</div>
-            <div class="stat-info">
-                <h4>AI Audit Model</h4>
-                <p>Gemini Online</p>
+            <div class="stat-card">
+                <div class="stat-icon yellow">🤖</div>
+                <div class="stat-info">
+                    <h4>AI Audit Model</h4>
+                    <p>Gemini Online</p>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Workspace Layout -->
-    <section class="container workspace-layout">
-        
-        <!-- Left Panel: Table Status Monitor -->
-        <div class="panel">
-            <div class="panel-header">
-                <h3 class="panel-title">
-                    <span>🏥</span>
-                    สถานะการตรวจสอบโครงสร้างตารางข้อมูล
-                </h3>
-                <span class="badge-status success">อัปเดตเรียลไทม์</span>
-            </div>
-            <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ชื่อตาราง (Table Name)</th>
-                            <th>คำอธิบายข้อมูล</th>
-                            <th>สถานะดักจับข้อผิดพลาด</th>
-                            <th>เวอร์ชัน Schema</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>s_tmp_drug_opd</strong></td>
-                            <td>ข้อมูลการจ่ายยาผู้ป่วยนอกชั่วคราว</td>
-                            <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
-                            <td>v2.4.1</td>
-                        </tr>
-                        <tr>
-                            <td><strong>s_kpi_cvd_risk</strong></td>
-                            <td>คัดกรองความเสี่ยงโรคหัวใจ CVD</td>
-                            <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
-                            <td>v1.2.0</td>
-                        </tr>
-                        <tr>
-                            <td><strong>s_pm25_disease</strong></td>
-                            <td>ผู้ป่วยรับผลกระทบฝุ่นละออง PM2.5</td>
-                            <td><span class="badge-status warning">รอปรับปรุงเป้าหมาย</span></td>
-                            <td>v1.0.1</td>
-                        </tr>
-                        <tr>
-                            <td><strong>s_death28pa</strong></td>
-                            <td>สถิติการตายทารกแรกเกิด ≤ 28 วัน</td>
-                            <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
-                            <td>v2.0.0</td>
-                        </tr>
-                        <tr>
-                            <td><strong>t_drug_interaction</strong></td>
-                            <td>ข้อมูลปฏิกิริยาระหว่างยา (Drug Interaction)</td>
-                            <td><span class="badge-status success">โหลดแล้ว 100%</span></td>
-                            <td>v3.1.0</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div style="margin-top: 20px; background: rgba(0, 242, 254, 0.03); border: 1px solid rgba(0, 242, 254, 0.1); border-radius: 8px; padding: 15px; font-size: 0.85rem;">
-                <strong>💡 ข้อกำหนดการตรวจสอบ Schema</strong>:
-                ระบบจะวิเคราะห์ความผิดพลาดในการส่งข้อมูลและการบันทึกตารางจากระบบนำเข้า (Import Engine) เพื่อแก้ไขปัญหารหัสพยาบาลรหัสมาตรฐานตกหล่นและแจ้งเตือนวิกฤตคุณภาพข้อมูลทันที
-            </div>
-        </div>
-
-        <!-- Right Panel: Client-Side AI Assistant -->
-        <div class="panel" id="ai-box">
-            <div class="panel-header">
-                <h3 class="panel-title">
-                    <span>🤖</span>
-                    RxMuk AI Diagnostic (ผู้ช่วยประเมินผล)
-                </h3>
-                <span class="badge-status success">AI Online</span>
+        <!-- Workspace Layout -->
+        <section class="container workspace-layout">
+            <!-- Left Panel: Table Status Monitor -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <span>🏥</span>
+                        สถานะการตรวจสอบโครงสร้างตารางข้อมูล
+                    </h3>
+                    <span class="badge-status success">อัปเดตเรียลไทม์</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ชื่อตาราง (Table Name)</th>
+                                <th>คำอธิบายข้อมูล</th>
+                                <th>สถานะดักจับข้อผิดพลาด</th>
+                                <th>เวอร์ชัน Schema</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>s_tmp_drug_opd</strong></td>
+                                <td>ข้อมูลการจ่ายยาผู้ป่วยนอกชั่วคราว</td>
+                                <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
+                                <td>v2.4.1</td>
+                            </tr>
+                            <tr>
+                                <td><strong>s_kpi_cvd_risk</strong></td>
+                                <td>คัดกรองความเสี่ยงโรคหัวใจ CVD</td>
+                                <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
+                                <td>v1.2.0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>s_pm25_disease</strong></td>
+                                <td>ผู้ป่วยรับผลกระทบฝุ่นละออง PM2.5</td>
+                                <td><span class="badge-status warning">รอปรับปรุงเป้าหมาย</span></td>
+                                <td>v1.0.1</td>
+                            </tr>
+                            <tr>
+                                <td><strong>s_death28pa</strong></td>
+                                <td>สถิติการตายทารกแรกเกิด ≤ 28 วัน</td>
+                                <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
+                                <td>v2.0.0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>t_drug_interaction</strong></td>
+                                <td>ข้อมูลปฏิกิริยาระหว่างยา (Drug Interaction)</td>
+                                <td><span class="badge-status success">โหลดแล้ว 100%</span></td>
+                                <td>v3.1.0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 20px; background: rgba(0, 242, 254, 0.03); border: 1px solid rgba(0, 242, 254, 0.1); border-radius: 8px; padding: 15px; font-size: 0.85rem;">
+                    <strong>💡 ข้อกำหนดการตรวจสอบ Schema</strong>:
+                    ระบบจะวิเคราะห์ความผิดพลาดในการส่งข้อมูลและการบันทึกตารางจากระบบนำเข้า (Import Engine) เพื่อแก้ไขปัญหารหัสพยาบาลรหัสมาตรฐานตกหล่นและแจ้งเตือนวิกฤตคุณภาพข้อมูลทันที
+                </div>
             </div>
 
-            <!-- API Key Configuration bar -->
-            <div class="config-bar">
-                <span>🔑 <strong>ตั้งค่า Gemini API Key</strong></span>
-                <input type="password" id="gemini-key" class="key-input" placeholder="ใส่คีย์ที่นี่..." title="ข้อมูลจะถูกเก็บใน Browser ของคุณเท่านั้น">
-            </div>
+            <!-- Right Panel: Client-Side AI Assistant -->
+            <div class="panel" id="ai-box">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <span>🤖</span>
+                        RxMuk AI Diagnostic (ผู้ช่วยประเมินผล)
+                    </h3>
+                    <span class="badge-status success">AI Online</span>
+                </div>
 
-            <div class="chat-container">
-                <div class="chat-messages" id="chat-messages">
-                    <div class="chat-bubble bot">
-                        สวัสดีครับ! ผมคือ <strong>RxMuk AI Assistant</strong> ผู้ช่วยวิเคราะห์ความผิดปกติของโครงสร้างตารางข้อมูล 43 แฟ้ม และตรวจสอบสิทธิ์ความถูกต้องของระบบนำเข้าเวชภัณฑ์ จ.มุกดาหาร
-                        <br><br>
-                        คุณสามารถพิมพ์ถามคำถามเพื่อความช่วยเหลือเชิงเทคนิค เช่น:
-                        <br>
-                        • <em>"ตาราง s_tmp_drug_opd ฟิลด์อะไรต้องกรอกบ้าง"</em>
-                        <br>
-                        • <em>"ช่วยเขียนคำสั่ง SQL เพื่อลบข้อมูลที่ซ้ำกันหน่อย"</em>
-                        <br>
-                        • <em>"ขั้นตอนตรวจคุณภาพข้อมูล 43 แฟ้มเบื้องต้น"</em>
+                <!-- API Key Configuration bar -->
+                <div class="config-bar">
+                    <span>🔑 <strong>ตั้งค่า Gemini API Key</strong></span>
+                    <input type="password" id="gemini-key" class="key-input" placeholder="ใส่คีย์ที่นี่..." title="ข้อมูลจะถูกเก็บใน Browser ของคุณเท่านั้น">
+                </div>
+
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-bubble bot">
+                            สวัสดีครับ! ผมคือ <strong>RxMuk AI Assistant</strong> ผู้ช่วยวิเคราะห์ความผิดปกติของโครงสร้างตารางข้อมูล 43 แฟ้ม และตรวจสอบสิทธิ์ความถูกต้องของระบบนำเข้าเวชภัณฑ์ จ.มุกดาหาร
+                            <br><br>
+                            คุณสามารถพิมพ์ถามคำถามเพื่อความช่วยเหลือเชิงเทคนิค เช่น:
+                            <br>
+                            • <em>"ตาราง s_tmp_drug_opd ฟิลด์อะไรต้องกรอกบ้าง"</em>
+                            <br>
+                            • <em>"ช่วยเขียนคำสั่ง SQL เพื่อลบข้อมูลที่ซ้ำกันหน่อย"</em>
+                            <br>
+                            • <em>"ขั้นตอนตรวจคุณภาพข้อมูล 43 แฟ้มเบื้องต้น"</em>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input" class="chat-input" placeholder="พิมพ์ข้อความของคุณที่นี่..." autocomplete="off">
+                        <button class="btn btn-primary" id="chat-send" style="padding: 10px 20px;">ส่ง ⚡</button>
                     </div>
                 </div>
-                <div class="chat-input-area">
-                    <input type="text" id="chat-input" class="chat-input" placeholder="พิมพ์ข้อความของคุณที่นี่..." autocomplete="off">
-                    <button class="btn btn-primary" id="chat-send" style="padding: 10px 20px;">ส่ง ⚡</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- TAB 2: DRUGS TABLE & PURCHASING -->
+    <div id="tab-drugs" class="tab-content">
+        <section class="container">
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <span>📦</span>
+                        บัญชีรายการตารางยา & แผนซื้อเวชภัณฑ์
+                    </h3>
+                    <span class="badge-status success">ระบบสืบค้นคลัง</span>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-row">
+                    <input type="text" id="drug-search" class="search-control" placeholder="🔍 ค้นหาด้วยรหัสยา หรือ ชื่อยา...">
+                    <select id="filter-abc" class="select-control">
+                        <option value="ALL">กลุ่ม ABC: ทั้งหมด</option>
+                        <option value="A">กลุ่ม A (มูลค่าสูงมาก)</option>
+                        <option value="B">กลุ่ม B (มูลค่าปานกลาง)</option>
+                        <option value="C">กลุ่ม C (มูลค่าทั่วไป)</option>
+                    </select>
+                    <select id="filter-ven" class="select-control">
+                        <option value="ALL">กลุ่ม VEN: ทั้งหมด</option>
+                        <option value="V">กลุ่ม V (Vital - ยาช่วยชีวิต)</option>
+                        <option value="E">กลุ่ม E (Essential - ยาจำเป็น)</option>
+                        <option value="N">กลุ่ม N (Non-essential - ยาทั่วไป)</option>
+                    </select>
+                </div>
+
+                <!-- Table -->
+                <div class="table-container">
+                    <table class="data-table" id="drugs-data-table">
+                        <thead>
+                            <tr>
+                                <th>รหัสยา (Drug Code)</th>
+                                <th>ชื่อสามัญทางยา (Generic Name)</th>
+                                <th>ยอดคงคลังปัจจุบัน</th>
+                                <th>เป้าหมายแผนซื้อ (ปีงบประมาณ 2569)</th>
+                                <th>ประมาณการงบประมาณ</th>
+                                <th>กลุ่ม ABC</th>
+                                <th>กลุ่ม VEN</th>
+                                <th>การจัดระดับสต็อก</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drugs-table-body">
+                            <!-- JS will populate -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
+        </section>
+    </div>
 
-    </section>
+    <!-- TAB 3: MONTHLY EXCEL IMPORT SUMMARY -->
+    <div id="tab-monthly" class="tab-content">
+        <section class="container">
+            <!-- Chart view -->
+            <div class="chart-wrapper">
+                <div class="chart-title">
+                    <span>📈</span>
+                    สถิติแนวโน้มการนำเข้าข้อมูลจำแนกรายเดือน (ยอดนำเข้ารวมสะสมปีงบประมาณ 2569)
+                </div>
+                
+                <!-- Simple SVG Bar Chart -->
+                <svg viewBox="0 0 800 200" class="svg-chart-container">
+                    <!-- X axis line -->
+                    <line x1="50" y1="170" x2="750" y2="170" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                    <!-- Bars & Labels -->
+                    <!-- Oct (Value: 124,500 -> Height: 124px) -->
+                    <rect x="90" y="46" width="40" height="124" fill="url(#blue-grad)" rx="4" />
+                    <text x="110" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ต.ค. 68</text>
+                    <text x="110" y="36" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">124.5K</text>
+                    
+                    <!-- Nov (Value: 98,200 -> Height: 98px) -->
+                    <rect x="200" y="72" width="40" height="98" fill="url(#blue-grad)" rx="4" />
+                    <text x="220" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">พ.ย. 68</text>
+                    <text x="220" y="62" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">98.2K</text>
+                    
+                    <!-- Dec (Value: 145,000 -> Height: 145px) -->
+                    <rect x="310" y="25" width="40" height="145" fill="url(#purple-grad)" rx="4" />
+                    <text x="330" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ธ.ค. 68</text>
+                    <text x="330" y="15" fill="var(--c-secondary)" font-size="11" font-weight="bold" text-anchor="middle">145K</text>
+                    
+                    <!-- Jan (Value: 112,000 -> Height: 112px) -->
+                    <rect x="420" y="58" width="40" height="112" fill="url(#blue-grad)" rx="4" />
+                    <text x="440" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ม.ค. 69</text>
+                    <text x="440" y="48" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">112K</text>
+                    
+                    <!-- Feb (Value: 85,600 -> Height: 85px) -->
+                    <rect x="530" y="85" width="40" height="85" fill="url(#blue-grad)" rx="4" />
+                    <text x="550" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">ก.พ. 69</text>
+                    <text x="550" y="75" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">85.6K</text>
+                    
+                    <!-- Mar (Value: 105,400 -> Height: 105px) -->
+                    <rect x="640" y="65" width="40" height="105" fill="url(#blue-grad)" rx="4" />
+                    <text x="660" y="190" fill="var(--text-muted)" font-size="12" text-anchor="middle">มี.ค. 69</text>
+                    <text x="660" y="55" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">105.4K</text>
+
+                    <!-- Gradients declarations -->
+                    <defs>
+                        <linearGradient id="blue-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#00f2fe" />
+                            <stop offset="100%" stop-color="#4facfe" stop-opacity="0.2" />
+                        </linearGradient>
+                        <linearGradient id="purple-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#c084fc" />
+                            <stop offset="100%" stop-color="#7f00ff" stop-opacity="0.2" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">
+                        <span>📊</span>
+                        สรุปภาพรวมรายเดือนจากการนำเข้าไฟล์ Excel สิทธิเวชภัณฑ์
+                    </h3>
+                    <span class="badge-status success">ข้อมูลตรวจสอบแล้ว</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>เดือนนำเข้า</th>
+                                <th>จำนวนไฟล์ Excel ที่นำเข้า</th>
+                                <th>จำนวนแถวข้อมูลสะสม (แถว)</th>
+                                <th>ข้อผิดพลาดที่สแกนพบ (Error/Warning)</th>
+                                <th>ยอดแผนงบประมาณซื้อรวม</th>
+                                <th>คุณภาพข้อมูลของเดือน</th>
+                                <th>สถานะรายงาน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>มีนาคม 2569</strong></td>
+                                <td>4 ไฟล์</td>
+                                <td>105,400 รายการ</td>
+                                <td><span style="color: var(--c-yellow); font-weight: 600;">120 รายการ</span></td>
+                                <td>290,000 บาท</td>
+                                <td>99.88%</td>
+                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>กุมภาพันธ์ 2569</strong></td>
+                                <td>3 ไฟล์</td>
+                                <td>85,600 รายการ</td>
+                                <td><span style="color: var(--c-green); font-weight: 600;">95 รายการ</span></td>
+                                <td>240,000 บาท</td>
+                                <td>99.89%</td>
+                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>มกราคม 2569</strong></td>
+                                <td>5 ไฟล์</td>
+                                <td>112,000 รายการ</td>
+                                <td><span style="color: var(--c-yellow); font-weight: 600;">110 รายการ</span></td>
+                                <td>320,000 บาท</td>
+                                <td>99.90%</td>
+                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>ธันวาคม 2568</strong></td>
+                                <td>6 ไฟล์</td>
+                                <td>145,000 รายการ</td>
+                                <td><span style="color: var(--c-red); font-weight: 600;">310 รายการ</span></td>
+                                <td>410,000 บาท</td>
+                                <td>99.78%</td>
+                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>พฤศจิกายน 2568</strong></td>
+                                <td>4 ไฟล์</td>
+                                <td>98,200 รายการ</td>
+                                <td><span style="color: var(--c-yellow); font-weight: 600;">180 รายการ</span></td>
+                                <td>280,000 บาท</td>
+                                <td>99.81%</td>
+                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>ตุลาคม 2568</strong></td>
+                                <td>5 ไฟล์</td>
+                                <td>124,500 รายการ</td>
+                                <td><span style="color: var(--c-red); font-weight: 600;">240 รายการ</span></td>
+                                <td>350,000 บาท</td>
+                                <td>99.80%</td>
+                                <td><span class="badge-status success">ตรวจสอบสำเร็จ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <!-- Tools Downloads Section -->
     <section class="tools-section" id="tools">
@@ -841,6 +1105,116 @@
 
     <!-- JS Logic -->
     <script>
+        // Tab switching logic
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const heroTitle = document.getElementById('hero-title');
+        const heroSubtitle = document.getElementById('hero-subtitle');
+
+        const tabDetails = {
+            dashboard: {
+                title: "ระบบควบคุมคุณภาพข้อมูลสุขภาพ 43 แฟ้ม",
+                subtitle: "ยกระดับคุณภาพข้อมูล จัดการ Schema ตรวจสอบความถูกต้องเวชภัณฑ์และการส่งข้อมูลของหน่วยบริการแบบเบ็ดเสร็จในแพลตฟอร์มเดียว"
+            },
+            drugs: {
+                title: "ตารางยา & แผนจัดซื้อเวชภัณฑ์ร่วม",
+                subtitle: "ตรวจสอบรายการคลังยาปัจจุบัน, รหัสยามาตรฐาน 24 หลัก, อัตราคงคลัง และตัวชี้วัดการจัดกลุ่มยาสำหรับโรงพยาบาล"
+            },
+            monthly: {
+                title: "สรุปผลนำเข้าเวชภัณฑ์รายเดือนจาก Excel",
+                subtitle: "วิเคราะห์ข้อมูลสถิติประวัติการนำเข้าไฟล์ข้อมูลแผนซื้อและยอดการจ่ายยาแบบประมวลสรุปสะสมแยกรายเดือน"
+            }
+        };
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.dataset.tab;
+                if (!targetTab) return; // skip links like #tools
+
+                // Update active state in nav
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Show target content
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(`tab-${targetTab}`).classList.add('active');
+
+                // Update hero text
+                if (tabDetails[targetTab]) {
+                    heroTitle.textContent = tabDetails[targetTab].title;
+                    heroSubtitle.textContent = tabDetails[targetTab].subtitle;
+                }
+            });
+        });
+
+        // Mock Drug Data
+        const mockDrugs = [
+            { code: "10000001", name: "Amoxicillin 500mg capsule", stock: 12500, plan: 50000, budget: 150000, abc: "C", ven: "E" },
+            { code: "10000002", name: "Paracetamol 500mg tablet", stock: 85000, plan: 200000, budget: 60000, abc: "C", ven: "N" },
+            { code: "10000003", name: "Atorvastatin 40mg tablet", stock: 8200, plan: 30000, budget: 450000, abc: "A", ven: "E" },
+            { code: "10000004", name: "Metformin 500mg tablet", stock: 45000, plan: 120000, budget: 180000, abc: "B", ven: "E" },
+            { code: "10000005", name: "Insulin Glargine 100 U/ml inj", stock: 450, plan: 2000, budget: 680000, abc: "A", ven: "V" },
+            { code: "10000006", name: "Losartan 50mg tablet", stock: 18000, plan: 60000, budget: 120000, abc: "B", ven: "E" },
+            { code: "10000007", name: "Ibuprofen 400mg tablet", stock: 14200, plan: 40000, budget: 88000, abc: "C", ven: "E" },
+            { code: "10000008", name: "Adrenaline 1mg/ml injection", stock: 120, plan: 500, budget: 25000, abc: "C", ven: "V" }
+        ];
+
+        // Render Drug Table function
+        function renderDrugsTable() {
+            const tableBody = document.getElementById('drugs-table-body');
+            const searchVal = document.getElementById('drug-search').value.toLowerCase();
+            const filterAbcVal = document.getElementById('filter-abc').value;
+            const filterVenVal = document.getElementById('filter-ven').value;
+
+            let filtered = mockDrugs.filter(d => {
+                const matchesSearch = d.code.includes(searchVal) || d.name.toLowerCase().includes(searchVal);
+                const matchesAbc = filterAbcVal === 'ALL' || d.abc === filterAbcVal;
+                const matchesVen = filterVenVal === 'ALL' || d.ven === filterVenVal;
+                return matchesSearch && matchesAbc && matchesVen;
+            });
+
+            tableBody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;">📭 ไม่พบข้อมูลยาทีค้นหา</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(d => {
+                const tr = document.createElement('tr');
+                
+                const abcColor = d.abc === 'A' ? '#ef4444' : (d.abc === 'B' ? '#f59e0b' : '#10b981');
+                const venColor = d.ven === 'V' ? '#ec4899' : (d.ven === 'E' ? '#3b82f6' : '#6b7280');
+                
+                const stockStatus = d.stock < (d.plan * 0.1) ? 
+                    `<span class="badge-status danger">🚨 สต็อกวิกฤต (ต่ำมาก)</span>` : 
+                    `<span class="badge-status success">🟢 สต็อกเพียงพอ</span>`;
+
+                tr.innerHTML = `
+                    <td><code>${d.code}</code></td>
+                    <td><strong>${d.name}</strong></td>
+                    <td>${d.stock.toLocaleString()}</td>
+                    <td>${d.plan.toLocaleString()}</td>
+                    <td>${d.budget.toLocaleString()} บาท</td>
+                    <td><span class="badge-class" style="background: ${abcColor}">${d.abc}</span></td>
+                    <td><span class="badge-class" style="background: ${venColor}">${d.ven}</span></td>
+                    <td>${stockStatus}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Bind drug filters
+        document.getElementById('drug-search').addEventListener('input', renderDrugsTable);
+        document.getElementById('filter-abc').addEventListener('change', renderDrugsTable);
+        document.getElementById('filter-ven').addEventListener('change', renderDrugsTable);
+
+        // Initial render
+        renderDrugsTable();
+
+        // AI Chatbot Logic
         const chatMessages = document.getElementById('chat-messages');
         const chatInput = document.getElementById('chat-input');
         const chatSend = document.getElementById('chat-send');
