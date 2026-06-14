@@ -1,0 +1,25 @@
+services:
+  rxmuk_app:
+    container_name: rxmuk_app
+    image: certificate-php-docker:latest
+    restart: unless-stopped
+    ports:
+      - "8866:80"
+    command: /bin/bash -c "sed -i 's/Listen 80/Listen 0.0.0.0:80/g' /etc/apache2/ports.conf && apache2-foreground"
+    environment:   
+      DB_HOST: mysql-docker
+      DB_USER: root
+      DB_PASS: "Ssj4900036!@#"
+      DB_NAME: rxmuk_db
+      TZ: Asia/Bangkok
+    volumes:
+      - ./:/var/www/html:Z
+    networks:
+      - certificate-network
+      - certificate_certnet
+
+networks:
+  certificate-network:
+    external: true
+  certificate_certnet:
+    external: true

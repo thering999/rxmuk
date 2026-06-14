@@ -1,0 +1,98 @@
+# Development environment with enhanced features
+version: '3.8'
+
+services:
+  # MySQL Database with debugging
+  db:
+    image: mysql:5.7
+    container_name: rxmuk_db_dev
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: rxmuk_db
+      MYSQL_USER: rxmuk_user
+      MYSQL_PASSWORD: rxmuk_pass123
+    volumes:
+      - db_data_dev:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - rxmuk_network
+    command: --default-authentication-plugin=mysql_native_password --query-cache-type=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 5
+
+  # PHP Apache Application with development tools
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rxmuk_app_dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: rxmuk_db_dev
+      DB_NAME: rxmuk_db
+      DB_USER: rxmuk_user
+      DB_PASSWORD: rxmuk_pass123
+      DB_PORT: 3306
+      APP_ENV: development
+      APP_DEBUG: "true"
+      PHP_DISPLAY_ERRORS: "1"
+      PHP_DISPLAY_STARTUP_ERRORS: "1"
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "80:80"
+    networks:
+      - rxmuk_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PHPMyAdmin - Database GUI
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: rxmuk_phpmyadmin_dev
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: rxmuk_db_dev
+      PMA_USER: rxmuk_user
+      PMA_PASSWORD: rxmuk_pass123
+      PMA_ROOT_PASSWORD: rootpass123
+    ports:
+      - "8080:80"
+    networks:
+      - rxmuk_network
+
+  # Development Tools (Optional)
+  # Uncomment to use
+  # shell:
+  #   image: alpine:latest
+  #   container_name: rxmuk_shell
+  #   volumes:
+  #     - .:/var/www/html
+  #   networks:
+  #     - rxmuk_network
+  #   stdin_open: true
+  #   tty: true
+
+volumes:
+  db_data_dev:
+    driver: local
+
+networks:
+  rxmuk_network:
+    driver: bridge
+
+# Usage:
+# docker-compose -f docker-compose.dev.yml up -d
+# docker-compose -f docker-compose.dev.yml logs -f
+# docker-compose -f docker-compose.dev.yml down
