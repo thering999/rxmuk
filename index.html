@@ -1043,6 +1043,13 @@
                             <input type="file" id="excel-file-input" class="file-input" accept=".xlsx, .xls, .csv">
                         </div>
 
+                        <!-- Clear Data Utility -->
+                        <div style="margin-top: 15px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+                            <button id="btn-clear-data" class="btn" style="background: var(--c-red); border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; color: white; transition: opacity 0.2s;">
+                                🗑️ ล้างข้อมูลระบบทั้งหมด (Clear All Data)
+                            </button>
+                        </div>
+
                         <!-- Progress Bar & Success message -->
                         <div id="import-progress-area" style="display: none; margin-bottom: 20px;">
                             <h4 style="margin-bottom: 8px; font-size: 0.9rem;">กำลังประมวลผลไฟล์...</h4>
@@ -2107,6 +2114,41 @@
                 };
 
                 reader.readAsArrayBuffer(file);
+            });
+        }
+
+        const btnClearData = document.getElementById('btn-clear-data');
+        if (btnClearData) {
+            btnClearData.addEventListener('click', () => {
+                if (confirm('คุณต้องการล้างข้อมูลสถิติและเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?\n(ข้อมูลจำลองทั้งหมดจะถูกลบออกด้วยเช่นกัน)')) {
+                    rawTransactions = [];
+                    
+                    // Reset all filters to 'all'
+                    const suffixList = ['drug', 'district', 'hosp'];
+                    suffixList.forEach(prefix => {
+                        ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
+                            const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                            if (el) el.value = 'all';
+                        });
+                    });
+
+                    // Re-populate all dropdown selectors (which will now be empty/blank)
+                    populateAllFilterDropdowns();
+
+                    // Update data source text labels
+                    document.getElementById('drug-data-source').textContent = 'แหล่งข้อมูล: ระบบว่างเปล่า (รอการนำเข้า)';
+                    document.getElementById('hosp-data-source').textContent = 'แหล่งข้อมูล: ระบบว่างเปล่า (รอการนำเข้า)';
+
+                    // Render empty/blank tables
+                    renderDrugBreakdown();
+                    renderDistrictBreakdown();
+                    renderHospBreakdown();
+
+                    // Show success message
+                    resultMsg.className = "badge-status success";
+                    resultMsg.innerHTML = `🗑️ ล้างข้อมูลในหน่วยความจำเรียบร้อยแล้ว ระบบว่างเปล่าและพร้อมสำหรับการนำเข้าตาราง Excel ชุดใหม่ตั้งแต่ 1 ต.ค. 2568`;
+                    resultMsg.style.display = 'block';
+                }
             });
         }
 
