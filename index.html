@@ -2293,7 +2293,15 @@
             const newTxs = [];
 
             rows.forEach(row => {
-                const hospcode = String(row[hospcodeKey] || 'Unknown').trim();
+                let hospcode = String(row[hospcodeKey] || 'Unknown').trim();
+                if (hospcode !== 'Unknown') {
+                    if (hospcode.includes('.')) {
+                        hospcode = hospcode.split('.')[0];
+                    }
+                    if (hospcode.length === 4) {
+                        hospcode = '0' + hospcode;
+                    }
+                }
                 
                 // Exclude clinics and private hospitals completely
                 if (!isGovtHospCode(hospcode)) {
