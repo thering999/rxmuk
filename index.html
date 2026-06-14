@@ -2710,6 +2710,44 @@
         renderDistrictBreakdown();
         renderHospBreakdown();
 
+        // Auto-load real CSV data if present in uploads/s_tmp_drug_opd.csv on page load
+        fetch('uploads/s_tmp_drug_opd.csv')
+            .then(res => {
+                if (res.ok) return res.arrayBuffer();
+                throw new Error('No uploaded real CSV file found on server path.');
+            })
+            .then(arrayBuffer => {
+                let text = '';
+                try {
+                    const decoder = new TextDecoder('utf-8', { fatal: true });
+                    text = decoder.decode(arrayBuffer);
+                } catch (utf8Err) {
+                    const decoder874 = new TextDecoder('windows-874');
+                    text = decoder874.decode(arrayBuffer);
+                }
+                const rows = parseCSV(text);
+                if (rows && rows.length > 0) {
+                    console.log('Successfully auto-loaded real CSV data:', rows.length, 'rows');
+                    processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
+                    
+                    // Add record to import history table
+                    const newTr = document.createElement('tr');
+                    newTr.innerHTML = `
+                        <td>${new Date().toLocaleString('th-TH', {hour12: false})}</td>
+                        <td><code>uploads/s_tmp_drug_opd.csv</code></td>
+                        <td>${rows.length.toLocaleString()} แถว</td>
+                        <td><span class="badge-status success">System (Auto)</span></td>
+                    `;
+                    const importHist = document.getElementById('import-history-body');
+                    if (importHist) {
+                        importHist.insertBefore(newTr, importHist.firstChild);
+                    }
+                }
+            })
+            .catch(err => {
+                console.log('Real data auto-load skipped, using mock data:', err.message);
+            });
+
         // Centralized Filter Synchronization & Cascading Logic
         function handleFilterChange(selectorType, val) {
             const suffixList = ['drug', 'district', 'hosp'];
