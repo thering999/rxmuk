@@ -1003,7 +1003,6 @@
                             <label for="input-password">Password</label>
                             <input type="password" id="input-password" placeholder="••••••" value="">
                         </div>
-                        <div style="font-size: 0.78rem; color: var(--c-primary); margin-top: 8px; cursor: pointer; text-align: center; text-decoration: underline;" id="btn-autofill-demo">💡 คลิกเพื่อใส่รหัสสำหรับทดสอบ (admin / 123456)</div>
                         <button class="btn btn-primary" id="btn-login-submit" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบ ⚡</button>
                     </div>
                 </div>
@@ -1032,6 +1031,42 @@
                         <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px;">
                             ลากและวางไฟล์ หรือเลือกอัปโหลดไฟล์เพื่อนำเข้าตาราง <code>tmp_drug_opd</code> หรือ <code>s_tmp_drug_opd</code> (แนะนำไฟล์รูปแบบ <strong>.csv</strong> เพื่อความรวดเร็วในการประมวลผลข้อมูลปริมาณแสนเรคคอร์ดแบบ Real-time โดยไม่ติดขัด)
                         </p>
+
+                        <!-- Default Ingestion Cycle Date Settings (for files without date columns) -->
+                        <div style="margin-bottom: 20px; padding: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border); border-radius: 12px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);">
+                            <h4 style="font-size: 0.9rem; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                                ⚙️ กำหนดรอบข้อมูล (สำหรับไฟล์ที่ไม่มีคอลัมน์วันที่ เช่น s_tmp_drug_opd)
+                            </h4>
+                            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+                                หากนำเข้าไฟล์สรุปที่ไม่ปรากฏคอลัมน์วันที่ ระบบจะกำหนดวันเริ่มให้บริการเป็นวันที่ 1 ของเดือน/ปีที่ระบุนี้โดยอัตโนมัติ
+                            </p>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <div style="flex: 1 1 140px; display: flex; flex-direction: column; gap: 6px;">
+                                    <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ปีปฏิทิน (ค.ศ.)</label>
+                                    <select id="import-default-year" class="select-control" style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;">
+                                        <option value="2025">ปี 2568 (2025 AD)</option>
+                                        <option value="2026" selected>ปี 2569 (2026 AD)</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px;">
+                                    <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">เดือน</label>
+                                    <select id="import-default-month" class="select-control" style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;">
+                                        <option value="01">มกราคม</option>
+                                        <option value="02">กุมภาพันธ์</option>
+                                        <option value="03">มีนาคม</option>
+                                        <option value="04">เมษายน</option>
+                                        <option value="05">พฤษภาคม</option>
+                                        <option value="06" selected>มิถุนายน</option>
+                                        <option value="07">กรกฎาคม</option>
+                                        <option value="08">สิงหาคม</option>
+                                        <option value="09">กันยายน</option>
+                                        <option value="10">ตุลาคม</option>
+                                        <option value="11">พฤศจิกายน</option>
+                                        <option value="12">ธันวาคม</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- File upload Zone -->
                         <div class="upload-zone">
@@ -1167,6 +1202,13 @@
                             <option value="all">📅 ทุกช่วงเวลา/เดือน</option>
                         </select>
 
+                        <div class="date-range-container" style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 8px; padding: 2px 10px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">ช่วงวัน:</span>
+                            <input type="date" id="drug-start-date" class="date-control" style="background: transparent; border: none; color: white; font-size: 0.8rem; outline: none; padding: 6px 0; color-scheme: dark; width: 115px;" placeholder="เริ่มต้น">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">-</span>
+                            <input type="date" id="drug-end-date" class="date-control" style="background: transparent; border: none; color: white; font-size: 0.8rem; outline: none; padding: 6px 0; color-scheme: dark; width: 115px;" placeholder="สิ้นสุด">
+                        </div>
+
                         <select id="drug-district-select" class="select-control" style="flex: 1 1 150px;">
                             <option value="all">🗺️ ทุกอำเภอ</option>
                         </select>
@@ -1237,6 +1279,13 @@
                         <select id="district-month-select" class="select-control" style="flex: 1 1 150px;">
                             <option value="all">📅 ทุกช่วงเวลา/เดือน</option>
                         </select>
+
+                        <div class="date-range-container" style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 8px; padding: 2px 10px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">ช่วงวัน:</span>
+                            <input type="date" id="district-start-date" class="date-control" style="background: transparent; border: none; color: white; font-size: 0.8rem; outline: none; padding: 6px 0; color-scheme: dark; width: 115px;" placeholder="เริ่มต้น">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">-</span>
+                            <input type="date" id="district-end-date" class="date-control" style="background: transparent; border: none; color: white; font-size: 0.8rem; outline: none; padding: 6px 0; color-scheme: dark; width: 115px;" placeholder="สิ้นสุด">
+                        </div>
 
                         <select id="district-district-select" class="select-control" style="flex: 1 1 150px;">
                             <option value="all">🗺️ ทุกอำเภอ</option>
@@ -1350,6 +1399,13 @@
                         <select id="hosp-month-select" class="select-control" style="flex: 1 1 150px;">
                             <option value="all">📅 ทุกช่วงเวลา/เดือน</option>
                         </select>
+
+                        <div class="date-range-container" style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 8px; padding: 2px 10px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">ช่วงวัน:</span>
+                            <input type="date" id="hosp-start-date" class="date-control" style="background: transparent; border: none; color: white; font-size: 0.8rem; outline: none; padding: 6px 0; color-scheme: dark; width: 115px;" placeholder="เริ่มต้น">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">-</span>
+                            <input type="date" id="hosp-end-date" class="date-control" style="background: transparent; border: none; color: white; font-size: 0.8rem; outline: none; padding: 6px 0; color-scheme: dark; width: 115px;" placeholder="สิ้นสุด">
+                        </div>
 
                         <select id="hosp-district-select" class="select-control" style="flex: 1 1 150px;">
                             <option value="all">🗺️ ทุกอำเภอ</option>
@@ -1675,6 +1731,7 @@
                         hospname: hInfo.hosname,
                         amphurCode: hInfo.amp_code,
                         amphurName: hInfo.amp_name,
+                        date: `${m}-01`,
                         month: m,
                         amount: amount,
                         price: price,
@@ -1819,11 +1876,20 @@
             const hospVal = document.getElementById(`${prefix}-hosp-select`) ? document.getElementById(`${prefix}-hosp-select`).value : 'all';
             const itemVal = document.getElementById(`${prefix}-item-select`) ? document.getElementById(`${prefix}-item-select`).value : 'all';
 
+            const startDateVal = document.getElementById(`${prefix}-start-date`) ? document.getElementById(`${prefix}-start-date`).value : '';
+            const endDateVal = document.getElementById(`${prefix}-end-date`) ? document.getElementById(`${prefix}-end-date`).value : '';
+
             if (yearVal !== 'all') {
                 txs = txs.filter(t => t.month && t.month.startsWith(yearVal));
             }
             if (monthVal !== 'all') {
                 txs = txs.filter(t => t.month === monthVal);
+            }
+            if (startDateVal) {
+                txs = txs.filter(t => t.date && t.date >= startDateVal);
+            }
+            if (endDateVal) {
+                txs = txs.filter(t => t.date && t.date <= endDateVal);
             }
             if (districtVal !== 'all') {
                 txs = txs.filter(t => t.amphurCode === districtVal);
@@ -1897,6 +1963,8 @@
             document.getElementById('drug-breakdown-search').value = '';
             document.getElementById('drug-year-select').value = 'all';
             document.getElementById('drug-month-select').value = 'all';
+            if (document.getElementById('drug-start-date')) document.getElementById('drug-start-date').value = '';
+            if (document.getElementById('drug-end-date')) document.getElementById('drug-end-date').value = '';
             document.getElementById('drug-district-select').value = 'all';
             document.getElementById('drug-hosp-select').value = 'all';
             document.getElementById('drug-item-select').value = 'all';
@@ -2015,6 +2083,8 @@
         function resetDistrictTable() {
             document.getElementById('district-year-select').value = 'all';
             document.getElementById('district-month-select').value = 'all';
+            if (document.getElementById('district-start-date')) document.getElementById('district-start-date').value = '';
+            if (document.getElementById('district-end-date')) document.getElementById('district-end-date').value = '';
             document.getElementById('district-district-select').value = 'all';
             document.getElementById('district-hosp-select').value = 'all';
             document.getElementById('district-item-select').value = 'all';
@@ -2025,6 +2095,8 @@
             document.getElementById('hosp-search').value = '';
             document.getElementById('hosp-year-select').value = 'all';
             document.getElementById('hosp-month-select').value = 'all';
+            if (document.getElementById('hosp-start-date')) document.getElementById('hosp-start-date').value = '';
+            if (document.getElementById('hosp-end-date')) document.getElementById('hosp-end-date').value = '';
             document.getElementById('hosp-district-select').value = 'all';
             document.getElementById('hosp-hosp-select').value = 'all';
             document.getElementById('hosp-item-select').value = 'all';
@@ -2230,8 +2302,8 @@
             });
         }
 
-        // Parse date strings or Excel serial numbers into standard YYYY-MM
-        function parseMonthFromRow(row, dateKeys) {
+        // Parse date strings or Excel serial numbers into standard YYYY-MM-DD
+        function parseFullDateFromRow(row, dateKeys) {
             for (let key of dateKeys) {
                 const val = row[key];
                 if (!val) continue;
@@ -2241,28 +2313,44 @@
                     const dateObj = new Date((val - 25569) * 86400 * 1000);
                     const y = dateObj.getFullYear();
                     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-                    return `${y}-${m}`;
+                    const d = String(dateObj.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
                 }
 
                 // If standard string date
                 const dateStr = String(val).trim();
-                const match = dateStr.match(/^(\d{4})[-/](\d{2})/);
-                if (match) {
-                    return `${match[1]}-${match[2]}`;
+                const matchFull = dateStr.match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
+                if (matchFull) {
+                    return `${matchFull[1]}-${matchFull[2]}-${matchFull[3]}`;
+                }
+                const matchMonth = dateStr.match(/^(\d{4})[-/](\d{2})/);
+                if (matchMonth) {
+                    return `${matchMonth[1]}-${matchMonth[2]}-01`;
                 }
 
                 // Thai Buddhist Era conversions or dd/mm/yyyy
                 const parts = dateStr.split(/[-/]/);
                 if (parts.length >= 3) {
-                    let y = parseInt(parts[2] || parts[0]);
-                    let m = String(parseInt(parts[1])).padStart(2, '0');
+                    let y, m, d;
+                    if (parts[0].length === 4) {
+                        y = parseInt(parts[0]);
+                        m = String(parseInt(parts[1])).padStart(2, '0');
+                        d = String(parseInt(parts[2])).padStart(2, '0');
+                    } else {
+                        d = String(parseInt(parts[0])).padStart(2, '0');
+                        m = String(parseInt(parts[1])).padStart(2, '0');
+                        y = parseInt(parts[2]);
+                    }
                     if (y > 2500) y -= 543; // BE to AD
                     if (y > 1900 && y < 2100) {
-                        return `${y}-${m}`;
+                        return `${y}-${m}-${d}`;
                     }
                 }
             }
-            return "2026-06"; // Fallback month if no dates found
+            // Fallback default date from settings
+            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : '2026';
+            const defMonth = document.getElementById('import-default-month') ? document.getElementById('import-default-month').value : '06';
+            return `${defYear}-${defMonth}-01`;
         }
 
         // Process parsed JSON row data and replace rawTransactions!
@@ -2316,7 +2404,8 @@
                 
                 // Get correct names from hospitals database
                 const hInfo = getHospitalInfo(hospcode);
-                const monthStr = parseMonthFromRow(row, dateKeys);
+                const dateStr = parseFullDateFromRow(row, dateKeys);
+                const monthStr = dateStr.slice(0, 7);
 
                 newTxs.push({
                     didstd,
@@ -2325,6 +2414,7 @@
                     hospname: hInfo.hosname,
                     amphurCode: hInfo.amp_code,
                     amphurName: hInfo.amp_name,
+                    date: dateStr,
                     month: monthStr,
                     amount,
                     price,
@@ -2379,7 +2469,6 @@
                                 <label>Password</label>
                                 <input type="password" class="input-lock-password" placeholder="••••••" value="" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
                             </div>
-                            <div style="font-size: 0.78rem; color: var(--c-primary); margin-top: 8px; cursor: pointer; text-align: center; text-decoration: underline; margin-bottom: 10px;" class="btn-lock-autofill">💡 คลิกเพื่อใส่รหัสสำหรับทดสอบ (admin / 123456)</div>
                             <button class="btn btn-primary btn-lock-login" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบเพื่อปลดล็อก ⚡</button>
                         </div>
                     </div>
@@ -2401,16 +2490,6 @@
                     } else {
                         alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                     }
-                });
-            });
-
-            const lockAutofills = document.querySelectorAll('.btn-lock-autofill');
-            lockAutofills.forEach((btn, idx) => {
-                btn.addEventListener('click', () => {
-                    const uInputs = document.querySelectorAll('.input-lock-username');
-                    const pInputs = document.querySelectorAll('.input-lock-password');
-                    if (uInputs[idx]) uInputs[idx].value = 'admin';
-                    if (pInputs[idx]) pInputs[idx].value = '123456';
                 });
             });
         }
@@ -2464,7 +2543,6 @@
         const inputPassword = document.getElementById('input-password');
         const btnLoginSubmit = document.getElementById('btn-login-submit');
         const btnLogout = document.getElementById('btn-logout');
-        const btnAutofillDemo = document.getElementById('btn-autofill-demo');
 
         // Bind main login submit
         if (btnLoginSubmit) {
@@ -2478,13 +2556,6 @@
                 } else {
                     alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                 }
-            });
-        }
-
-        if (btnAutofillDemo) {
-            btnAutofillDemo.addEventListener('click', () => {
-                if (inputUsername) inputUsername.value = 'admin';
-                if (inputPassword) inputPassword.value = '123456';
             });
         }
 
@@ -2536,16 +2607,14 @@
                 });
                 // Update hospital dropdown options based on new district
                 updateHospitalsDropdown(val);
-            } else {
-                // For year, month, item: just sync the value across all tabs
+            } else if (selectorType === 'start-date' || selectorType === 'end-date') {
+                // Sync start/end date inputs
                 suffixList.forEach(prefix => {
-                    const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                    const el = document.getElementById(`${prefix}-${selectorType}`);
                     if (el) el.value = val;
                 });
-            }
-
-            // Sync other non-special filters
-            if (selectorType !== 'hosp' && selectorType !== 'district') {
+            } else {
+                // For year, month, item: just sync the value across all tabs
                 suffixList.forEach(prefix => {
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
                     if (el) el.value = val;
@@ -2563,6 +2632,14 @@
         suffixList.forEach(prefix => {
             ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                 const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                if (el) {
+                    el.addEventListener('change', () => {
+                        handleFilterChange(selectorType, el.value);
+                    });
+                }
+            });
+            ['start-date', 'end-date'].forEach(selectorType => {
+                const el = document.getElementById(`${prefix}-${selectorType}`);
                 if (el) {
                     el.addEventListener('change', () => {
                         handleFilterChange(selectorType, el.value);
