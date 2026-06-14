@@ -1003,6 +1003,7 @@
                             <label for="input-password">Password</label>
                             <input type="password" id="input-password" placeholder="••••••" value="">
                         </div>
+                        <div style="font-size: 0.78rem; color: var(--c-primary); margin-top: 8px; cursor: pointer; text-align: center; text-decoration: underline;" id="btn-autofill-demo">💡 คลิกเพื่อใส่รหัสสำหรับทดสอบ (admin / 123456)</div>
                         <button class="btn btn-primary" id="btn-login-submit" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบ ⚡</button>
                     </div>
                 </div>
@@ -2201,6 +2202,7 @@
                                 <label>Password</label>
                                 <input type="password" class="input-lock-password" placeholder="••••••" value="" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
                             </div>
+                            <div style="font-size: 0.78rem; color: var(--c-primary); margin-top: 8px; cursor: pointer; text-align: center; text-decoration: underline; margin-bottom: 10px;" class="btn-lock-autofill">💡 คลิกเพื่อใส่รหัสสำหรับทดสอบ (admin / 123456)</div>
                             <button class="btn btn-primary btn-lock-login" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบเพื่อปลดล็อก ⚡</button>
                         </div>
                     </div>
@@ -2222,6 +2224,16 @@
                     } else {
                         alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                     }
+                });
+            });
+
+            const lockAutofills = document.querySelectorAll('.btn-lock-autofill');
+            lockAutofills.forEach((btn, idx) => {
+                btn.addEventListener('click', () => {
+                    const uInputs = document.querySelectorAll('.input-lock-username');
+                    const pInputs = document.querySelectorAll('.input-lock-password');
+                    if (uInputs[idx]) uInputs[idx].value = 'admin';
+                    if (pInputs[idx]) pInputs[idx].value = '123456';
                 });
             });
         }
@@ -2275,6 +2287,7 @@
         const inputPassword = document.getElementById('input-password');
         const btnLoginSubmit = document.getElementById('btn-login-submit');
         const btnLogout = document.getElementById('btn-logout');
+        const btnAutofillDemo = document.getElementById('btn-autofill-demo');
 
         // Bind main login submit
         if (btnLoginSubmit) {
@@ -2288,6 +2301,13 @@
                 } else {
                     alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                 }
+            });
+        }
+
+        if (btnAutofillDemo) {
+            btnAutofillDemo.addEventListener('click', () => {
+                if (inputUsername) inputUsername.value = 'admin';
+                if (inputPassword) inputPassword.value = '123456';
             });
         }
 
@@ -2664,7 +2684,32 @@ WHERE t1.id < t2.id
   AND t1.didstd = t2.didstd;
 \`\`\``;
             }
-            return `ขออภัยครับ คีย์ Gemini API ของคุณยังไม่ได้ตั้งค่า หรือตั้งค่าไม่ถูกต้อง ทำให้ระบบจำลองออฟไลน์ทำงานแทนคำถามทั่วไปครับ คุณสามารถแนะนำคำสั่ง SQL หรือสอบถามเกี่ยวกับข้อมูลยา 43 แฟ้มของมุกดาหารได้ครับ`;
+            if (query.includes('didstd') || query.includes('รหัสยา') || query.includes('did')) {
+                return `**รหัสยามาตรฐาน 24 หลัก (DIDSTD)** เป็นรหัสอ้างอิงระดับประเทศที่กระทรวงสาธารณสุขกำหนด เพื่อควบคุมความกว้างและมาตรฐานของชื่อยา รวมถึงการนำมารวบรวมคำนวณมูลค่าราคากลางและการวิเคราะห์แบบ ABC/VEN ในระบบจัดซื้อจัดจ้างคลังเวชภัณฑ์ของจังหวัดมุกดาหาร`;
+            }
+            if (query.includes('คุณภาพ') || query.includes('qc') || query.includes('เกณฑ์')) {
+                return `**เกณฑ์คุณภาพข้อมูล (HDC Data Quality)**:
+1. **รหัสสถานบริการ (hospcode)** ต้องมีความยาวถูกต้อง 5 หลักและอยู่ในฐานข้อมูลจังหวัดมุกดาหาร
+2. **รหัสยามาตรฐาน (didstd)** ต้องมีความยาวครบ 24 หลัก
+3. **ฟิลด์ปริมาณ (amount) และ ราคา (price)** ต้องเป็นตัวเลขบวกที่สมเหตุสมผล
+4. **ความครบถ้วนของข้อมูลสำคัญ** ต้องผ่าน 100% จึงจะประเมินเป็น "ผ่านเกณฑ์"`;
+            }
+            if (query.includes('อำเภอ') || query.includes('district') || query.includes('พื้นที่')) {
+                return `ระบบรองรับการกรองวิเคราะห์ข้อมูลยารายอำเภอ 7 อำเภอหลักของมุกดาหาร:
+- **เมืองมุกดาหาร** (รหัส 4901)
+- **นิคมคำสร้อย** (รหัส 4902)
+- **ดอนตาล** (รหัส 4903)
+- **ดงหลวง** (รหัส 4904)
+- **คำชะอี** (รหัส 4905)
+- **หว้านใหญ่** (รหัส 4906)
+- **หนองสูง** (รหัส 4907)`;
+            }
+            return `คีย์ Gemini API ของคุณยังไม่ได้ตั้งค่า หรือตั้งค่าไม่ถูกต้อง ทำให้ระบบบอทช่วยเหลือออฟไลน์ทำงานแทนครับ คุณสามารถสอบถามเกี่ยวกับ:
+- **"ตาราง"** หรือ **"field"** (โครงสร้างข้อมูลนำเข้า s_tmp_drug_opd)
+- **"คำสั่ง SQL"** (ลบข้อมูลซ้ำซ้อน)
+- **"รหัสยา"** หรือ **"didstd"** (ความหมายของรหัสยา 24 หลัก)
+- **"คุณภาพ"** หรือ **"qc"** (เกณฑ์คุณภาพข้อมูล)
+- **"อำเภอ"** (รายชื่อรหัสอำเภอของมุกดาหาร)`;
         }
     </script>
 </body>
