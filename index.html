@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- SheetJS CDN for client-side Excel parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Mukdahan Hospitals DB provided by user -->
+    <script src="hospitals_db.js"></script>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -848,7 +850,7 @@
         <p id="hero-subtitle">ยกระดับคุณภาพข้อมูล จัดการ Schema ตรวจสอบความถูกต้องเวชภัณฑ์และการส่งข้อมูลของหน่วยบริการแบบเบ็ดเสร็จในแพลตฟอร์มเดียว</p>
     </section>
 
-    <!-- TAB 1: DASHBOARD -->
+    <!-- TAB 1: DASHBOARD (PUBLICLY VIEWABLE) -->
     <div id="tab-dashboard" class="tab-content active">
         <!-- Stats Grid -->
         <section class="container grid-stats">
@@ -993,11 +995,11 @@
                         <p style="font-size: 0.85rem; color: var(--text-muted);">กรุณากรอก Username จากระบบควบคุมของ SQL</p>
                     </div>
                     <div class="login-form">
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 15px;">
                             <label for="input-username">Username</label>
                             <input type="text" id="input-username" placeholder="admin" value="admin">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 15px;">
                             <label for="input-password">Password</label>
                             <input type="password" id="input-password" placeholder="••••••" value="123456">
                         </div>
@@ -1111,171 +1113,168 @@
         </section>
     </div>
 
-    <!-- TAB 3: BREAKDOWN BY DRUG (สรุปรายตัวยา) -->
+    <!-- TAB 3: BREAKDOWN BY DRUG (สรุปรายตัวยา - SECURED WITH AUTH GATE) -->
     <div id="tab-drugs" class="tab-content">
         <section class="container">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3 class="panel-title">
-                        <span>💊</span>
-                        สรุปรายละเอียดประวัติการจ่ายยาแยกตามตัวยา (Drug Breakdown)
-                    </h3>
-                    <span class="badge-status success" id="drug-data-source">แหล่งข้อมูล: Mock Database</span>
-                </div>
-
-                <div class="filter-row">
-                    <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหารายการยาด้วยชื่อ หรือ รหัสยา...">
-                    
-                    <select id="drug-month-select" class="select-control">
-                        <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
-                        <option value="2025-10">ตุลาคม 2568</option>
-                        <option value="2025-11">พฤศจิกายน 2568</option>
-                        <option value="2025-12">ธันวาคม 2568</option>
-                        <option value="2026-01">มกราคม 2569</option>
-                        <option value="2026-02">กุมภาพันธ์ 2569</option>
-                        <option value="2026-03">มีนาคม 2569</option>
-                    </select>
-
-                    <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตัวกรอง</button>
-                </div>
-
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
-                                <th>ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
-                                <th>จำนวนจ่ายสะสม (Amount)</th>
-                                <th>ราคารวมสะสม (SumPrice)</th>
-                                <th>ต้นทุนสะสม (SumCost)</th>
-                                <th>ระดับผลกระทบมูลค่า (ABC Class)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="drug-breakdown-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <!-- TAB 4: BREAKDOWN BY DISTRICT (สรุปรายอำเภอ) -->
-    <div id="tab-district" class="tab-content">
-        <section class="container">
-            <div class="panel" style="margin-bottom: 20px;">
-                <div class="filter-row" style="margin-bottom: 0;">
-                    <label for="district-month-select" style="font-weight: 600; color: #fff; margin-right: 10px;">📅 ตัวกรองประจำเดือนข้อมูล:</label>
-                    <select id="district-month-select" class="select-control" style="min-width: 250px;">
-                        <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
-                        <option value="2025-10">ตุลาคม 2568</option>
-                        <option value="2025-11">พฤศจิกายน 2568</option>
-                        <option value="2025-12">ธันวาคม 2568</option>
-                        <option value="2026-01">มกราคม 2569</option>
-                        <option value="2026-02">กุมภาพันธ์ 2569</option>
-                        <option value="2026-03">มีนาคม 2569</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="workspace-layout">
-                <!-- Breakdown Table -->
+            <!-- Secured Content Wrapper -->
+            <div class="secured-content">
                 <div class="panel">
                     <div class="panel-header">
                         <h3 class="panel-title">
-                            <span>🗺️</span>
-                            สัดส่วนข้อมูลจ่ายยาแยกรายอำเภอ (จ.มุกดาหาร)
+                            <span>💊</span>
+                            สรุปรายละเอียดประวัติการจ่ายยาแยกตามตัวยา (Drug Breakdown)
                         </h3>
+                        <span class="badge-status success" id="drug-data-source">แหล่งข้อมูล: Mock Database</span>
+                    </div>
+
+                    <div class="filter-row">
+                        <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหารายการยาด้วยชื่อ หรือ รหัสยา...">
+                        
+                        <select id="drug-month-select" class="select-control">
+                            <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        </select>
+
+                        <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตัวกรอง</button>
                     </div>
 
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
-                                <th>รหัสอำเภอ</th>
-                                <th>ชื่ออำเภอ</th>
-                                <th>จำนวนบริการ (ครั้ง)</th>
-                                <th>มูลค่าราคารวมจ่าย (บาท)</th>
-                                <th>สัดส่วนเปอร์เซ็นต์</th>
+                                <tr>
+                                    <th>รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
+                                    <th>ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
+                                    <th>จำนวนจ่ายสะสม (Amount)</th>
+                                    <th>ราคารวมสะสม (SumPrice)</th>
+                                    <th>ต้นทุนสะสม (SumCost)</th>
+                                    <th>ระดับผลกระทบมูลค่า (ABC Class)</th>
+                                </tr>
                             </thead>
-                            <tbody id="district-breakdown-body">
+                            <tbody id="drug-breakdown-body">
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
                     </div>
                 </div>
-
-                <!-- Beautiful SVG Pie/Bar Chart Panel -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3 class="panel-title">
-                            <span>📊</span>
-                            กราฟสัดส่วนมูลค่ายาตามอำเภอ
-                        </h3>
-                    </div>
-                    
-                    <svg viewBox="0 0 400 300" style="width: 100%; height: 260px;">
-                        <!-- Simple visual bar comparison -->
-                        <g id="chart-bars-district">
-                            <!-- Populated dynamically -->
-                        </g>
-                        <defs>
-                            <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#00f2fe"/>
-                                <stop offset="100%" stop-color="#4facfe"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                </div>
             </div>
+
+            <!-- Secured Lock Screen -->
+            <div class="secured-lock" style="display: none;"></div>
         </section>
     </div>
 
-    <!-- TAB 5: BREAKDOWN BY SERVICE UNIT (สรุปรายหน่วยบริการ) -->
-    <div id="tab-hosp" class="tab-content">
+    <!-- TAB 4: BREAKDOWN BY DISTRICT (สรุปรายอำเภอ - SECURED WITH AUTH GATE) -->
+    <div id="tab-district" class="tab-content">
         <section class="container">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3 class="panel-title">
-                        <span>🏥</span>
-                        สรุปสถิตินำเข้าและมูลค่ายาแยกรายหน่วยบริการ (Hospcode / Hospital)
-                    </h3>
-                    <span class="badge-status success" id="hosp-data-source">แหล่งข้อมูล: Mock Database</span>
+            <div class="secured-content">
+                <div class="panel" style="margin-bottom: 20px;">
+                    <div class="filter-row" style="margin-bottom: 0;">
+                        <label for="district-month-select" style="font-weight: 600; color: #fff; margin-right: 10px;">📅 ตัวกรองประจำเดือนข้อมูล:</label>
+                        <select id="district-month-select" class="select-control" style="min-width: 250px;">
+                            <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="filter-row">
-                    <input type="text" id="hosp-search" class="search-control" placeholder="🔍 พิมพ์ค้นหารหัสพยาบาล หรือ ชื่อสถานบริการ...">
-                    
-                    <select id="hosp-month-select" class="select-control">
-                        <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
-                        <option value="2025-10">ตุลาคม 2568</option>
-                        <option value="2025-11">พฤศจิกายน 2568</option>
-                        <option value="2025-12">ธันวาคม 2568</option>
-                        <option value="2026-01">มกราคม 2569</option>
-                        <option value="2026-02">กุมภาพันธ์ 2569</option>
-                        <option value="2026-03">มีนาคม 2569</option>
-                    </select>
+                <div class="workspace-layout">
+                    <!-- Breakdown Table -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>🗺️</span>
+                                สัดส่วนข้อมูลจ่ายยาแยกรายอำเภอ (จ.มุกดาหาร)
+                            </h3>
+                        </div>
 
-                    <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตัวกรอง</button>
-                </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <th>รหัสอำเภอ</th>
+                                    <th>ชื่ออำเภอ</th>
+                                    <th>จำนวนบริการ (ครั้ง)</th>
+                                    <th>มูลค่าราคารวมจ่าย (บาท)</th>
+                                    <th>สัดส่วนเปอร์เซ็นต์</th>
+                                </thead>
+                                <tbody id="district-breakdown-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>รหัสหน่วยบริการ (Hospcode)</th>
-                                <th>ชื่อสถานบริการสาธารณสุข</th>
-                                <th>จำนวนยอดสแกนจ่ายยา (ครั้ง)</th>
-                                <th>ปริมาณยาสะสม (Amount)</th>
-                                <th>มูลค่าราคารวมสะสม (บาท)</th>
-                                <th>คุณภาพข้อมูลผ่านเกณฑ์</th>
-                            </tr>
-                        </thead>
-                        <tbody id="hosp-breakdown-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
+                    <!-- Beautiful SVG Pie/Bar Chart Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>📊</span>
+                                กราฟสัดส่วนมูลค่ายาตามอำเภอ
+                            </h3>
+                        </div>
+                        
+                        <svg viewBox="0 0 400 300" style="width: 100%; height: 260px;">
+                            <g id="chart-bars-district">
+                                <!-- Populated dynamically -->
+                            </g>
+                            <defs>
+                                <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#00f2fe"/>
+                                    <stop offset="100%" stop-color="#4facfe"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
                 </div>
             </div>
+
+            <!-- Secured Lock Screen -->
+            <div class="secured-lock" style="display: none;"></div>
+        </section>
+    </div>
+
+    <!-- TAB 5: BREAKDOWN BY SERVICE UNIT (สรุปรายหน่วยบริการ - SECURED WITH AUTH GATE) -->
+    <div id="tab-hosp" class="tab-content">
+        <section class="container">
+            <div class="secured-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">
+                            <span>🏥</span>
+                            สรุปสถิตินำเข้าและมูลค่ายาแยกรายหน่วยบริการ (Hospcode / Hospital)
+                        </h3>
+                        <span class="badge-status success" id="hosp-data-source">แหล่งข้อมูล: Mock Database</span>
+                    </div>
+
+                    <div class="filter-row">
+                        <input type="text" id="hosp-search" class="search-control" placeholder="🔍 พิมพ์ค้นหารหัสพยาบาล หรือ ชื่อสถานบริการ...">
+                        
+                        <select id="hosp-month-select" class="select-control">
+                            <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        </select>
+
+                        <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตัวกรอง</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัสหน่วยบริการ (Hospcode)</th>
+                                    <th>ชื่อสถานบริการสาธารณสุข</th>
+                                    <th>จำนวนยอดสแกนจ่ายยา (ครั้ง)</th>
+                                    <th>ปริมาณยาสะสม (Amount)</th>
+                                    <th>มูลค่าราคารวมสะสม (บาท)</th>
+                                    <th>คุณภาพข้อมูลผ่านเกณฑ์</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hosp-breakdown-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Secured Lock Screen -->
+            <div class="secured-lock" style="display: none;"></div>
         </section>
     </div>
 
@@ -1394,63 +1393,6 @@
             });
         });
 
-        // Login management logic
-        const btnLoginSubmit = document.getElementById('btn-login-submit');
-        const btnLogout = document.getElementById('btn-logout');
-        const inputUsername = document.getElementById('input-username');
-        const inputPassword = document.getElementById('input-password');
-        const userDisplayName = document.getElementById('user-display-name');
-        const loginStatusPill = document.getElementById('login-status-pill');
-        const importLoginGate = document.getElementById('import-login-gate');
-        const importDashboard = document.getElementById('import-dashboard');
-        const authFullName = document.getElementById('auth-full-name');
-
-        function checkAuthState() {
-            const loggedInUser = sessionStorage.getItem('rxmuk_auth_user');
-            if (loggedInUser) {
-                // Set UI state
-                userDisplayName.textContent = `ผู้ใช้: admin`;
-                loginStatusPill.style.background = 'rgba(16, 185, 129, 0.1)';
-                loginStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.2)';
-                loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-green)';
-                loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-green)';
-
-                authFullName.textContent = 'System Administrator (admin)';
-                importLoginGate.style.display = 'none';
-                importDashboard.style.display = 'block';
-            } else {
-                // Set Guest UI State
-                userDisplayName.textContent = `ยังไม่ได้เข้าระบบ`;
-                loginStatusPill.style.background = 'rgba(239, 68, 68, 0.1)';
-                loginStatusPill.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-red)';
-                loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-red)';
-
-                importLoginGate.style.display = 'block';
-                importDashboard.style.display = 'none';
-            }
-        }
-
-        btnLoginSubmit.addEventListener('click', () => {
-            const u = inputUsername.value.trim();
-            const p = inputPassword.value.trim();
-
-            if (u === 'admin' && p === '123456') {
-                sessionStorage.setItem('rxmuk_auth_user', 'admin');
-                checkAuthState();
-            } else {
-                alert('Username หรือ Password ไม่ถูกต้อง! (คำแนะนำ: ใช้ admin / 123456)');
-            }
-        });
-
-        btnLogout.addEventListener('click', () => {
-            sessionStorage.removeItem('rxmuk_auth_user');
-            checkAuthState();
-        });
-
-        // Initial Auth check
-        checkAuthState();
-
         // ----------------------------------------------------
         // DATA LOGIC: TRANSACTIONS STRUCTURE (FOR DYNAMIC SLICING & MONTH FILTER)
         // ----------------------------------------------------
@@ -1482,29 +1424,55 @@
         ];
 
         const baseHospitals = [
-            { hospcode: "10712", name: "โรงพยาบาลมุกดาหาร (รพท.)" },
-            { hospcode: "10713", name: "โรงพยาบาลนิคมคำสร้อย (รพช.)" },
-            { hospcode: "10714", name: "โรงพยาบาลดอนตาล (รพช.)" },
-            { hospcode: "05790", name: "รพ.สต. บ้านคำบก" },
-            { hospcode: "05791", name: "รพ.สต. บ้านนาสองห้อง" },
-            { hospcode: "05792", name: "รพ.สต. บ้านคำแคน" },
-            { hospcode: "05793", name: "รพ.สต. บ้านคำป่าหลาย" },
-            { hospcode: "05794", name: "รพ.สต. บ้านป่าไร่" },
-            { hospcode: "05795", name: "รพ.สต. บ้านคำป่าหลายสาขา" }
+            { hospcode: "10712", name: "โรงพยาบาลมุกดาหาร" },
+            { hospcode: "11113", name: "โรงพยาบาลนิคมคำสร้อย" },
+            { hospcode: "11114", name: "โรงพยาบาลดอนตาล" },
+            { hospcode: "11115", name: "โรงพยาบาลดงหลวง" },
+            { hospcode: "11116", name: "โรงพยาบาลคำชะอี" },
+            { hospcode: "11117", name: "โรงพยาบาลหว้านใหญ่" },
+            { hospcode: "11118", name: "โรงพยาบาลหนองสูง" },
+            { hospcode: "05740", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านกุดโง้ง" },
+            { hospcode: "05741", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านโคก" },
+            { hospcode: "05790", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านคำบก" },
+            { hospcode: "05791", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านนาสองห้อง" },
+            { hospcode: "05792", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านคำแคน" },
+            { hospcode: "05793", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านคำป่าหลาย" },
+            { hospcode: "05794", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านป่าไร่" }
         ];
 
         const baseDistricts = [
-            { code: "4901", name: "อ.เมืองมุกดาหาร" },
-            { code: "4902", name: "อ.นิคมคำสร้อย" },
-            { code: "4903", name: "อ.ดอนตาล" },
-            { code: "4904", name: "อ.คำชะอี" },
-            { code: "4905", name: "อ.ดงหลวง" },
-            { code: "4906", name: "อ.หนองสูง" },
-            { code: "4907", name: "อ.หว้านใหญ่" }
+            { code: "4901", name: "เมืองมุกดาหาร" },
+            { code: "4902", name: "นิคมคำสร้อย" },
+            { code: "4903", name: "ดอนตาล" },
+            { code: "4904", name: "ดงหลวง" },
+            { code: "4905", name: "คำชะอี" },
+            { code: "4906", name: "หว้านใหญ่" },
+            { code: "4907", name: "หนองสูง" }
         ];
 
         // Global Transaction Log
         let rawTransactions = [];
+
+        // Resolve Hospital Info from user's hospitals_db.js
+        function getHospitalInfo(hospcode) {
+            if (typeof MUKDAHAN_HOSPITALS !== 'undefined' && MUKDAHAN_HOSPITALS[hospcode]) {
+                const info = MUKDAHAN_HOSPITALS[hospcode];
+                return {
+                    hosname: info.hosname,
+                    amp_code: info.amp_code,
+                    amp_name: info.amp_name
+                };
+            }
+            // Fallback to static mock mapping
+            const match = baseHospitals.find(h => h.hospcode === hospcode);
+            if (match) {
+                // Find matching district
+                const dCode = hospcode === "11113" ? "4902" : (hospcode === "11114" ? "4903" : (hospcode === "11115" ? "4904" : (hospcode === "11116" ? "4905" : (hospcode === "11117" ? "4906" : (hospcode === "11118" ? "4907" : "4901")))));
+                const dName = hospcode === "11113" ? "นิคมคำสร้อย" : (hospcode === "11114" ? "ดอนตาล" : (hospcode === "11115" ? "ดงหลวง" : (hospcode === "11116" ? "คำชะอี" : (hospcode === "11117" ? "หว้านใหญ่" : (hospcode === "11118" ? "หนองสูง" : "เมืองมุกดาหาร")))));
+                return { hosname: match.name, amp_code: dCode, amp_name: dName };
+            }
+            return { hosname: `หน่วยบริการ ${hospcode}`, amp_code: "4901", amp_name: "เมืองมุกดาหาร" };
+        }
 
         // Thai Month-Year Formatter
         function getThaiMonthYearName(yearMonthStr) {
@@ -1527,25 +1495,32 @@
             const list = [];
             const months = ["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
             
+            // Map mock hospital codes from MUKDAHAN_HOSPITALS keys!
+            let hospKeys = [];
+            if (typeof MUKDAHAN_HOSPITALS !== 'undefined') {
+                hospKeys = Object.keys(MUKDAHAN_HOSPITALS).slice(0, 25);
+            }
+            if (hospKeys.length === 0) {
+                hospKeys = baseHospitals.map(h => h.hospcode);
+            }
+
             baseDrugs.forEach((d, dIdx) => {
                 months.forEach((m, mIdx) => {
-                    // Spread values dynamically
                     const factor = 0.5 + (mIdx * 0.12) + ((dIdx % 3) * 0.15);
                     const amount = Math.round((d.abc === 'A' ? 3000 : (d.abc === 'B' ? 1200 : 500)) * factor);
                     const price = Math.round(amount * (d.abc === 'A' ? 25 : (d.abc === 'B' ? 8 : 1.5)));
                     const cost = Math.round(price * 0.72);
 
-                    // Choose hospcode & district randomly but consistently
-                    const h = baseHospitals[dIdx % baseHospitals.length];
-                    const dist = baseDistricts[(dIdx + mIdx) % baseDistricts.length];
+                    const hospcode = hospKeys[dIdx % hospKeys.length];
+                    const hInfo = getHospitalInfo(hospcode);
 
                     list.push({
                         didstd: d.didstd,
                         dname: d.name,
-                        hospcode: h.hospcode,
-                        hospname: h.name,
-                        amphurCode: dist.code,
-                        amphurName: dist.name,
+                        hospcode: hospcode,
+                        hospname: hInfo.hosname,
+                        amphurCode: hInfo.amp_code,
+                        amphurName: hInfo.amp_name,
                         month: m,
                         amount: amount,
                         price: price,
@@ -1589,6 +1564,7 @@
         // Render functions for breakdown tables with month and search filters
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
+            if(!body) return;
             const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
             const monthVal = document.getElementById('drug-month-select').value;
 
@@ -1610,7 +1586,6 @@
             });
 
             let list = Object.values(drugAgg).map(d => {
-                // Determine ABC based on active price summation
                 d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
                 return d;
             });
@@ -1653,6 +1628,7 @@
 
         function renderDistrictBreakdown() {
             const body = document.getElementById('district-breakdown-body');
+            if(!body) return;
             const monthVal = document.getElementById('district-month-select').value;
 
             // Filter transactions
@@ -1663,7 +1639,6 @@
 
             // Aggregate by District
             const districtAgg = {};
-            // Initialize with all districts to avoid empty rows
             baseDistricts.forEach(d => {
                 districtAgg[d.code] = { code: d.code, name: d.name, count: 0, budget: 0 };
             });
@@ -1697,23 +1672,25 @@
 
             // Render SVG Bars Chart
             const chartG = document.getElementById('chart-bars-district');
-            chartG.innerHTML = '';
+            if(chartG) {
+                chartG.innerHTML = '';
+                list.forEach((d, idx) => {
+                    const percent = ((d.budget / totalBudget) * 100).toFixed(1);
+                    const yPos = 30 + (idx * 35);
+                    const barWidth = Math.max(8, Math.min(220, (d.budget / totalBudget) * 220));
 
-            list.forEach((d, idx) => {
-                const percent = ((d.budget / totalBudget) * 100).toFixed(1);
-                const yPos = 30 + (idx * 35);
-                const barWidth = Math.max(8, Math.min(220, (d.budget / totalBudget) * 220));
-
-                chartG.innerHTML += `
-                    <text x="10" y="${yPos + 14}" fill="#fff" font-size="11">${d.name}</text>
-                    <rect x="130" y="${yPos}" width="${barWidth}" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                    <text x="${130 + barWidth + 10}" y="${yPos + 14}" fill="var(--c-primary)" font-size="11" font-weight="bold">${percent}%</text>
-                `;
-            });
+                    chartG.innerHTML += `
+                        <text x="10" y="${yPos + 14}" fill="#fff" font-size="11">${d.name}</text>
+                        <rect x="130" y="${yPos}" width="${barWidth}" height="18" fill="url(#cyan-gradient)" rx="3"/>
+                        <text x="${130 + barWidth + 10}" y="${yPos + 14}" fill="var(--c-primary)" font-size="11" font-weight="bold">${percent}%</text>
+                    `;
+                });
+            }
         }
 
         function renderHospBreakdown() {
             const body = document.getElementById('hosp-breakdown-body');
+            if(!body) return;
             const searchVal = document.getElementById('hosp-search').value.toLowerCase();
             const monthVal = document.getElementById('hosp-month-select').value;
 
@@ -1770,21 +1747,6 @@
             renderHospBreakdown();
         }
 
-        // Initialize table renders & populate selectors
-        populateMonthSelectors();
-        renderDrugBreakdown();
-        renderDistrictBreakdown();
-        renderHospBreakdown();
-
-        // Bind events to dropdown monthly filters
-        document.getElementById('drug-month-select').addEventListener('change', renderDrugBreakdown);
-        document.getElementById('district-month-select').addEventListener('change', renderDistrictBreakdown);
-        document.getElementById('hosp-month-select').addEventListener('change', renderHospBreakdown);
-
-        // Bind input searches
-        document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
-        document.getElementById('hosp-search').addEventListener('input', renderHospBreakdown);
-
         // ----------------------------------------------------
         // EXCEL PARSING LOGIC USING SHEETJS (CDN)
         // ----------------------------------------------------
@@ -1794,80 +1756,82 @@
         const resultMsg = document.getElementById('import-result-msg');
         const importHistoryBody = document.getElementById('import-history-body');
 
-        excelFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        if(excelFileInput) {
+            excelFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
 
-            // Trigger upload progress visual simulation
-            progressArea.style.display = 'block';
-            progressBar.style.width = '0%';
-            resultMsg.style.display = 'none';
+                // Trigger upload progress visual simulation
+                progressArea.style.display = 'block';
+                progressBar.style.width = '0%';
+                resultMsg.style.display = 'none';
 
-            let width = 0;
-            const progressInterval = setInterval(() => {
-                if (width >= 90) {
-                    clearInterval(progressInterval);
-                } else {
-                    width += 15;
-                    progressBar.style.width = width + '%';
-                }
-            }, 100);
+                let width = 0;
+                const progressInterval = setInterval(() => {
+                    if (width >= 90) {
+                        clearInterval(progressInterval);
+                    } else {
+                        width += 15;
+                        progressBar.style.width = width + '%';
+                    }
+                }, 100);
 
-            // Read and parse Excel file
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const rows = XLSX.utils.sheet_to_json(worksheet);
-
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-
-                    setTimeout(() => {
-                        progressArea.style.display = 'none';
+                // Read and parse Excel file
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
                         
-                        if (rows.length === 0) {
-                            resultMsg.className = "badge-status danger";
-                            resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const rows = XLSX.utils.sheet_to_json(worksheet);
+
+                        clearInterval(progressInterval);
+                        progressBar.style.width = '100%';
+
+                        setTimeout(() => {
+                            progressArea.style.display = 'none';
+                            
+                            if (rows.length === 0) {
+                                resultMsg.className = "badge-status danger";
+                                resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
+                                resultMsg.style.display = 'block';
+                                return;
+                            }
+
+                            // Successfully parsed! Add to History Table
+                            const rowCount = rows.length;
+                            const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
+                            const newTr = document.createElement('tr');
+                            newTr.innerHTML = `
+                                <td>${dateStr}</td>
+                                <td><code>${file.name}</code></td>
+                                <td>${rowCount.toLocaleString()} แถว</td>
+                                <td><span class="badge-status success">admin</span></td>
+                            `;
+                            importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
+
+                            // Trigger dynamic calculation to update the breakdowns!
+                            processParsedExcelData(rows, file.name);
+
+                            resultMsg.className = "badge-status success";
+                            resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! อ่านข้อมูลเรียบร้อยจำนวน ${rowCount.toLocaleString()} แถวข้อมูลจากแผ่นงาน "${firstSheetName}" และเชื่อมประสานโครงสร้าง SQL สำเร็จ`;
                             resultMsg.style.display = 'block';
-                            return;
-                        }
+                        }, 500);
 
-                        // Successfully parsed! Add to History Table
-                        const rowCount = rows.length;
-                        const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
-                        const newTr = document.createElement('tr');
-                        newTr.innerHTML = `
-                            <td>${dateStr}</td>
-                            <td><code>${file.name}</code></td>
-                            <td>${rowCount.toLocaleString()} แถว</td>
-                            <td><span class="badge-status success">admin</span></td>
-                        `;
-                        importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
-
-                        // Trigger dynamic calculation to update the breakdowns!
-                        processParsedExcelData(rows, file.name);
-
-                        resultMsg.className = "badge-status success";
-                        resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! อ่านข้อมูลเรียบร้อยจำนวน ${rowCount.toLocaleString()} แถวข้อมูลจากแผ่นงาน "${firstSheetName}" และเชื่อมประสานโครงสร้าง SQL สำเร็จ`;
+                    } catch (err) {
+                        clearInterval(progressInterval);
+                        progressArea.style.display = 'none';
+                        resultMsg.className = "badge-status danger";
+                        resultMsg.innerHTML = `❌ ข้อผิดพลาดในการแยกวิเคราะห์ไฟล์ Excel: ${err.message}`;
                         resultMsg.style.display = 'block';
-                    }, 500);
+                    }
+                };
 
-                } catch (err) {
-                    clearInterval(progressInterval);
-                    progressArea.style.display = 'none';
-                    resultMsg.className = "badge-status danger";
-                    resultMsg.innerHTML = `❌ ข้อผิดพลาดในการแยกวิเคราะห์ไฟล์ Excel: ${err.message}`;
-                    resultMsg.style.display = 'block';
-                }
-            };
-
-            reader.readAsArrayBuffer(file);
-        });
+                reader.readAsArrayBuffer(file);
+            });
+        }
 
         // Parse date strings or Excel serial numbers into standard YYYY-MM
         function parseMonthFromRow(row, dateKeys) {
@@ -1911,7 +1875,6 @@
             // Detect key mappings
             const dnameKey = keys.find(k => k.toLowerCase() === 'dname' || k.toLowerCase() === 'drug_name');
             const hospcodeKey = keys.find(k => k.toLowerCase() === 'hospcode');
-            const amphurKey = keys.find(k => k.toLowerCase() === 'amphur');
             const amountKey = keys.find(k => k.toLowerCase() === 'amount' || k.toLowerCase() === 'sumamount');
             const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code');
             const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice');
@@ -1930,29 +1893,22 @@
             rows.forEach(row => {
                 const didstd = row[didstdKey] || 'N/A';
                 const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
-                const hospcode = row[hospcodeKey] || 'Unknown';
+                const hospcode = String(row[hospcodeKey] || 'Unknown').trim();
                 const amount = parseFloat(row[amountKey]) || 1;
                 const price = parseFloat(row[priceKey]) || (amount * 5);
                 const cost = parseFloat(row[costKey]) || (price * 0.7);
                 
-                let amphur = String(row[amphurKey] || '4901').trim();
-                if (amphur.length > 4) amphur = amphur.substring(0, 4);
-
-                // Map amphur name
-                const resolvedDist = baseDistricts.find(d => d.code === amphur) || baseDistricts[0];
-                // Map hosp name
-                const resolvedHosp = baseHospitals.find(h => h.hospcode === hospcode) || { hospcode, name: `หน่วยบริการ ${hospcode}` };
-
-                // Extract month
+                // Get correct names from hospitals database
+                const hInfo = getHospitalInfo(hospcode);
                 const monthStr = parseMonthFromRow(row, dateKeys);
 
                 newTxs.push({
                     didstd,
                     dname,
                     hospcode,
-                    hospname: resolvedHosp.name,
-                    amphurCode: resolvedDist.code,
-                    amphurName: resolvedDist.name,
+                    hospname: hInfo.hosname,
+                    amphurCode: hInfo.amp_code,
+                    amphurName: hInfo.amp_name,
                     month: monthStr,
                     amount,
                     price,
@@ -1979,6 +1935,146 @@
             renderHospBreakdown();
         }
 
+        // ----------------------------------------------------
+        // AUTH GATING FOR TAB CONTENT (SECURITY CONTROL)
+        // ----------------------------------------------------
+        function generateSecuredLocks() {
+            const locks = document.querySelectorAll('.secured-lock');
+            locks.forEach(lock => {
+                lock.innerHTML = `
+                    <div class="login-card">
+                        <div class="login-header">
+                            <h2>🔐 ข้อมูลจำกัดการเข้าถึงเฉพาะเจ้าหน้าที่</h2>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">
+                                กรุณาเข้าสู่ระบบด้วยสิทธิ์ผู้ตรวจวัดข้อมูลเวชภัณฑ์เพื่อเปิดรายงานนี้
+                            </p>
+                        </div>
+                        <div class="login-form">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label>Username</label>
+                                <input type="text" class="input-lock-username" placeholder="admin" value="admin" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label>Password</label>
+                                <input type="password" class="input-lock-password" placeholder="••••••" value="123456" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
+                            </div>
+                            <button class="btn btn-primary btn-lock-login" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบเพื่อปลดล็อก ⚡</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Bind click events
+            const lockButtons = document.querySelectorAll('.btn-lock-login');
+            lockButtons.forEach((btn, idx) => {
+                btn.addEventListener('click', () => {
+                    const uInputs = document.querySelectorAll('.input-lock-username');
+                    const pInputs = document.querySelectorAll('.input-lock-password');
+                    const u = uInputs[idx].value.trim();
+                    const p = pInputs[idx].value.trim();
+
+                    if (u === 'admin' && p === '123456') {
+                        sessionStorage.setItem('rxmuk_auth_user', 'admin');
+                        checkAuthState();
+                    } else {
+                        alert('Username หรือ Password ไม่ถูกต้อง! (คำแนะนำ: ใช้ admin / 123456)');
+                    }
+                });
+            });
+        }
+
+        // Show lock screens or dynamic breakdown data depending on session auth
+        function checkAuthState() {
+            const loggedInUser = sessionStorage.getItem('rxmuk_auth_user');
+            
+            const userDisplayName = document.getElementById('user-display-name');
+            const loginStatusPill = document.getElementById('login-status-pill');
+            const importLoginGate = document.getElementById('import-login-gate');
+            const importDashboard = document.getElementById('import-dashboard');
+            const authFullName = document.getElementById('auth-full-name');
+
+            const securedContents = document.querySelectorAll('.secured-content');
+            const securedLocks = document.querySelectorAll('.secured-lock');
+
+            if (loggedInUser) {
+                // Set UI state to active
+                userDisplayName.textContent = `ผู้ใช้: admin`;
+                loginStatusPill.style.background = 'rgba(16, 185, 129, 0.1)';
+                loginStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+                loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-green)';
+                loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-green)';
+
+                if(authFullName) authFullName.textContent = 'System Administrator (admin)';
+                if(importLoginGate) importLoginGate.style.display = 'none';
+                if(importDashboard) importDashboard.style.display = 'block';
+
+                // Display reports
+                securedContents.forEach(c => c.style.display = 'block');
+                securedLocks.forEach(l => l.style.display = 'none');
+            } else {
+                // Set Guest UI State
+                userDisplayName.textContent = `ยังไม่ได้เข้าระบบ`;
+                loginStatusPill.style.background = 'rgba(239, 68, 68, 0.1)';
+                loginStatusPill.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-red)';
+                loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-red)';
+
+                if(importLoginGate) importLoginGate.style.display = 'block';
+                if(importDashboard) importDashboard.style.display = 'none';
+
+                // Hide reports behind locks
+                securedContents.forEach(c => c.style.display = 'none');
+                securedLocks.forEach(l => l.style.display = 'block');
+            }
+        }
+
+        const inputUsername = document.getElementById('input-username');
+        const inputPassword = document.getElementById('input-password');
+        const btnLoginSubmit = document.getElementById('btn-login-submit');
+        const btnLogout = document.getElementById('btn-logout');
+
+        // Bind main login submit
+        if (btnLoginSubmit) {
+            btnLoginSubmit.addEventListener('click', () => {
+                const u = inputUsername ? inputUsername.value.trim() : '';
+                const p = inputPassword ? inputPassword.value.trim() : '';
+
+                if (u === 'admin' && p === '123456') {
+                    sessionStorage.setItem('rxmuk_auth_user', 'admin');
+                    checkAuthState();
+                } else {
+                    alert('Username หรือ Password ไม่ถูกต้อง! (คำแนะนำ: ใช้ admin / 123456)');
+                }
+            });
+        }
+
+        if (btnLogout) {
+            btnLogout.addEventListener('click', () => {
+                sessionStorage.removeItem('rxmuk_auth_user');
+                checkAuthState();
+            });
+        }
+
+        // Initialize lists & auth locks
+        generateSecuredLocks();
+        checkAuthState();
+
+        // Initialize selectors & data
+        rawTransactions = generateMockTransactions();
+        populateMonthSelectors();
+        renderDrugBreakdown();
+        renderDistrictBreakdown();
+        renderHospBreakdown();
+
+        // Bind events to dropdown monthly filters
+        document.getElementById('drug-month-select').addEventListener('change', renderDrugBreakdown);
+        document.getElementById('district-month-select').addEventListener('change', renderDistrictBreakdown);
+        document.getElementById('hosp-month-select').addEventListener('change', renderHospBreakdown);
+
+        // Bind input searches
+        document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
+        document.getElementById('hosp-search').addEventListener('input', renderHospBreakdown);
+
         // AI Chatbot Logic
         const chatMessages = document.getElementById('chat-messages');
         const chatInput = document.getElementById('chat-input');
@@ -1993,48 +2089,6 @@
         geminiKeyInput.addEventListener('change', () => {
             localStorage.setItem('rxmuk_gemini_key', geminiKeyInput.value.trim());
         });
-
-        function getLocalBotReply(msg) {
-            const text = msg.toLowerCase();
-            if (text.includes('s_tmp_drug_opd') || text.includes('drug_opd')) {
-                return `<strong>โครงสร้างตาราง s_tmp_drug_opd:</strong><br>
-                ตารางนี้เป็นตารางนำเข้าชั่วคราวของการจ่ายยาผู้ป่วยนอก ประกอบด้วยฟิลด์สำคัญ:<br>
-                1. <code>hospcode</code> (รหัสสถานพยาบาล 5 หลัก) - *ต้องกรอก*<br>
-                2. <code>hn</code> (เลขประจำตัวผู้ป่วยนอก) - *ต้องกรอก*<br>
-                3. <code>date_serv</code> (วันที่รับบริการ) - *ต้องกรอก*<br>
-                4. <code>didstd</code> (รหัสยามาตรฐาน 24 หลัก) - *สำคัญมากสำหรับการประเมิน KPI ด้านยา*<br><br>
-                <em>ข้อเสนอแนะ:</em> ตรวจสอบให้แน่ใจว่าได้Normalise ข้อมูลก่อนนำเข้าจริงเพื่อป้องกันรหัสยาซ้ำซ้อน`;
-            }
-            if (text.includes('sql') || text.includes('ซ้ำ')) {
-                return `<strong>คำสั่ง SQL สำหรับหาและลบข้อมูลที่ซ้ำกันในตารางนำเข้า:</strong><br>
-                <pre style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.78rem; color: var(--c-primary); margin-top: 8px; overflow-x: auto;">
--- 1. หาข้อมูลที่ซ้ำกัน
-SELECT hospcode, hn, date_serv, count(*) 
-FROM s_tmp_drug_opd 
-GROUP BY hospcode, hn, date_serv 
-HAVING count(*) > 1;
-
--- 2. ตัวอย่างการลบแถวซ้ำด้วย ROW_NUMBER()
-WITH CTE AS (
-    SELECT *, ROW_NUMBER() OVER (
-        PARTITION BY hospcode, hn, date_serv, didstd 
-        ORDER BY (SELECT NULL)
-    ) as row_num 
-    FROM s_tmp_drug_opd
-)
-DELETE FROM CTE WHERE row_num > 1;
-                </pre>`;
-            }
-            if (text.includes('43 แฟ้ม') || text.includes('คุณภาพข้อมูล') || text.includes('แก้เป้า')) {
-                return `<strong>ขั้นตอนการตรวจสอบคุณภาพข้อมูล 43 แฟ้มจังหวัดมุกดาหาร:</strong><br>
-                1. รันไฟล์ตรวจสอบ <code>list_import_files.php</code> เพื่อดูรายการไฟล์ที่อัปโหลดทั้งหมด<br>
-                2. ใช้เครื่องมือ <code>NewHDC_DataCorrect.zip</code> ในการแก้ไขกลุ่มเป้าหมายที่ไม่ถูกต้องในตารางหลัก<br>
-                3. ดึงข้อมูลผ่านทาง API MOPH Open Data เพื่อตรวจสอบเปรียบเทียบความถูกต้องกับระบบ HDC ส่วนกลาง<br>
-                4. สามารถศึกษาขั้นตอนการ Deploy ระบบวิเคราะห์หน้าบ้านแบบออฟไลน์เพิ่มเติมได้จากคู่มือ <code>PLANNER.md</code>`;
-            }
-            return `ขออภัยครับ คำถามของคุณไม่พบในฐานข้อมูลคำแนะนำด่วนแบบออฟไลน์<br><br>
-            หากต้องการข้อมูลวิเคราะห์ที่ละเอียดลึกขึ้น รบกวนนำคีย์ Gemini มาใส่ไว้ในกล่อง <strong>"ตั้งค่า Gemini API Key"</strong> ด้านบน เพื่อให้ผู้ช่วย AI สามารถดึงข้อมูลความรู้เชิงลึกแบบเรียลไทม์มาวิเคราะห์ให้คุณได้ครับ`;
-        }
 
         async function callGeminiAPI(userMsg) {
             let apiKey = geminiKeyInput.value.trim();
@@ -2076,10 +2130,11 @@ DELETE FROM CTE WHERE row_num > 1;
         }
 
         function scrollToBottom() {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            if(chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
         function addMessage(text, isBot = false) {
+            if(!chatMessages) return;
             const bubble = document.createElement('div');
             bubble.className = `chat-bubble ${isBot ? 'bot' : 'user'}`;
             
@@ -2121,12 +2176,14 @@ DELETE FROM CTE WHERE row_num > 1;
             addMessage(reply, true);
         }
 
-        chatSend.addEventListener('click', handleSend);
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                handleSend();
-            }
-        });
+        if(chatSend) {
+            chatSend.addEventListener('click', handleSend);
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleSend();
+                }
+            });
+        }
     </script>
 </body>
 </html>
