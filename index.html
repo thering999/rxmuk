@@ -1659,7 +1659,42 @@
         // Initialize transaction database
         rawTransactions = generateMockTransactions();
 
-        // Dynamically get unique years, months, districts, hospitals, and drugs to populate all dropdowns
+        // Dynamically get unique years, months, districts, and drugs to populate dropdowns,
+        // and delegate hospital population based on active district selection.
+        function updateHospitalsDropdown(districtVal) {
+            const hospitals = [];
+            const seenHosp = new Set();
+            rawTransactions.forEach(t => {
+                if (t.hospcode && !seenHosp.has(t.hospcode)) {
+                    if (districtVal === 'all' || t.amphurCode === districtVal) {
+                        seenHosp.add(t.hospcode);
+                        hospitals.push({ code: t.hospcode, name: t.hospname });
+                    }
+                }
+            });
+            hospitals.sort((a, b) => a.name.localeCompare(b.name));
+
+            const suffixList = ['drug', 'district', 'hosp'];
+            suffixList.forEach(prefix => {
+                const hSelect = document.getElementById(`${prefix}-hosp-select`);
+                if (hSelect) {
+                    const prevVal = hSelect.value;
+                    hSelect.innerHTML = '<option value="all">🏥 ทุกหน่วยบริการ</option>';
+                    hospitals.forEach(h => {
+                        const opt = document.createElement('option');
+                        opt.value = h.code;
+                        opt.textContent = `${h.code} - ${h.name}`;
+                        hSelect.appendChild(opt);
+                    });
+                    if (hospitals.some(h => h.code === prevVal)) {
+                        hSelect.value = prevVal;
+                    } else {
+                        hSelect.value = 'all';
+                    }
+                }
+            });
+        }
+
         function populateAllFilterDropdowns() {
             // Extract unique values
             const years = [...new Set(rawTransactions.map(t => t.month ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
@@ -1667,17 +1702,6 @@
             
             // Districts
             const districts = [...new Set(rawTransactions.map(t => JSON.stringify({ code: t.amphurCode, name: t.amphurName })))].map(str => JSON.parse(str)).sort((a, b) => a.code.localeCompare(b.code));
-            
-            // Hospitals
-            const hospitals = [];
-            const seenHosp = new Set();
-            rawTransactions.forEach(t => {
-                if (t.hospcode && !seenHosp.has(t.hospcode)) {
-                    seenHosp.add(t.hospcode);
-                    hospitals.push({ code: t.hospcode, name: t.hospname });
-                }
-            });
-            hospitals.sort((a, b) => a.name.localeCompare(b.name));
             
             // Drugs
             const drugs = [];
@@ -1735,20 +1759,6 @@
                     dSelect.value = districts.map(x => x.code).includes(curr) ? curr : 'all';
                 }
 
-                // Populate Hosp
-                const hSelect = document.getElementById(`${prefix}-hosp-select`);
-                if (hSelect) {
-                    const curr = hSelect.value;
-                    hSelect.innerHTML = '<option value="all">🏥 ทุกหน่วยบริการ</option>';
-                    hospitals.forEach(h => {
-                        const opt = document.createElement('option');
-                        opt.value = h.code;
-                        opt.textContent = `${h.code} - ${h.name}`;
-                        hSelect.appendChild(opt);
-                    });
-                    hSelect.value = hospitals.map(x => x.code).includes(curr) ? curr : 'all';
-                }
-
                 // Populate Items
                 const iSelect = document.getElementById(`${prefix}-item-select`);
                 if (iSelect) {
@@ -1763,6 +1773,10 @@
                     iSelect.value = drugs.map(x => x.code).includes(curr) ? curr : 'all';
                 }
             });
+
+            // Initialize hospitals dropdown based on the active district
+            const activeDistrict = document.getElementById('drug-district-select') ? document.getElementById('drug-district-select').value : 'all';
+            updateHospitalsDropdown(activeDistrict);
         }
 
         // Shared dynamic filter resolver
@@ -2112,20 +2126,24 @@
         function processParsedExcelData(rows, filename) {
             const keys = Object.keys(rows[0] || {});
             
-            // Detect key mappings
-            const dnameKey = keys.find(k => k.toLowerCase() === 'dname' || k.toLowerCase() === 'drug_name');
-            const hospcodeKey = keys.find(k => k.toLowerCase() === 'hospcode');
-            const amountKey = keys.find(k => k.toLowerCase() === 'amount' || k.toLowerCase() === 'sumamount');
-            const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code');
-            const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice');
-            const costKey = keys.find(k => k.toLowerCase() === 'cost' || k.toLowerCase() === 'sumdrugcost');
+            // Detect key mappings (English, Thai, substrings)
+            const dnameKey = keys.find(k => k.toLowerCase() === 'dname' || k.toLowerCase() === 'drug_name' || k.toLowerCase().includes('name') || k.toLowerCase().includes('ชื่อยา'));
+            const hospcodeKey = keys.find(k => k.toLowerCase() === 'hospcode' || k.toLowerCase().includes('hosp') || k.toLowerCase().includes('หน่วยบริการ') || k.toLowerCase().includes('รหัสสถานบริการ'));
+            const amountKey = keys.find(k => k.toLowerCase() === 'amount' || k.toLowerCase() === 'sumamount' || k.toLowerCase() === 'qty' || k.toLowerCase().includes('amount') || k.toLowerCase().includes('จำนวน'));
+            const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code' || k.toLowerCase().includes('did') || k.toLowerCase().includes('รหัสยา'));
+            const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice' || k.toLowerCase().includes('price') || k.toLowerCase().includes('ราคา'));
+            const costKey = keys.find(k => k.toLowerCase() === 'cost' || k.toLowerCase() === 'sumdrugcost' || k.toLowerCase().includes('cost') || k.toLowerCase().includes('ทุน'));
             
             // Date column keys
             const dateKeys = keys.filter(k => 
                 k.toLowerCase().includes('date') || 
                 k.toLowerCase().includes('serv') || 
                 k.toLowerCase() === 'd_update' || 
-                k.toLowerCase() === 'hdc_date'
+                k.toLowerCase() === 'hdc_date' ||
+                k.toLowerCase().includes('เดือน') ||
+                k.toLowerCase().includes('ปี') ||
+                k.toLowerCase().includes('ym') ||
+                k.toLowerCase().includes('month')
             );
 
             const newTxs = [];
@@ -2159,10 +2177,7 @@
             // Update global transactions
             rawTransactions = newTxs;
 
-            // Re-populate all selectors
-            populateAllFilterDropdowns();
-
-            // Reset all filters to 'all'
+            // Reset all filters to 'all' first
             const suffixList = ['drug', 'district', 'hosp'];
             suffixList.forEach(prefix => {
                 ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
@@ -2170,6 +2185,9 @@
                     if (el) el.value = 'all';
                 });
             });
+
+            // Re-populate all selectors
+            populateAllFilterDropdowns();
 
             document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
             document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
@@ -2329,6 +2347,58 @@
         renderDistrictBreakdown();
         renderHospBreakdown();
 
+        // Centralized Filter Synchronization & Cascading Logic
+        function handleFilterChange(selectorType, val) {
+            const suffixList = ['drug', 'district', 'hosp'];
+
+            if (selectorType === 'hosp') {
+                if (val !== 'all') {
+                    const hInfo = getHospitalInfo(val);
+                    if (hInfo && hInfo.amp_code) {
+                        // Sync district values
+                        suffixList.forEach(prefix => {
+                            const dSelect = document.getElementById(`${prefix}-district-select`);
+                            if (dSelect) dSelect.value = hInfo.amp_code;
+                        });
+                        // Update hospital dropdown options to match this district
+                        updateHospitalsDropdown(hInfo.amp_code);
+                        // Restore hospital selection across all tabs
+                        suffixList.forEach(prefix => {
+                            const hSelect = document.getElementById(`${prefix}-hosp-select`);
+                            if (hSelect) hSelect.value = val;
+                        });
+                    }
+                }
+            } else if (selectorType === 'district') {
+                // Sync district values
+                suffixList.forEach(prefix => {
+                    const dSelect = document.getElementById(`${prefix}-district-select`);
+                    if (dSelect) dSelect.value = val;
+                });
+                // Update hospital dropdown options based on new district
+                updateHospitalsDropdown(val);
+            } else {
+                // For year, month, item: just sync the value across all tabs
+                suffixList.forEach(prefix => {
+                    const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                    if (el) el.value = val;
+                });
+            }
+
+            // Sync other non-special filters
+            if (selectorType !== 'hosp' && selectorType !== 'district') {
+                suffixList.forEach(prefix => {
+                    const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                    if (el) el.value = val;
+                });
+            }
+
+            // Re-render all breakdown tabs to reflect the new filter state
+            renderDrugBreakdown();
+            renderDistrictBreakdown();
+            renderHospBreakdown();
+        }
+
         // Bind change events to all 5 dropdown filters for drug, district, and hosp
         const suffixList = ['drug', 'district', 'hosp'];
         suffixList.forEach(prefix => {
@@ -2336,9 +2406,7 @@
                 const el = document.getElementById(`${prefix}-${selectorType}-select`);
                 if (el) {
                     el.addEventListener('change', () => {
-                        if (prefix === 'drug') renderDrugBreakdown();
-                        if (prefix === 'district') renderDistrictBreakdown();
-                        if (prefix === 'hosp') renderHospBreakdown();
+                        handleFilterChange(selectorType, el.value);
                     });
                 }
             });
