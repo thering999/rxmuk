@@ -366,6 +366,7 @@
             gap: 12px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .search-control {
@@ -1124,7 +1125,18 @@
 
                 <div class="filter-row">
                     <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหารายการยาด้วยชื่อ หรือ รหัสยา...">
-                    <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตาราง</button>
+                    
+                    <select id="drug-month-select" class="select-control">
+                        <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        <option value="2025-10">ตุลาคม 2568</option>
+                        <option value="2025-11">พฤศจิกายน 2568</option>
+                        <option value="2025-12">ธันวาคม 2568</option>
+                        <option value="2026-01">มกราคม 2569</option>
+                        <option value="2026-02">กุมภาพันธ์ 2569</option>
+                        <option value="2026-03">มีนาคม 2569</option>
+                    </select>
+
+                    <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ตตัวกรอง</button>
                 </div>
 
                 <div class="table-container">
@@ -1151,6 +1163,21 @@
     <!-- TAB 4: BREAKDOWN BY DISTRICT (สรุปรายอำเภอ) -->
     <div id="tab-district" class="tab-content">
         <section class="container">
+            <div class="panel" style="margin-bottom: 20px;">
+                <div class="filter-row" style="margin-bottom: 0;">
+                    <label for="district-month-select" style="font-weight: 600; color: #fff; margin-right: 10px;">📅 ตัวกรองประจำเดือนข้อมูล:</label>
+                    <select id="district-month-select" class="select-control" style="min-width: 250px;">
+                        <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        <option value="2025-10">ตุลาคม 2568</option>
+                        <option value="2025-11">พฤศจิกายน 2568</option>
+                        <option value="2025-12">ธันวาคม 2568</option>
+                        <option value="2026-01">มกราคม 2569</option>
+                        <option value="2026-02">กุมภาพันธ์ 2569</option>
+                        <option value="2026-03">มีนาคม 2569</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="workspace-layout">
                 <!-- Breakdown Table -->
                 <div class="panel">
@@ -1189,34 +1216,7 @@
                     <svg viewBox="0 0 400 300" style="width: 100%; height: 260px;">
                         <!-- Simple visual bar comparison -->
                         <g id="chart-bars-district">
-                            <!-- Oct-March static preview, replaced dynamically if custom file uploaded -->
-                            <rect x="130" y="30" width="180" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="44" fill="#fff" font-size="12">อ.เมืองมุกดาหาร</text>
-                            <text x="320" y="44" fill="var(--c-primary)" font-size="12" font-weight="bold">54.2%</text>
-
-                            <rect x="130" y="65" width="80" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="79" fill="#fff" font-size="12">อ.นิคมคำสร้อย</text>
-                            <text x="220" y="79" fill="var(--c-primary)" font-size="12" font-weight="bold">21.0%</text>
-
-                            <rect x="130" y="100" width="45" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="114" fill="#fff" font-size="12">อ.ดอนตาล</text>
-                            <text x="185" y="114" fill="var(--c-primary)" font-size="12" font-weight="bold">11.4%</text>
-
-                            <rect x="130" y="135" width="30" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="149" fill="#fff" font-size="12">อ.คำชะอี</text>
-                            <text x="170" y="149" fill="var(--c-primary)" font-size="12" font-weight="bold">6.8%</text>
-
-                            <rect x="130" y="170" width="20" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="184" fill="#fff" font-size="12">อ.ดงหลวง</text>
-                            <text x="160" y="184" fill="var(--c-primary)" font-size="12" font-weight="bold">3.2%</text>
-
-                            <rect x="130" y="205" width="12" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="219" fill="#fff" font-size="12">อ.หนองสูง</text>
-                            <text x="150" y="219" fill="var(--c-primary)" font-size="12" font-weight="bold">2.1%</text>
-
-                            <rect x="130" y="240" width="8" height="18" fill="url(#cyan-gradient)" rx="3"/>
-                            <text x="10" y="254" fill="#fff" font-size="12">อ.หว้านใหญ่</text>
-                            <text x="145" y="254" fill="var(--c-primary)" font-size="12" font-weight="bold">1.3%</text>
+                            <!-- Populated dynamically -->
                         </g>
                         <defs>
                             <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1244,7 +1244,18 @@
 
                 <div class="filter-row">
                     <input type="text" id="hosp-search" class="search-control" placeholder="🔍 พิมพ์ค้นหารหัสพยาบาล หรือ ชื่อสถานบริการ...">
-                    <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตาราง</button>
+                    
+                    <select id="hosp-month-select" class="select-control">
+                        <option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>
+                        <option value="2025-10">ตุลาคม 2568</option>
+                        <option value="2025-11">พฤศจิกายน 2568</option>
+                        <option value="2025-12">ธันวาคม 2568</option>
+                        <option value="2026-01">มกราคม 2569</option>
+                        <option value="2026-02">กุมภาพันธ์ 2569</option>
+                        <option value="2026-03">มีนาคม 2569</option>
+                    </select>
+
+                    <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ตตัวกรอง</button>
                 </div>
 
                 <div class="table-container">
@@ -1440,65 +1451,186 @@
         // Initial Auth check
         checkAuthState();
 
-        // MOCK DATA GENERATED DIRECTLY FROM SQL SCHEMA ENTRIES FOR STABILITY
-        let drugData = [
-            { didstd: "100752000004493120381169", name: "Paracetamol 500mg เม็ด", amount: 124500, price: 62250, cost: 24900, abc: "C" },
-            { didstd: "100245200000000000000000", name: "Aerobidol MDI(Berodual) 50 mcg+20mcg/dose ขวด", amount: 480, price: 66240, cost: 52900, abc: "A" },
-            { didstd: "101108000004201130781122", name: "(N1)N-acetylcysteine(NAC) powder 200mg ซอง", amount: 15600, price: 27300, cost: 18408, abc: "B" },
-            { didstd: "410000000459301440181113", name: "Plaivana Cream 35 g 14%w/w หลอด", amount: 650, price: 26500, cost: 29250, abc: "B" },
-            { didstd: "100702000003750120481078", name: "Di-clo-FEnac 25mg เม็ด", amount: 84000, price: 42000, cost: 9240, abc: "C" },
-            { didstd: "201070700019999930781122", name: "ORS - ซอง", amount: 42000, price: 115500, cost: 83580, abc: "A" },
-            { didstd: "100582000004203120181168", name: "Fenofibrate 200mg เม็ด", amount: 14200, price: 56800, cost: 42600, abc: "B" },
-            { didstd: "10082300000321120381189", name: "Haloperidol 0.5mg เม็ด", amount: 9600, price: 4800, cost: 1728, abc: "C" },
-            { didstd: "213030200018276120381169", name: "(N1)Norgesic (Paracetamol+orphenadrine) 450+35mg เม็ด", amount: 64200, price: 64200, cost: 25680, abc: "A" },
-            { didstd: "410000000399390240281113", name: "Capsaicin Gel (60 g) 0.025% หลอด", amount: 280, price: 20440, cost: 16800, abc: "B" },
-            { didstd: "124867242002980170281336", name: "(Avamys)Fluticasone NS 120 dose 27.5 mcg ขวด", amount: 150, price: 41100, cost: 34347, abc: "A" },
-            { didstd: "100651000003640120381113", name: "Betahistine 12 mg เม็ด", amount: 24000, price: 24000, cost: 24000, abc: "B" },
-            { didstd: "124846000003972121781421", name: "Clopidogrel 75mg เม็ด", amount: 18500, price: 134125, cost: 101010, abc: "A" },
-            { didstd: "101434000004493121781506", name: "Metformin 500mg เม็ด", amount: 185000, price: 185000, cost: 51800, abc: "A" },
-            { didstd: "100854000003521120381506", name: "Diazepam 5mg เม็ด", amount: 35000, price: 17500, cost: 4200, abc: "C" },
-            { didstd: "101875000004021220381144", name: "Vitamin B1 100mg เม็ด", amount: 195000, price: 195000, cost: 48750, abc: "A" },
-            { didstd: "105573000003721120381202", name: "Simvastatin 20mg เม็ด", amount: 112000, price: 168000, cost: 78400, abc: "A" },
-            { didstd: "123897133003850120381735", name: "Sertraline 50mg เม็ด", amount: 6200, price: 18600, cost: 13268, abc: "B" },
-            { didstd: "101832000004203120281168", name: "Theophylline(Duralyn) 200 mg เม็ด", amount: 48000, price: 132000, cost: 87360, abc: "A" },
-            { didstd: "420000001589502094782737", name: "ยาแก้ไอมะขามป้อม 120 ซีซี - ขวด", amount: 8400, price: 180600, cost: 142800, abc: "A" },
-            { didstd: "100275000004203120381506", name: "Metronidazole 200mg เม็ด", amount: 28400, price: 42600, cost: 18460, abc: "B" },
-            { didstd: "100772000004021220181621", name: "Phenytoin 100mg เม็ด", amount: 35000, price: 35000, cost: 14000, abc: "B" }
+        // ----------------------------------------------------
+        // DATA LOGIC: TRANSACTIONS STRUCTURE (FOR DYNAMIC SLICING & MONTH FILTER)
+        // ----------------------------------------------------
+        
+        // Base Drug Dictionary from SQL inserts
+        const baseDrugs = [
+            { didstd: "100752000004493120381169", name: "Paracetamol 500mg เม็ด", abc: "C" },
+            { didstd: "100245200000000000000000", name: "Aerobidol MDI(Berodual) 50 mcg+20mcg/dose ขวด", abc: "A" },
+            { didstd: "101108000004201130781122", name: "(N1)N-acetylcysteine(NAC) powder 200mg ซอง", abc: "B" },
+            { didstd: "410000000459301440181113", name: "Plaivana Cream 35 g 14%w/w หลอด", abc: "B" },
+            { didstd: "100702000003750120481078", name: "Di-clo-FEnac 25mg เม็ด", abc: "C" },
+            { didstd: "201070700019999930781122", name: "ORS - ซอง", abc: "A" },
+            { didstd: "100582000004203120181168", name: "Fenofibrate 200mg เม็ด", abc: "B" },
+            { didstd: "10082300000321120381189", name: "Haloperidol 0.5mg เม็ด", abc: "C" },
+            { didstd: "213030200018276120381169", name: "(N1)Norgesic (Paracetamol+orphenadrine) 450+35mg เม็ด", abc: "A" },
+            { didstd: "410000000399390240281113", name: "Capsaicin Gel (60 g) 0.025% หลอด", abc: "B" },
+            { didstd: "124867242002980170281336", name: "(Avamys)Fluticasone NS 120 dose 27.5 mcg ขวด", abc: "A" },
+            { didstd: "100651000003640120381113", name: "Betahistine 12 mg เม็ด", abc: "B" },
+            { didstd: "124846000003972121781421", name: "Clopidogrel 75mg เม็ด", abc: "A" },
+            { didstd: "101434000004493121781506", name: "Metformin 500mg เม็ด", abc: "A" },
+            { didstd: "100854000003521120381506", name: "Diazepam 5mg เม็ด", abc: "C" },
+            { didstd: "101875000004021220381144", name: "Vitamin B1 100mg เม็ด", abc: "A" },
+            { didstd: "105573000003721120381202", name: "Simvastatin 20mg เม็ด", abc: "A" },
+            { didstd: "123897133003850120381735", name: "Sertraline 50mg เม็ด", abc: "B" },
+            { didstd: "101832000004203120281168", name: "Theophylline(Duralyn) 200 mg เม็ด", abc: "A" },
+            { didstd: "420000001589502094782737", name: "ยาแก้ไอมะขามป้อม 120 ซีซี - ขวด", abc: "A" },
+            { didstd: "100275000004203120381506", name: "Metronidazole 200mg เม็ด", abc: "B" },
+            { didstd: "100772000004021220181621", name: "Phenytoin 100mg เม็ด", abc: "B" }
         ];
 
-        let districtData = [
-            { code: "4901", name: "อ.เมืองมุกดาหาร", count: 24200, budget: 1450000 },
-            { code: "4902", name: "อ.นิคมคำสร้อย", count: 9600, budget: 560000 },
-            { code: "4903", name: "อ.ดอนตาล", count: 5200, budget: 305000 },
-            { code: "4904", name: "อ.คำชะอี", count: 3100, budget: 182000 },
-            { code: "4905", name: "อ.ดงหลวง", count: 1850, budget: 85600 },
-            { code: "4906", name: "อ.หนองสูง", count: 1200, budget: 56200 },
-            { code: "4907", name: "อ.หว้านใหญ่", count: 850, budget: 34800 }
+        const baseHospitals = [
+            { hospcode: "10712", name: "โรงพยาบาลมุกดาหาร (รพท.)" },
+            { hospcode: "10713", name: "โรงพยาบาลนิคมคำสร้อย (รพช.)" },
+            { hospcode: "10714", name: "โรงพยาบาลดอนตาล (รพช.)" },
+            { hospcode: "05790", name: "รพ.สต. บ้านคำบก" },
+            { hospcode: "05791", name: "รพ.สต. บ้านนาสองห้อง" },
+            { hospcode: "05792", name: "รพ.สต. บ้านคำแคน" },
+            { hospcode: "05793", name: "รพ.สต. บ้านคำป่าหลาย" },
+            { hospcode: "05794", name: "รพ.สต. บ้านป่าไร่" },
+            { hospcode: "05795", name: "รพ.สต. บ้านคำป่าหลายสาขา" }
         ];
 
-        let hospData = [
-            { hospcode: "10712", name: "โรงพยาบาลมุกดาหาร (รพท.)", count: 28400, amount: 245000, budget: 1850000, qc: "100% ผ่าน" },
-            { hospcode: "10713", name: "โรงพยาบาลนิคมคำสร้อย (รพช.)", count: 9200, amount: 84000, budget: 512000, qc: "100% ผ่าน" },
-            { hospcode: "10714", name: "โรงพยาบาลดอนตาล (รพช.)", count: 4800, amount: 42000, budget: 280000, qc: "100% ผ่าน" },
-            { hospcode: "05790", name: "รพ.สต. บ้านคำบก", count: 1250, amount: 12400, budget: 18600, qc: "99.8% ผ่าน" },
-            { hospcode: "05791", name: "รพ.สต. บ้านนาสองห้อง", count: 980, amount: 8500, budget: 12400, qc: "100% ผ่าน" },
-            { hospcode: "05792", name: "รพ.สต. บ้านคำแคน", count: 850, amount: 7600, budget: 11200, qc: "100% ผ่าน" },
-            { hospcode: "05793", name: "รพ.สต. บ้านคำป่าหลาย", count: 1450, amount: 15400, budget: 24500, qc: "99.4% ผ่าน" },
-            { hospcode: "05794", name: "รพ.สต. บ้านป่าไร่", count: 1120, amount: 9800, budget: 14200, qc: "100% ผ่าน" },
-            { hospcode: "05795", name: "รพ.สต. บ้านคำป่าหลายสาขา", count: 760, amount: 6200, budget: 9200, qc: "100% ผ่าน" }
+        const baseDistricts = [
+            { code: "4901", name: "อ.เมืองมุกดาหาร" },
+            { code: "4902", name: "อ.นิคมคำสร้อย" },
+            { code: "4903", name: "อ.ดอนตาล" },
+            { code: "4904", name: "อ.คำชะอี" },
+            { code: "4905", name: "อ.ดงหลวง" },
+            { code: "4906", name: "อ.หนองสูง" },
+            { code: "4907", name: "อ.หว้านใหญ่" }
         ];
 
-        // Functions to render tables
+        // Global Transaction Log
+        let rawTransactions = [];
+
+        // Thai Month-Year Formatter
+        function getThaiMonthYearName(yearMonthStr) {
+            if(!yearMonthStr || yearMonthStr === 'all') return 'แสดงทุกเดือน';
+            const parts = yearMonthStr.split('-');
+            if(parts.length < 2) return yearMonthStr;
+            const year = parts[0];
+            const month = parts[1];
+            const thaiMonths = [
+                "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+            ];
+            const monthIndex = parseInt(month) - 1;
+            const thaiYear = parseInt(year) + 543;
+            return `${thaiMonths[monthIndex]} ${thaiYear}`;
+        }
+
+        // Generate dynamic transactions from static base lists
+        function generateMockTransactions() {
+            const list = [];
+            const months = ["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
+            
+            baseDrugs.forEach((d, dIdx) => {
+                months.forEach((m, mIdx) => {
+                    // Spread values dynamically
+                    const factor = 0.5 + (mIdx * 0.12) + ((dIdx % 3) * 0.15);
+                    const amount = Math.round((d.abc === 'A' ? 3000 : (d.abc === 'B' ? 1200 : 500)) * factor);
+                    const price = Math.round(amount * (d.abc === 'A' ? 25 : (d.abc === 'B' ? 8 : 1.5)));
+                    const cost = Math.round(price * 0.72);
+
+                    // Choose hospcode & district randomly but consistently
+                    const h = baseHospitals[dIdx % baseHospitals.length];
+                    const dist = baseDistricts[(dIdx + mIdx) % baseDistricts.length];
+
+                    list.push({
+                        didstd: d.didstd,
+                        dname: d.name,
+                        hospcode: h.hospcode,
+                        hospname: h.name,
+                        amphurCode: dist.code,
+                        amphurName: dist.name,
+                        month: m,
+                        amount: amount,
+                        price: price,
+                        cost: cost
+                    });
+                });
+            });
+
+            return list;
+        }
+
+        // Initialize transaction database
+        rawTransactions = generateMockTransactions();
+
+        // Dynamically get unique months in database to populate dropdowns
+        function populateMonthSelectors() {
+            const months = [...new Set(rawTransactions.map(t => t.month))].sort();
+            const selectors = ['drug-month-select', 'district-month-select', 'hosp-month-select'];
+            
+            selectors.forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                const currentVal = select.value;
+                select.innerHTML = '<option value="all">📅 แสดงทุกเดือน (ทั้งหมด)</option>';
+                
+                months.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = getThaiMonthYearName(m);
+                    select.appendChild(opt);
+                });
+
+                if (months.includes(currentVal)) {
+                    select.value = currentVal;
+                } else {
+                    select.value = 'all';
+                }
+            });
+        }
+
+        // Render functions for breakdown tables with month and search filters
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
             const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
-            
-            let filtered = drugData.filter(d => 
-                d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal)
-            );
+            const monthVal = document.getElementById('drug-month-select').value;
 
+            // Filter transactions
+            let txs = rawTransactions;
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+
+            // Aggregate by Drug
+            const drugAgg = {};
+            txs.forEach(t => {
+                if (!drugAgg[t.didstd]) {
+                    drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, amount: 0, price: 0, cost: 0, abc: "C" };
+                }
+                drugAgg[t.didstd].amount += t.amount;
+                drugAgg[t.didstd].price += t.price;
+                drugAgg[t.didstd].cost += t.cost;
+            });
+
+            let list = Object.values(drugAgg).map(d => {
+                // Determine ABC based on active price summation
+                d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
+                return d;
+            });
+
+            // Apply search filter
+            if (searchVal) {
+                list = list.filter(d => d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal));
+            }
+
+            // Sort by price descending
+            list.sort((a, b) => b.price - a.price);
+
+            // Render UI rows
             body.innerHTML = '';
-            filtered.forEach(d => {
+            if (list.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">ไม่พบข้อมูลตัวยาที่สอดคล้องกับเงื่อนไขการกรอง</td></tr>`;
+                return;
+            }
+
+            list.forEach(d => {
                 const tr = document.createElement('tr');
                 const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)');
                 tr.innerHTML = `
@@ -1515,16 +1647,42 @@
 
         function resetDrugTable() {
             document.getElementById('drug-breakdown-search').value = '';
+            document.getElementById('drug-month-select').value = 'all';
             renderDrugBreakdown();
         }
 
         function renderDistrictBreakdown() {
             const body = document.getElementById('district-breakdown-body');
+            const monthVal = document.getElementById('district-month-select').value;
+
+            // Filter transactions
+            let txs = rawTransactions;
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+
+            // Aggregate by District
+            const districtAgg = {};
+            // Initialize with all districts to avoid empty rows
+            baseDistricts.forEach(d => {
+                districtAgg[d.code] = { code: d.code, name: d.name, count: 0, budget: 0 };
+            });
+
+            txs.forEach(t => {
+                const code = t.amphurCode || "4901";
+                if (!districtAgg[code]) {
+                    districtAgg[code] = { code, name: t.amphurName || `อำเภอ ${code}`, count: 0, budget: 0 };
+                }
+                districtAgg[code].count++;
+                districtAgg[code].budget += t.price;
+            });
+
+            const list = Object.values(districtAgg).sort((a,b) => b.budget - a.budget);
+            const totalBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
+
+            // Render table
             body.innerHTML = '';
-
-            const totalBudget = districtData.reduce((acc, curr) => acc + curr.budget, 0);
-
-            districtData.forEach(d => {
+            list.forEach(d => {
                 const percent = ((d.budget / totalBudget) * 100).toFixed(1);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -1537,15 +1695,15 @@
                 body.appendChild(tr);
             });
 
-            // Update SVG bars dynamically based on districtData
+            // Render SVG Bars Chart
             const chartG = document.getElementById('chart-bars-district');
             chartG.innerHTML = '';
 
-            districtData.forEach((d, idx) => {
+            list.forEach((d, idx) => {
                 const percent = ((d.budget / totalBudget) * 100).toFixed(1);
                 const yPos = 30 + (idx * 35);
-                const barWidth = Math.max(10, Math.min(220, (d.budget / totalBudget) * 300));
-                
+                const barWidth = Math.max(8, Math.min(220, (d.budget / totalBudget) * 220));
+
                 chartG.innerHTML += `
                     <text x="10" y="${yPos + 14}" fill="#fff" font-size="11">${d.name}</text>
                     <rect x="130" y="${yPos}" width="${barWidth}" height="18" fill="url(#cyan-gradient)" rx="3"/>
@@ -1557,13 +1715,42 @@
         function renderHospBreakdown() {
             const body = document.getElementById('hosp-breakdown-body');
             const searchVal = document.getElementById('hosp-search').value.toLowerCase();
+            const monthVal = document.getElementById('hosp-month-select').value;
 
-            let filtered = hospData.filter(h => 
-                h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal)
-            );
+            // Filter transactions
+            let txs = rawTransactions;
+            if (monthVal !== 'all') {
+                txs = txs.filter(t => t.month === monthVal);
+            }
+
+            // Aggregate by Hospital
+            const hospAgg = {};
+            txs.forEach(t => {
+                if (!hospAgg[t.hospcode]) {
+                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                }
+                hospAgg[t.hospcode].count++;
+                hospAgg[t.hospcode].amount += t.amount;
+                hospAgg[t.hospcode].budget += t.price;
+            });
+
+            let list = Object.values(hospAgg);
+
+            // Filter by search
+            if (searchVal) {
+                list = list.filter(h => h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal));
+            }
+
+            // Sort by budget descending
+            list.sort((a,b) => b.budget - a.budget);
 
             body.innerHTML = '';
-            filtered.forEach(h => {
+            if (list.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">ไม่พบข้อมูลสถานพยาบาลที่สอดคล้องกับเงื่อนไขการกรอง</td></tr>`;
+                return;
+            }
+
+            list.forEach(h => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><code>${h.hospcode}</code></td>
@@ -1579,19 +1766,28 @@
 
         function resetHospTable() {
             document.getElementById('hosp-search').value = '';
+            document.getElementById('hosp-month-select').value = 'all';
             renderHospBreakdown();
         }
 
-        // Initialize lists
+        // Initialize table renders & populate selectors
+        populateMonthSelectors();
         renderDrugBreakdown();
         renderDistrictBreakdown();
         renderHospBreakdown();
 
-        // Bind Search controls
+        // Bind events to dropdown monthly filters
+        document.getElementById('drug-month-select').addEventListener('change', renderDrugBreakdown);
+        document.getElementById('district-month-select').addEventListener('change', renderDistrictBreakdown);
+        document.getElementById('hosp-month-select').addEventListener('change', renderHospBreakdown);
+
+        // Bind input searches
         document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
         document.getElementById('hosp-search').addEventListener('input', renderHospBreakdown);
 
+        // ----------------------------------------------------
         // EXCEL PARSING LOGIC USING SHEETJS (CDN)
+        // ----------------------------------------------------
         const excelFileInput = document.getElementById('excel-file-input');
         const progressArea = document.getElementById('import-progress-area');
         const progressBar = document.getElementById('import-progress-bar');
@@ -1673,18 +1869,46 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // Function to process parsed JSON row data and update overall calculations!
-        function processParsedExcelData(rows, filename) {
-            console.log("Processing excel rows:", rows.length);
+        // Parse date strings or Excel serial numbers into standard YYYY-MM
+        function parseMonthFromRow(row, dateKeys) {
+            for (let key of dateKeys) {
+                const val = row[key];
+                if (!val) continue;
 
-            // Detect column fields
-            const sampleRow = rows[0];
-            let hasDname = false;
-            let hasHospcode = false;
-            let hasAmphur = false;
+                // If Excel date serial number
+                if (typeof val === 'number' && val > 1000) {
+                    const dateObj = new Date((val - 25569) * 86400 * 1000);
+                    const y = dateObj.getFullYear();
+                    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    return `${y}-${m}`;
+                }
+
+                // If standard string date
+                const dateStr = String(val).trim();
+                const match = dateStr.match(/^(\d{4})[-/](\d{2})/);
+                if (match) {
+                    return `${match[1]}-${match[2]}`;
+                }
+
+                // Thai Buddhist Era conversions or dd/mm/yyyy
+                const parts = dateStr.split(/[-/]/);
+                if (parts.length >= 3) {
+                    let y = parseInt(parts[2] || parts[0]);
+                    let m = String(parseInt(parts[1])).padStart(2, '0');
+                    if (y > 2500) y -= 543; // BE to AD
+                    if (y > 1900 && y < 2100) {
+                        return `${y}-${m}`;
+                    }
+                }
+            }
+            return "2026-06"; // Fallback month if no dates found
+        }
+
+        // Process parsed JSON row data and replace rawTransactions!
+        function processParsedExcelData(rows, filename) {
+            const keys = Object.keys(rows[0] || {});
             
-            // Look for matching keys
-            const keys = Object.keys(sampleRow);
+            // Detect key mappings
             const dnameKey = keys.find(k => k.toLowerCase() === 'dname' || k.toLowerCase() === 'drug_name');
             const hospcodeKey = keys.find(k => k.toLowerCase() === 'hospcode');
             const amphurKey = keys.find(k => k.toLowerCase() === 'amphur');
@@ -1692,87 +1916,67 @@
             const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code');
             const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice');
             const costKey = keys.find(k => k.toLowerCase() === 'cost' || k.toLowerCase() === 'sumdrugcost');
+            
+            // Date column keys
+            const dateKeys = keys.filter(k => 
+                k.toLowerCase().includes('date') || 
+                k.toLowerCase().includes('serv') || 
+                k.toLowerCase() === 'd_update' || 
+                k.toLowerCase() === 'hdc_date'
+            );
 
-            if (dnameKey && hospcodeKey) {
-                // We have a detailed drug_opd file!
-                // Clear existing lists or merge them
-                const tempDrugs = {};
-                const tempHosp = {};
-                const tempDistrict = {
-                    "4901": { name: "อ.เมืองมุกดาหาร", count: 0, budget: 0 },
-                    "4902": { name: "อ.นิคมคำสร้อย", count: 0, budget: 0 },
-                    "4903": { name: "อ.ดอนตาล", count: 0, budget: 0 },
-                    "4904": { name: "อ.คำชะอี", count: 0, budget: 0 },
-                    "4905": { name: "อ.ดงหลวง", count: 0, budget: 0 },
-                    "4906": { name: "อ.หนองสูง", count: 0, budget: 0 },
-                    "4907": { name: "อ.หว้านใหญ่", count: 0, budget: 0 }
-                };
+            const newTxs = [];
 
-                rows.forEach(row => {
-                    const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
-                    const didstd = row[didstdKey] || 'N/A';
-                    const hospcode = row[hospcodeKey] || 'Unknown';
-                    const amount = parseFloat(row[amountKey]) || 1;
-                    const price = parseFloat(row[priceKey]) || (amount * 5);
-                    const cost = parseFloat(row[costKey]) || (price * 0.7);
-                    
-                    let amphur = row[amphurKey] || '4901';
-                    if (amphur.length > 4) amphur = amphur.substring(0, 4); // handle full code
+            rows.forEach(row => {
+                const didstd = row[didstdKey] || 'N/A';
+                const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
+                const hospcode = row[hospcodeKey] || 'Unknown';
+                const amount = parseFloat(row[amountKey]) || 1;
+                const price = parseFloat(row[priceKey]) || (amount * 5);
+                const cost = parseFloat(row[costKey]) || (price * 0.7);
+                
+                let amphur = String(row[amphurKey] || '4901').trim();
+                if (amphur.length > 4) amphur = amphur.substring(0, 4);
 
-                    // Group by Drug
-                    if (!tempDrugs[didstd]) {
-                        tempDrugs[didstd] = { didstd, name: dname, amount: 0, price: 0, cost: 0, abc: "C" };
-                    }
-                    tempDrugs[didstd].amount += amount;
-                    tempDrugs[didstd].price += price;
-                    tempDrugs[didstd].cost += cost;
+                // Map amphur name
+                const resolvedDist = baseDistricts.find(d => d.code === amphur) || baseDistricts[0];
+                // Map hosp name
+                const resolvedHosp = baseHospitals.find(h => h.hospcode === hospcode) || { hospcode, name: `หน่วยบริการ ${hospcode}` };
 
-                    // Group by Hospcode
-                    if (!tempHosp[hospcode]) {
-                        tempHosp[hospcode] = { hospcode, name: `หน่วยบริการ ${hospcode}`, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
-                    }
-                    tempHosp[hospcode].count++;
-                    tempHosp[hospcode].amount += amount;
-                    tempHosp[hospcode].budget += price;
+                // Extract month
+                const monthStr = parseMonthFromRow(row, dateKeys);
 
-                    // Group by District
-                    const ampCode = tempDistrict[amphur] ? amphur : "4901";
-                    tempDistrict[ampCode].count++;
-                    tempDistrict[ampCode].budget += price;
+                newTxs.push({
+                    didstd,
+                    dname,
+                    hospcode,
+                    hospname: resolvedHosp.name,
+                    amphurCode: resolvedDist.code,
+                    amphurName: resolvedDist.name,
+                    month: monthStr,
+                    amount,
+                    price,
+                    cost
                 });
+            });
 
-                // Update Globals
-                drugData = Object.values(tempDrugs).map(d => {
-                    // Recalculate ABC class based on arbitrary budget boundaries
-                    d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
-                    return d;
-                }).sort((a,b) => b.price - a.price); // sort by total price descending
+            // Update global transactions
+            rawTransactions = newTxs;
 
-                hospData = Object.values(tempHosp).map(h => {
-                    // Try to resolve name from our static hosp map
-                    const existing = hospData.find(ex => ex.hospcode === h.hospcode);
-                    if (existing) h.name = existing.name;
-                    return h;
-                }).sort((a,b) => b.budget - a.budget);
+            // Re-populate monthly selectors
+            populateMonthSelectors();
 
-                districtData = Object.keys(tempDistrict).map(code => ({
-                    code,
-                    name: tempDistrict[code].name,
-                    count: tempDistrict[code].count,
-                    budget: tempDistrict[code].budget
-                })).sort((a,b) => b.budget - a.budget);
+            // Reset filters to All and re-render everything
+            document.getElementById('drug-month-select').value = 'all';
+            document.getElementById('district-month-select').value = 'all';
+            document.getElementById('hosp-month-select').value = 'all';
 
-                // Update data-source labels
-                document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
-                document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+            document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+            document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
 
-                // Re-render
-                renderDrugBreakdown();
-                renderDistrictBreakdown();
-                renderHospBreakdown();
-            } else {
-                console.warn("Could not find standard DNAME or HOSPCODE columns. Just updating stats.");
-            }
+            renderDrugBreakdown();
+            renderDistrictBreakdown();
+            renderHospBreakdown();
         }
 
         // AI Chatbot Logic
@@ -1781,18 +1985,15 @@
         const chatSend = document.getElementById('chat-send');
         const geminiKeyInput = document.getElementById('gemini-key');
 
-        // Load saved key from localStorage on start
         const savedKey = localStorage.getItem('rxmuk_gemini_key');
         if (savedKey) {
             geminiKeyInput.value = savedKey;
         }
 
-        // Save key on change
         geminiKeyInput.addEventListener('change', () => {
             localStorage.setItem('rxmuk_gemini_key', geminiKeyInput.value.trim());
         });
 
-        // Simple default AI response generator (in case online service fails)
         function getLocalBotReply(msg) {
             const text = msg.toLowerCase();
             if (text.includes('s_tmp_drug_opd') || text.includes('drug_opd')) {
@@ -1835,12 +2036,8 @@ DELETE FROM CTE WHERE row_num > 1;
             หากต้องการข้อมูลวิเคราะห์ที่ละเอียดลึกขึ้น รบกวนนำคีย์ Gemini มาใส่ไว้ในกล่อง <strong>"ตั้งค่า Gemini API Key"</strong> ด้านบน เพื่อให้ผู้ช่วย AI สามารถดึงข้อมูลความรู้เชิงลึกแบบเรียลไทม์มาวิเคราะห์ให้คุณได้ครับ`;
         }
 
-        // Call Gemini API client-side with auto fallback
         async function callGeminiAPI(userMsg) {
-            // Priority 1: User's custom API key in UI
             let apiKey = geminiKeyInput.value.trim();
-            
-            // Priority 2: System fallback API key from .env (embedded here securely for client use)
             if (!apiKey) {
                 apiKey = 'AIzaSyApt3F3OqbhFMnx1YJ617OFYlH--CaRzxg';
             }
@@ -1887,7 +2084,6 @@ DELETE FROM CTE WHERE row_num > 1;
             bubble.className = `chat-bubble ${isBot ? 'bot' : 'user'}`;
             
             if (isBot) {
-                // simple markdown-like processing
                 let formatted = text
                     .replace(/\n/g, '<br>')
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -1909,14 +2105,12 @@ DELETE FROM CTE WHERE row_num > 1;
             chatInput.value = '';
             addMessage(text, false);
 
-            // Add typing indicator
             const typing = document.createElement('div');
             typing.className = 'chat-bubble bot typing-indicator';
             typing.innerHTML = `<span class="typing-dot">•</span><span class="typing-dot">•</span><span class="typing-dot">•</span>`;
             chatMessages.appendChild(typing);
             scrollToBottom();
 
-            // Call API or Fallback
             let reply = await callGeminiAPI(text);
             typing.remove();
 
