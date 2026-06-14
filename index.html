@@ -1161,7 +1161,8 @@
         <section class="container">
             <!-- Secured Content Wrapper -->
             <div class="secured-content">
-                <div class="panel">
+                <!-- Top Panel (Stats + Filters) -->
+                <div class="panel" style="margin-bottom: 20px;">
                     <div class="panel-header">
                         <h3 class="panel-title">
                             <span>💊</span>
@@ -1191,7 +1192,7 @@
                         <button onclick="showRawModal('drug')" style="flex:0 0 auto;align-self:center;background:rgba(0,242,254,0.1);border:1px solid rgba(0,242,254,0.3);color:var(--c-primary);border-radius:10px;padding:10px 18px;cursor:pointer;font-size:0.85rem;font-weight:600;">🔎 ดูข้อมูลดิบ</button>
                     </div>
 
-                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px;">
                         <input type="text" id="drug-breakdown-search" class="search-control" placeholder="🔍 ค้นหาเร็ว..." style="flex: 1 1 200px;">
                         
                         <select id="drug-year-select" class="select-control" style="flex: 1 1 120px;">
@@ -1222,25 +1223,59 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportDrugExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
                         <button class="btn btn-primary" onclick="exportDrugCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
+                </div>
 
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
-                                    <th>ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
-                                    <th>จำนวนจ่ายสะสม (Amount)</th>
-                                    <th>ราคารวมสะสม (SumPrice)</th>
-                                    <th>ต้นทุนสะสม (SumCost)</th>
-                                    <th>ระดับผลกระทบมูลค่า (ABC Class)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="drug-breakdown-body">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                <!-- Split Workspace Layout -->
+                <div class="workspace-layout" style="grid-template-columns: 1.6fr 1.4fr;">
+                    <!-- Table Panel -->
+                    <div class="panel" style="overflow-x: auto;">
+                        <div class="panel-header" style="margin-bottom: 15px;">
+                            <h3 class="panel-title">
+                                <span>📋</span>
+                                ตารางแจกแจงรายการยา
+                            </h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
+                                        <th>ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
+                                        <th>จำนวนจ่ายสะสม (Amount)</th>
+                                        <th>ราคารวมสะสม (SumPrice)</th>
+                                        <th>ต้นทุนสะสม (SumCost)</th>
+                                        <th>ระดับผลกระทบมูลค่า (ABC Class)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drug-breakdown-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Chart Panel -->
+                    <div class="panel">
+                        <div class="panel-header" style="margin-bottom: 15px;">
+                            <h3 class="panel-title">
+                                <span>📊</span>
+                                10 อันดับมูลค่าการจัดซื้อยาสูงสุด
+                            </h3>
+                        </div>
+                        <svg viewBox="0 0 400 380" style="width: 100%; height: 350px;">
+                            <defs>
+                                <linearGradient id="purple-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#a855f7" />
+                                    <stop offset="100%" stop-color="#d946ef" />
+                                </linearGradient>
+                            </defs>
+                            <g id="chart-bars-drug">
+                                <!-- Populated dynamically -->
+                            </g>
+                        </svg>
                     </div>
                 </div>
             </div>
@@ -1300,6 +1335,7 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetDistrictTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportDistrictExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
                         <button class="btn btn-primary" onclick="exportDistrictCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
@@ -1363,7 +1399,8 @@
     <div id="tab-hosp" class="tab-content">
         <section class="container">
             <div class="secured-content">
-                <div class="panel">
+                <!-- Top Panel (Stats + Filters) -->
+                <div class="panel" style="margin-bottom: 20px;">
                     <div class="panel-header">
                         <h3 class="panel-title">
                             <span>🏥</span>
@@ -1389,7 +1426,7 @@
                         <button onclick="showRawModal('hosp')" style="flex:0 0 auto;align-self:center;background:rgba(0,242,254,0.1);border:1px solid rgba(0,242,254,0.3);color:var(--c-primary);border-radius:10px;padding:10px 18px;cursor:pointer;font-size:0.85rem;font-weight:600;">🔎 ดูข้อมูลดิบ</button>
                     </div>
 
-                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px;">
                         <input type="text" id="hosp-search" class="search-control" placeholder="🔍 ค้นหาเร็ว..." style="flex: 1 1 200px;">
                         
                         <select id="hosp-year-select" class="select-control" style="flex: 1 1 120px;">
@@ -1420,25 +1457,59 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetHospTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportHospExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
                         <button class="btn btn-primary" onclick="exportHospCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
+                </div>
 
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>รหัสหน่วยบริการ (Hospcode)</th>
-                                    <th>ชื่อสถานบริการสาธารณสุข</th>
-                                    <th>จำนวนยอดสแกนจ่ายยา (ครั้ง)</th>
-                                    <th>ปริมาณยาสะสม (Amount)</th>
-                                    <th>มูลค่าราคารวมสะสม (บาท)</th>
-                                    <th>คุณภาพข้อมูลผ่านเกณฑ์</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hosp-breakdown-body">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                <!-- Split Workspace Layout -->
+                <div class="workspace-layout" style="grid-template-columns: 1.6fr 1.4fr;">
+                    <!-- Table Panel -->
+                    <div class="panel" style="overflow-x: auto;">
+                        <div class="panel-header" style="margin-bottom: 15px;">
+                            <h3 class="panel-title">
+                                <span>📋</span>
+                                ตารางข้อมูลหน่วยบริการ
+                            </h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัสหน่วยบริการ (Hospcode)</th>
+                                        <th>ชื่อสถานบริการสาธารณสุข</th>
+                                        <th>จำนวนยอดสแกนจ่ายยา (ครั้ง)</th>
+                                        <th>ปริมาณยาสะสม (Amount)</th>
+                                        <th>มูลค่าราคารวมสะสม (บาท)</th>
+                                        <th>คุณภาพข้อมูลผ่านเกณฑ์</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hosp-breakdown-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Chart Panel -->
+                    <div class="panel">
+                        <div class="panel-header" style="margin-bottom: 15px;">
+                            <h3 class="panel-title">
+                                <span>📊</span>
+                                10 อันดับหน่วยบริการมูลค่ายาสูงสุด
+                            </h3>
+                        </div>
+                        <svg viewBox="0 0 400 380" style="width: 100%; height: 350px;">
+                            <defs>
+                                <linearGradient id="emerald-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#10b981" />
+                                    <stop offset="100%" stop-color="#059669" />
+                                </linearGradient>
+                            </defs>
+                            <g id="chart-bars-hosp">
+                                <!-- Populated dynamically -->
+                            </g>
+                        </svg>
                     </div>
                 </div>
             </div>
@@ -1494,6 +1565,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                 <h3 style="margin:0;color:var(--c-primary);font-size:1.1rem;">🔎 ตารางข้อมูลดิบ (ตามตัวกรองที่เลือก)</h3>
                 <div style="display:flex;gap:10px;">
+                    <button onclick="exportRawModalExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); border: none; color: #fff; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 0.85rem; font-weight: 600; box-shadow: 0 4px 12px rgba(27, 94, 32, 0.25);">🟢 ส่งออก Excel</button>
                     <button id="raw-modal-export" onclick="exportRawModalCSV()" style="background:var(--gradient-2);border:none;color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:0.85rem;font-weight:600;">📤 ส่งออก CSV</button>
                     <button onclick="document.getElementById('raw-data-modal').style.display='none'" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:var(--c-red);border-radius:8px;padding:8px 16px;cursor:pointer;font-size:0.85rem;">✕ ปิด</button>
                 </div>
@@ -1957,6 +2029,28 @@
                 body.appendChild(tr);
             });
             updateDrugStats(list);
+
+            // Render SVG Bars Chart
+            const chartG = document.getElementById('chart-bars-drug');
+            if (chartG) {
+                chartG.innerHTML = '';
+                const top10 = list.slice(0, 10);
+                const totalDrugBudget = top10.reduce((acc, curr) => acc + curr.price, 0) || 1;
+                
+                top10.forEach((d, idx) => {
+                    const percent = ((d.price / totalDrugBudget) * 100).toFixed(1);
+                    const yPos = 20 + (idx * 35);
+                    const barWidth = Math.max(8, Math.min(220, (d.price / totalDrugBudget) * 220));
+                    // Shorten drug name for display if it's too long
+                    const shortName = d.name.length > 20 ? d.name.substring(0, 20) + '...' : d.name;
+
+                    chartG.innerHTML += `
+                        <text x="10" y="${yPos + 14}" fill="#fff" font-size="11">${shortName}</text>
+                        <rect x="130" y="${yPos}" width="${barWidth}" height="18" fill="url(#purple-gradient)" rx="3"/>
+                        <text x="${130 + barWidth + 10}" y="${yPos + 14}" fill="var(--c-secondary)" font-size="11" font-weight="bold">${percent}%</text>
+                    `;
+                });
+            }
         }
 
         function resetDrugTable() {
@@ -2078,6 +2172,28 @@
                 body.appendChild(tr);
             });
             updateHospStats(list);
+
+            // Render SVG Bars Chart
+            const chartG = document.getElementById('chart-bars-hosp');
+            if (chartG) {
+                chartG.innerHTML = '';
+                const top10 = list.slice(0, 10);
+                const totalHospBudget = top10.reduce((acc, curr) => acc + curr.budget, 0) || 1;
+                
+                top10.forEach((h, idx) => {
+                    const percent = ((h.budget / totalHospBudget) * 100).toFixed(1);
+                    const yPos = 20 + (idx * 35);
+                    const barWidth = Math.max(8, Math.min(220, (h.budget / totalHospBudget) * 220));
+                    // Shorten hospital name for display if it's too long
+                    const shortName = h.name.length > 20 ? h.name.substring(0, 20) + '...' : h.name;
+
+                    chartG.innerHTML += `
+                        <text x="10" y="${yPos + 14}" fill="#fff" font-size="11">${shortName}</text>
+                        <rect x="130" y="${yPos}" width="${barWidth}" height="18" fill="url(#emerald-gradient)" rx="3"/>
+                        <text x="${130 + barWidth + 10}" y="${yPos + 14}" fill="var(--c-green)" font-size="11" font-weight="bold">${percent}%</text>
+                    `;
+                });
+            }
         }
 
         function resetDistrictTable() {
@@ -2775,6 +2891,136 @@
                 link.click();
                 document.body.removeChild(link);
             }
+        }
+
+        // SheetJS Excel (.xlsx) Export Helper
+        function downloadExcel(filename, headers, rows, sheetName = 'RxMuk Data') {
+            try {
+                const worksheetData = [headers, ...rows];
+                const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+                
+                // Add basic column widths to make it readable
+                const maxCols = headers.length;
+                const colsSetting = [];
+                for(let i=0; i<maxCols; i++) {
+                    colsSetting.push({ wch: 22 });
+                }
+                worksheet['!cols'] = colsSetting;
+
+                XLSX.writeFile(workbook, filename);
+            } catch (err) {
+                console.error('Error generating Excel file:', err);
+                alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Excel: ' + err.message);
+            }
+        }
+
+        function exportDrugExcel() {
+            const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
+            const yearVal = document.getElementById('drug-year-select').value;
+            const monthVal = document.getElementById('drug-month-select').value;
+
+            let txs = getFilteredTransactions('drug');
+
+            const drugAgg = {};
+            txs.forEach(t => {
+                if (!drugAgg[t.didstd]) {
+                    drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, amount: 0, price: 0, cost: 0, abc: "C" };
+                }
+                drugAgg[t.didstd].amount += t.amount;
+                drugAgg[t.didstd].price += t.price;
+                drugAgg[t.didstd].cost += t.cost;
+            });
+
+            let list = Object.values(drugAgg).map(d => {
+                d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
+                return d;
+            });
+
+            if (searchVal) {
+                list = list.filter(d => d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal));
+            }
+            list.sort((a, b) => b.price - a.price);
+
+            const headers = ["รหัสยามาตรฐาน (DID/STD 24 หลัก)", "ชื่อทางการค้า / ชื่อสามัญทางยา", "จำนวนจ่ายสะสม", "ราคารวมสะสม (บาท)", "ต้นทุนสะสม (บาท)", "ระดับผลกระทบมูลค่า (ABC Class)"];
+            const rows = list.map(d => [d.didstd, d.name, d.amount, d.price, d.cost, d.abc]);
+
+            const filename = `drug_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            downloadExcel(filename, headers, rows, "Drug Breakdown");
+        }
+
+        function exportDistrictExcel() {
+            const yearVal = document.getElementById('district-year-select').value;
+            const monthVal = document.getElementById('district-month-select').value;
+
+            let txs = getFilteredTransactions('district');
+
+            const districtAgg = {};
+            baseDistricts.forEach(d => {
+                districtAgg[d.code] = { code: d.code, name: d.name, count: 0, budget: 0 };
+            });
+
+            txs.forEach(t => {
+                const code = t.amphurCode || "4901";
+                if (!districtAgg[code]) {
+                    districtAgg[code] = { code, name: t.amphurName || `อำเภอ ${code}`, count: 0, budget: 0 };
+                }
+                districtAgg[code].count++;
+                districtAgg[code].budget += t.price;
+            });
+
+            const list = Object.values(districtAgg).sort((a,b) => b.budget - a.budget);
+            const totalBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
+
+            const headers = ["รหัสอำเภอ", "ชื่ออำเภอ", "จำนวนบริการ (ครั้ง)", "มูลค่าราคารวมจ่าย (บาท)", "สัดส่วนเปอร์เซ็นต์"];
+            const rows = list.map(d => {
+                const percent = ((d.budget / totalBudget) * 100).toFixed(1) + "%";
+                return [d.code, d.name, d.count, d.budget, percent];
+            });
+
+            const filename = `district_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            downloadExcel(filename, headers, rows, "District Breakdown");
+        }
+
+        function exportHospExcel() {
+            const searchVal = document.getElementById('hosp-search').value.toLowerCase();
+            const yearVal = document.getElementById('hosp-year-select').value;
+            const monthVal = document.getElementById('hosp-month-select').value;
+
+            let txs = getFilteredTransactions('hosp');
+
+            const hospAgg = {};
+            txs.forEach(t => {
+                if (!hospAgg[t.hospcode]) {
+                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                }
+                hospAgg[t.hospcode].count++;
+                hospAgg[t.hospcode].amount += t.amount;
+                hospAgg[t.hospcode].budget += t.price;
+            });
+
+            let list = Object.values(hospAgg);
+            if (searchVal) {
+                list = list.filter(h => h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal));
+            }
+            list.sort((a,b) => b.budget - a.budget);
+
+            const headers = ["รหัสหน่วยบริการ (Hospcode)", "ชื่อสถานบริการสาธารณสุข", "จำนวนยอดสแกนจ่ายยา (ครั้ง)", "ปริมาณยาสะสม", "มูลค่าราคารวมสะสม (บาท)", "คุณภาพข้อมูลผ่านเกณฑ์"];
+            const rows = list.map(h => [h.hospcode, h.name, h.count, h.amount, h.budget, h.qc]);
+
+            const filename = `hospital_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            downloadExcel(filename, headers, rows, "Hospital Breakdown");
+        }
+
+        function exportRawModalExcel() {
+            const txs = _rawModalData;
+            if (!txs.length) return;
+            const headers = ["ปี-เดือน", "อำเภอ", "รหัสหน่วยบริการ", "ชื่อสถานบริการ", "รหัสยา (DID)", "ชื่อยา", "จำนวน", "ราคา (บาท)", "ต้นทุน (บาท)", "เวลาที่นำเข้า"];
+            const rows = txs.map(t => [t.month || '', t.amphurName || '', t.hospcode || '', t.hospname || '', t.didstd || '', t.dname || '', t.amount || 0, t.price || 0, t.cost || 0, t.uploadTime || 'ข้อมูลจำลอง']);
+
+            const filename = `raw_data_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            downloadExcel(filename, headers, rows, "Raw Data Export");
         }
 
         function exportDrugCSV() {
