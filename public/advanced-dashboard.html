@@ -4121,7 +4121,7 @@
         // Show lock screens or dynamic breakdown data depending on session auth
         function checkAuthState() {
             const loggedInUser = sessionStorage.getItem('rxmuk_auth_user');
-
+            
             const userDisplayName = document.getElementById('user-display-name');
             const loginStatusPill = document.getElementById('login-status-pill');
             const importLoginGate = document.getElementById('import-login-gate');
@@ -4130,26 +4130,18 @@
 
             const securedContents = document.querySelectorAll('.secured-content');
             const securedLocks = document.querySelectorAll('.secured-lock');
-            const uploaderPanel = document.querySelector('#import-dashboard .panel');
 
             if (loggedInUser) {
                 // Set UI state to active
-                userDisplayName.textContent = `ผู้ใช้: ${loggedInUser}`;
+                userDisplayName.textContent = `ผู้ใช้: admin`;
                 loginStatusPill.style.background = 'rgba(16, 185, 129, 0.1)';
                 loginStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.2)';
                 loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-green)';
                 loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-green)';
 
+                if(authFullName) authFullName.textContent = 'System Administrator (admin)';
                 if(importLoginGate) importLoginGate.style.display = 'none';
                 if(importDashboard) importDashboard.style.display = 'block';
-
-                if (loggedInUser === 'admin') {
-                    if(authFullName) authFullName.textContent = 'System Administrator (admin)';
-                    if(uploaderPanel) uploaderPanel.style.display = 'block';
-                } else if (loggedInUser === 'rxmuk') {
-                    if(authFullName) authFullName.textContent = 'RxMuk Viewer (rxmuk)';
-                    if(uploaderPanel) uploaderPanel.style.display = 'none'; // Hide upload panel for viewer
-                }
 
                 // Display reports
                 securedContents.forEach(c => c.style.display = 'block');
@@ -4185,14 +4177,12 @@
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
-                } else if (u === 'rxmuk' && p === '123456') {
-                    sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
-                    checkAuthState();
                 } else {
                     alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                 }
             });
         }
+
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
                 sessionStorage.removeItem('rxmuk_auth_user');

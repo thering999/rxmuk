@@ -64,6 +64,11 @@ class ExcelImporter {
                 return ['success' => false, 'message' => 'ไม่สามารถบันทึกไฟล์ได้', 'filename' => $file_name];
             }
 
+            // Sync with SPA's main data file if it matches the summary name
+            if (strpos($file_name, 's_tmp_drug_opd') !== false && $file_ext === 'csv') {
+                copy($file_path, $this->upload_dir . 's_tmp_drug_opd.csv');
+            }
+
             // Read Excel file
             $data = $this->readExcelFile($file_path, $sheet_name);
             if (!$data['success']) {
