@@ -37,28 +37,27 @@ if (Auth::isLoggedIn()) {
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         .login-container {
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             padding: 15px;
         }
         
         .login-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--card-bg);
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 15px var(--c-primary-glow);
             padding: 40px;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(12px);
             animation: slideInUp 0.6s ease-out;
+            color: #fff;
         }
         
         @keyframes slideInUp {
@@ -74,15 +73,18 @@ if (Auth::isLoggedIn()) {
         
         .login-card h1 {
             text-align: center;
-            color: #667eea;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
-            font-weight: 700;
-            font-size: 28px;
+            font-weight: 800;
+            font-size: 36px;
+            letter-spacing: -0.05em;
         }
         
         .login-card p.subtitle {
             text-align: center;
-            color: #999;
+            color: var(--text-muted);
             margin-bottom: 30px;
             font-size: 14px;
         }
@@ -94,15 +96,17 @@ if (Auth::isLoggedIn()) {
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 13px;
         }
         
         .form-group input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
+            padding: 12px 16px;
+            border: 1px solid var(--card-border);
+            background: rgba(17, 24, 39, 0.6);
+            color: #fff;
             border-radius: 10px;
             font-size: 14px;
             transition: all 0.3s ease;
@@ -111,18 +115,18 @@ if (Auth::isLoggedIn()) {
         
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--c-primary);
+            box-shadow: 0 0 12px var(--c-primary-glow);
         }
         
         .btn-login {
             width: 100%;
             padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--gradient-1);
+            color: #0b0f19;
             border: none;
             border-radius: 10px;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -131,7 +135,7 @@ if (Auth::isLoggedIn()) {
         
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
         }
         
         .btn-login:active {
@@ -158,7 +162,7 @@ if (Auth::isLoggedIn()) {
         
         .footer-text {
             text-align: center;
-            color: white;
+            color: var(--text-muted);
             margin-top: 20px;
             font-size: 13px;
         }
@@ -191,9 +195,9 @@ if (Auth::isLoggedIn()) {
                 <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
             </form>
             
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #999; font-size: 13px;">
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--card-border); text-align: center; color: var(--text-muted); font-size: 13px;">
                 <p>ข้อมูลเริ่มต้น:</p>
-                <p>ชื่อผู้ใช้: <strong>admin</strong><br>รหัสผ่าน: <strong>123456</strong></p>
+                <p>ชื่อผู้ใช้: <strong style="color: var(--c-primary);">admin</strong><br>รหัสผ่าน: <strong style="color: var(--c-primary);">123456</strong></p>
             </div>
         </div>
         
