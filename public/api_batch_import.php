@@ -123,13 +123,13 @@ switch ($action) {
             $conn = $db->connect();
             
             // Verify user owns this import or is admin
-            $query = "SELECT user_id FROM imported_files WHERE id = ?";
+            $query = "SELECT user_id, file_name FROM imported_files WHERE id = ?";
             $stmt = $conn->prepare($query);
             $stmt->bind_param("i", $import_id);
             $stmt->execute();
             
-            $result = $stmt->get_result()->fetch_assoc();
-            if ($result && ($result['user_id'] == $user_id || Auth::isAdmin())) {
+            $res_data = $stmt->get_result()->fetch_assoc();
+            if ($res_data && ($res_data['user_id'] == $user_id || Auth::isAdmin())) {
                 // Delete from database
                 $delete_query = "DELETE FROM imported_files WHERE id = ?";
                 $delete_stmt = $conn->prepare($delete_query);
@@ -137,8 +137,8 @@ switch ($action) {
                 
                 if ($delete_stmt->execute()) {
                     // Attempt to remove uploaded file from disk
-                    if (!empty($import_info['file_name'])) {
-                        $filePath = __DIR__ . '/../uploads/' . $import_info['file_name'];
+                    if (!empty($res_data['file_name'])) {
+                        $filePath = __DIR__ . '/../uploads/' . $res_data['file_name'];
                         if (file_exists($filePath)) {
                             @unlink($filePath);
                         }
@@ -157,6 +157,43 @@ switch ($action) {
                 ];
             }
         }
+        break;
+
+    case 'clear_all':
+        // Wipe all data from the system (Admin only)
+        if (!Auth::isAdmin()) {
+            http_response_code(403);
+            $response = ['success' => false, 'message' => 'สิทธิ์ไม่เพียงพอ'];
+            break;
+        }
+
+        require_once __DIR__ . '/../config/Database.php';
+        $db = new Database();
+        $conn = $db->connect();
+
+        // 1. Get all filenames to delete from disk
+        $res = $conn->query("SELECT file_name FROM imported_files");
+        while ($row = $res->fetch_assoc()) {
+            if (!empty($row['file_name'])) {
+                $filePath = __DIR__ . '/../uploads/' . $row['file_name'];
+                if (file_exists($filePath)) @unlink($filePath);
+            }
+        }
+
+        // 2. Also clear the SPA's primary data file
+        $spaFile = __DIR__ . '/../uploads/s_tmp_drug_opd.csv';
+        if (file_exists($spaFile)) @unlink($spaFile);
+
+        // 3. Truncate tables
+        $conn->query("SET FOREIGN_KEY_CHECKS = 0");
+        $conn->query("TRUNCATE TABLE imported_data");
+        $conn->query("TRUNCATE TABLE imported_files");
+        $conn->query("SET FOREIGN_KEY_CHECKS = 1");
+
+        $response = [
+            'success' => true,
+            'message' => 'ล้างข้อมูลทั้งหมดในระบบเรียบร้อยแล้ว'
+        ];
         break;
 }
 

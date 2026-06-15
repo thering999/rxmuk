@@ -139,6 +139,13 @@ $imports = $importer->getImportedFiles(); // Get all files, not just current use
                     <div class="stat-number">43</div>
                     <div class="stat-label">ไฟล์ HDC ทั้งหมด</div>
                 </div>
+                <?php if (Auth::isAdmin()): ?>
+                <div class="stat-card" style="border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05);">
+                    <button id="btn-clear-all-system" class="btn btn-danger w-100 h-100" style="font-weight: 700;">
+                        <i class="bi bi-trash3-fill"></i> ล้างข้อมูลระบบทั้งหมด
+                    </button>
+                </div>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($upload_message)): ?>
@@ -387,6 +394,32 @@ $imports = $importer->getImportedFiles(); // Get all files, not just current use
 
         // Attach handlers on load
         attachDeleteHandlers();
+
+        // Clear All System Data handler
+        const btnClearAll = document.getElementById('btn-clear-all-system');
+        if (btnClearAll) {
+            btnClearAll.addEventListener('click', () => {
+                if (!confirm('🛑 คำเตือน: คุณแน่ใจว่าต้องการล้างข้อมูล "ทั้งหมด" ในระบบ? \nการกระทำนี้จะลบฐานข้อมูลทุกตารางและไฟล์อัปโหลดทั้งหมดถาวร ไม่สามารถกู้คืนได้!')) return;
+
+                fetch('api_batch_import.php?action=clear_all', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                })
+                .then(res => res.json())
+                .then(json => {
+                    if (json.success) {
+                        alert(json.message);
+                        window.location.reload();
+                    } else {
+                        alert('ข้อผิดพลาด: ' + json.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+                });
+            });
+        }
     </script>
 </body>
 </html>

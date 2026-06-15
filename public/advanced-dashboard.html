@@ -2591,7 +2591,7 @@
             },
             map: {
                 title: "แผนที่สถิติการสั่งจ่ายยาเชิงภูมิศาสตร์ (Geospatial Distribution)",
-                subtitle: "จำลองภาพความหนาแน่นเชิงสถิติและงบประมาณการจัดสรรยาโรคเรื้อรังหลัก (DM, Lipid, HT) ในแต่ละอำเภอของมุกดาหาร"
+                subtitle: "แสดงภาพวิเคราะห์ความหนาแน่นเชิงสถิติและงบประมาณการจัดสรรยาโรคเรื้อรังหลัก (DM, Lipid, HT) ในแต่ละอำเภอของมุกดาหาร"
             },
             "access-index": {
                 title: "ดัชนีความเท่าเทียมในการเข้าถึงยา (Access Index)",
@@ -2637,52 +2637,10 @@
         });
 
         // ----------------------------------------------------
+        // ----------------------------------------------------
         // DATA LOGIC: TRANSACTIONS STRUCTURE (FOR DYNAMIC SLICING & MONTH FILTER)
         // ----------------------------------------------------
         
-        // Base Drug Dictionary from SQL inserts
-        const baseDrugs = [
-            { didstd: "100752000004493120381169", name: "Paracetamol 500mg เม็ด", abc: "C" },
-            { didstd: "100245200000000000000000", name: "Aerobidol MDI(Berodual) 50 mcg+20mcg/dose ขวด", abc: "A" },
-            { didstd: "101108000004201130781122", name: "(N1)N-acetylcysteine(NAC) powder 200mg ซอง", abc: "B" },
-            { didstd: "410000000459301440181113", name: "Plaivana Cream 35 g 14%w/w หลอด", abc: "B" },
-            { didstd: "100702000003750120481078", name: "Di-clo-FEnac 25mg เม็ด", abc: "C" },
-            { didstd: "201070700019999930781122", name: "ORS - ซอง", abc: "A" },
-            { didstd: "100582000004203120181168", name: "Fenofibrate 200mg เม็ด", abc: "B" },
-            { didstd: "10082300000321120381189", name: "Haloperidol 0.5mg เม็ด", abc: "C" },
-            { didstd: "213030200018276120381169", name: "(N1)Norgesic (Paracetamol+orphenadrine) 450+35mg เม็ด", abc: "A" },
-            { didstd: "410000000399390240281113", name: "Capsaicin Gel (60 g) 0.025% หลอด", abc: "B" },
-            { didstd: "124867242002980170281336", name: "(Avamys)Fluticasone NS 120 dose 27.5 mcg ขวด", abc: "A" },
-            { didstd: "100651000003640120381113", name: "Betahistine 12 mg เม็ด", abc: "B" },
-            { didstd: "124846000003972121781421", name: "Clopidogrel 75mg เม็ด", abc: "A" },
-            { didstd: "101434000004493121781506", name: "Metformin 500mg เม็ด", abc: "A" },
-            { didstd: "100854000003521120381506", name: "Diazepam 5mg เม็ด", abc: "C" },
-            { didstd: "101875000004021220381144", name: "Vitamin B1 100mg เม็ด", abc: "A" },
-            { didstd: "105573000003721120381202", name: "Simvastatin 20mg เม็ด", abc: "A" },
-            { didstd: "123897133003850120381735", name: "Sertraline 50mg เม็ด", abc: "B" },
-            { didstd: "101832000004203120281168", name: "Theophylline(Duralyn) 200 mg เม็ด", abc: "A" },
-            { didstd: "420000001589502094782737", name: "ยาแก้ไอมะขามป้อม 120 ซีซี - ขวด", abc: "A" },
-            { didstd: "100275000004203120381506", name: "Metronidazole 200mg เม็ด", abc: "B" },
-            { didstd: "100772000004021220181621", name: "Phenytoin 100mg เม็ด", abc: "B" }
-        ];
-
-        const baseHospitals = [
-            { hospcode: "10712", name: "โรงพยาบาลมุกดาหาร" },
-            { hospcode: "11113", name: "โรงพยาบาลนิคมคำสร้อย" },
-            { hospcode: "11114", name: "โรงพยาบาลดอนตาล" },
-            { hospcode: "11115", name: "โรงพยาบาลดงหลวง" },
-            { hospcode: "11116", name: "โรงพยาบาลคำชะอี" },
-            { hospcode: "11117", name: "โรงพยาบาลหว้านใหญ่" },
-            { hospcode: "11118", name: "โรงพยาบาลหนองสูง" },
-            { hospcode: "05740", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านกุดโง้ง" },
-            { hospcode: "05741", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านโคก" },
-            { hospcode: "05790", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านคำบก" },
-            { hospcode: "05791", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านนาสองห้อง" },
-            { hospcode: "05792", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านคำแคน" },
-            { hospcode: "05793", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านคำป่าหลาย" },
-            { hospcode: "05794", name: "โรงพยาบาลส่งเสริมสุขภาพตำบลบ้านป่าไร่" }
-        ];
-
         const baseDistricts = [
             { code: "4901", name: "เมืองมุกดาหาร" },
             { code: "4902", name: "นิคมคำสร้อย" },
@@ -2728,9 +2686,6 @@
             let name = "";
             if (typeof MUKDAHAN_HOSPITALS !== 'undefined' && MUKDAHAN_HOSPITALS[hospcode]) {
                 name = MUKDAHAN_HOSPITALS[hospcode].hosname;
-            } else {
-                const match = baseHospitals.find(h => h.hospcode === hospcode);
-                if (match) name = match.name;
             }
             if (!name) return true;
             
@@ -2756,107 +2711,8 @@
                     amp_name: info.amp_name
                 };
             }
-            // Fallback to static mock mapping
-            const match = baseHospitals.find(h => h.hospcode === hospcode);
-            if (match) {
-                // Find matching district
-                const dCode = hospcode === "11113" ? "4902" : (hospcode === "11114" ? "4903" : (hospcode === "11115" ? "4904" : (hospcode === "11116" ? "4905" : (hospcode === "11117" ? "4906" : (hospcode === "11118" ? "4907" : "4901")))));
-                const dName = hospcode === "11113" ? "นิคมคำสร้อย" : (hospcode === "11114" ? "ดอนตาล" : (hospcode === "11115" ? "ดงหลวง" : (hospcode === "11116" ? "คำชะอี" : (hospcode === "11117" ? "หว้านใหญ่" : (hospcode === "11118" ? "หนองสูง" : "เมืองมุกดาหาร")))));
-                return { hosname: match.name, amp_code: dCode, amp_name: dName };
-            }
             return { hosname: `หน่วยบริการ ${hospcode}`, amp_code: "4901", amp_name: "เมืองมุกดาหาร" };
         }
-
-        // Thai Month-Year Formatter
-        function getThaiMonthYearName(yearMonthStr) {
-            if(!yearMonthStr || yearMonthStr === 'all') return 'แสดงทุกเดือน';
-            const parts = yearMonthStr.split('-');
-            if(parts.length < 2) return yearMonthStr;
-            const year = parts[0];
-            const month = parts[1];
-            const thaiMonths = [
-                "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-                "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-            ];
-            const monthIndex = parseInt(month) - 1;
-            const thaiYear = parseInt(year) + 543;
-            return `${thaiMonths[monthIndex]} ${thaiYear}`;
-        }
-
-        // Generate dynamic transactions from static base lists
-        function generateMockTransactions() {
-            const list = [];
-            const months = ["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
-            
-            // Map mock hospital codes from MUKDAHAN_HOSPITALS keys!
-            let hospKeys = [];
-            if (typeof MUKDAHAN_HOSPITALS !== 'undefined') {
-                hospKeys = Object.keys(MUKDAHAN_HOSPITALS).filter(isGovtHospCode);
-            }
-            if (hospKeys.length === 0) {
-                hospKeys = baseHospitals.map(h => h.hospcode);
-            }
-
-            hospKeys.forEach((hospcode, hIdx) => {
-                const hInfo = getHospitalInfo(hospcode);
-                
-                // Each hospital gets a subset of drugs
-                // For main hospitals (e.g. Mukdahan Hospital 10712, and district hospitals 11113-11118), assign most of the drugs (16 drugs)
-                // For sub-district health promotion hospitals (รพ.สต.), assign 6 drugs
-                const isMainHosp = hospcode === "10712" || (parseInt(hospcode) >= 11113 && parseInt(hospcode) <= 11118);
-                const drugCountToSelect = isMainHosp ? 18 : 6;
-                
-                // Select a deterministic set of drugs based on hospital index to keep mock data stable
-                const selectedDrugs = [];
-                for (let i = 0; i < drugCountToSelect; i++) {
-                    const drugIdx = (hIdx + i) % baseDrugs.length;
-                    selectedDrugs.push(baseDrugs[drugIdx]);
-                }
-
-                selectedDrugs.forEach((d, dIdx) => {
-                    months.forEach((m, mIdx) => {
-                        // Main hospital has much higher volume
-                        const volumeMultiplier = isMainHosp ? (hospcode === "10712" ? 12 : 4) : 1;
-                        const factor = (0.6 + (mIdx * 0.08) + ((dIdx % 3) * 0.12)) * volumeMultiplier;
-                        
-                        const amount = Math.round((d.abc === 'A' ? 2500 : (d.abc === 'B' ? 1000 : 400)) * factor);
-                        const price = Math.round(amount * (d.abc === 'A' ? 25 : (d.abc === 'B' ? 8 : 1.5)));
-                        const cost = Math.round(price * 0.72);
-
-                        // Introduce 2% realistic errors for data quality scorecard
-                        let finalDidstd = d.didstd;
-                        let finalPrice = price;
-                        const errorSeed = (hIdx * 7 + dIdx * 13 + mIdx * 17) % 100;
-                        if (errorSeed === 0) {
-                            finalDidstd = 'N/A'; // Missing didstd
-                        } else if (errorSeed === 1) {
-                            finalDidstd = d.didstd.substring(0, 15); // Invalid length
-                        } else if (errorSeed === 2) {
-                            finalPrice = 0; // Zero/Negative price
-                        }
-
-                        list.push({
-                            didstd: finalDidstd,
-                            dname: d.name,
-                            hospcode: hospcode,
-                            hospname: hInfo.hosname,
-                            amphurCode: hInfo.amp_code,
-                            amphurName: hInfo.amp_name,
-                            date: `${m}-${String(1 + (dIdx % 28)).padStart(2, '0')}`, // Spread dates throughout the month
-                            month: m,
-                            amount: amount,
-                            price: finalPrice,
-                            cost: cost
-                        });
-                    });
-                });
-            });
-
-            return list;
-        }
-
-        // Initialize transaction database
-        rawTransactions = [];
 
         // Dynamically get unique years, months, districts, and drugs to populate dropdowns,
         // and delegate hospital population based on active district selection.
@@ -3509,15 +3365,19 @@
         const btnClearData = document.getElementById('btn-clear-data');
         if (btnClearData) {
             btnClearData.addEventListener('click', () => {
-                if (confirm('คุณต้องการล้างข้อมูลสถิติและเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?\n(ข้อมูลจำลองทั้งหมดจะถูกลบออกด้วยเช่นกัน)')) {
+                if (confirm('คุณต้องการล้างข้อมูลเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?')) {
                     rawTransactions = [];
                     
                     // Reset all filters to 'all'
-                    const suffixList = ['drug', 'district', 'hosp'];
+                    const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
                     suffixList.forEach(prefix => {
                         ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                             const el = document.getElementById(`${prefix}-${selectorType}-select`);
                             if (el) el.value = 'all';
+                        });
+                        ['start-date', 'end-date'].forEach(selectorType => {
+                            const el = document.getElementById(`${prefix}-${selectorType}`);
+                            if (el) el.value = '';
                         });
                     });
 
@@ -3525,18 +3385,40 @@
                     populateAllFilterDropdowns();
 
                     // Update data source text labels
-                    document.getElementById('drug-data-source').textContent = 'แหล่งข้อมูล: ระบบว่างเปล่า (รอการนำเข้า)';
-                    document.getElementById('hosp-data-source').textContent = 'แหล่งข้อมูล: ระบบว่างเปล่า (รอการนำเข้า)';
+                    const drugSource = document.getElementById('drug-data-source');
+                    if (drugSource) {
+                        drugSource.textContent = 'แหล่งข้อมูล: ระบบว่างเปล่า (รอการนำเข้า)';
+                        drugSource.className = 'badge-status danger';
+                    }
+                    const hospSource = document.getElementById('hosp-data-source');
+                    if (hospSource) {
+                        hospSource.textContent = 'แหล่งข้อมูล: ระบบว่างเปล่า (รอการนำเข้า)';
+                        hospSource.className = 'badge-status danger';
+                    }
 
-                    // Render empty/blank tables
+                    // Clear import history UI
+                    const importHistoryBody = document.getElementById('import-history-body');
+                    if (importHistoryBody) {
+                        importHistoryBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">ไม่พบประวัติการนำเข้า</td></tr>';
+                    }
+
+                    // Render all reports (will be empty because rawTransactions is [])
                     renderDrugBreakdown();
                     renderDistrictBreakdown();
                     renderHospBreakdown();
+                    renderPriceVarianceReport();
+                    renderAbcVedMatrix();
+                    renderDataQualityScorecard();
+                    renderGeospatialMap();
+                    renderAccessIndex();
+                    updateDashboardOverview();
 
                     // Show success message
                     resultMsg.className = "badge-status success";
-                    resultMsg.innerHTML = `🗑️ ล้างข้อมูลในหน่วยความจำเรียบร้อยแล้ว ระบบว่างเปล่าและพร้อมสำหรับการนำเข้าตาราง Excel ชุดใหม่ตั้งแต่ 1 ต.ค. 2568`;
+                    resultMsg.innerHTML = `🗑️ ล้างข้อมูลในหน่วยความจำเรียบร้อยแล้ว<br>
+                    <small style="opacity: 0.8;">(หมายเหตุ: การกดรีเฟรชหน้าจออาจทำให้ระบบโหลดข้อมูลไฟล์จริงจากเซิร์ฟเวอร์กลับมาใหม่โดยอัตโนมัติ)</small>`;
                     resultMsg.style.display = 'block';
+
                 }
             });
         }
@@ -3917,9 +3799,7 @@
             if (hospsEl) hospsEl.textContent = `${uniqueHosps.toLocaleString()} แห่ง`;
             
             if (recordsEl) {
-                if (records === 42972 && rawTransactions.length === 42972) {
-                    recordsEl.textContent = '42,972 แถว (สรุปรายเดือน)';
-                } else if (txs[0] && txs[0].uploadTime && (txs[0].uploadTime.includes('tmp_drug_opd.csv') || txs[0].uploadTime.includes('สตรีมมิ่ง'))) {
+                if (txs[0] && txs[0].uploadTime && (txs[0].uploadTime.includes('tmp_drug_opd.csv') || txs[0].uploadTime.includes('สตรีมมิ่ง'))) {
                     recordsEl.textContent = `${records.toLocaleString()} แถว (Monthly Aggregated)`;
                 } else {
                     recordsEl.textContent = `${records.toLocaleString()} แถว`;
@@ -4121,7 +4001,7 @@
         // Show lock screens or dynamic breakdown data depending on session auth
         function checkAuthState() {
             const loggedInUser = sessionStorage.getItem('rxmuk_auth_user');
-            
+
             const userDisplayName = document.getElementById('user-display-name');
             const loginStatusPill = document.getElementById('login-status-pill');
             const importLoginGate = document.getElementById('import-login-gate');
@@ -4130,18 +4010,26 @@
 
             const securedContents = document.querySelectorAll('.secured-content');
             const securedLocks = document.querySelectorAll('.secured-lock');
+            const uploaderPanel = document.querySelector('#import-dashboard .panel');
 
             if (loggedInUser) {
                 // Set UI state to active
-                userDisplayName.textContent = `ผู้ใช้: admin`;
+                userDisplayName.textContent = `ผู้ใช้: ${loggedInUser}`;
                 loginStatusPill.style.background = 'rgba(16, 185, 129, 0.1)';
                 loginStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.2)';
                 loginStatusPill.querySelector('.status-indicator').style.background = 'var(--c-green)';
                 loginStatusPill.querySelector('.status-indicator').style.boxShadow = '0 0 8px var(--c-green)';
 
-                if(authFullName) authFullName.textContent = 'System Administrator (admin)';
                 if(importLoginGate) importLoginGate.style.display = 'none';
                 if(importDashboard) importDashboard.style.display = 'block';
+
+                if (loggedInUser === 'admin') {
+                    if(authFullName) authFullName.textContent = 'System Administrator (admin)';
+                    if(uploaderPanel) uploaderPanel.style.display = 'block';
+                } else if (loggedInUser === 'rxmuk') {
+                    if(authFullName) authFullName.textContent = 'RxMuk Viewer (rxmuk)';
+                    if(uploaderPanel) uploaderPanel.style.display = 'none'; // Hide upload panel for viewer
+                }
 
                 // Display reports
                 securedContents.forEach(c => c.style.display = 'block');
@@ -4177,12 +4065,14 @@
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
+                } else if (u === 'rxmuk' && p === '123456') {
+                    sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
+                    checkAuthState();
                 } else {
                     alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                 }
             });
         }
-
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
                 sessionStorage.removeItem('rxmuk_auth_user');
@@ -4613,7 +4503,7 @@
             const txs = _rawModalData;
             if (!txs.length) return;
             const headers = ["ปี-เดือน", "อำเภอ", "รหัสหน่วยบริการ", "ชื่อสถานบริการ", "รหัสยา (DID)", "ชื่อยา", "จำนวน", "ราคา (บาท)", "ต้นทุน (บาท)", "เวลาที่นำเข้า"];
-            const rows = txs.map(t => [t.month || '', t.amphurName || '', t.hospcode || '', t.hospname || '', t.didstd || '', t.dname || '', t.amount || 0, t.price || 0, t.cost || 0, t.uploadTime || 'ข้อมูลจำลอง']);
+            const rows = txs.map(t => [t.month || '', t.amphurName || '', t.hospcode || '', t.hospname || '', t.didstd || '', t.dname || '', t.amount || 0, t.price || 0, t.cost || 0, t.uploadTime || 'System (Auto)']);
 
             const filename = `raw_data_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "Raw Data Export");
@@ -4781,7 +4671,7 @@
                     <td>${(t.amount || 0).toLocaleString()}</td>
                     <td>${(t.price || 0).toLocaleString()}</td>
                     <td>${(t.cost || 0).toLocaleString()}</td>
-                    <td style="font-size:0.78rem;color:var(--text-muted);">${t.uploadTime || 'ข้อมูลจำลอง'}</td>
+                    <td style="font-size:0.78rem;color:var(--text-muted);">${t.uploadTime || 'System (Auto)'}</td>
                 </tr>`;
             });
 
@@ -4799,7 +4689,7 @@
             if (!txs.length) return;
             let csv = 'ปี-เดือน,อำเภอ,รหัสหน่วยบริการ,ชื่อสถานบริการ,รหัสยา(DID),ชื่อยา,จำนวน,ราคา(บาท),ต้นทุน(บาท),เวลาที่นำเข้า\n';
             txs.forEach(t => {
-                csv += `"${t.month||''}","${t.amphurName||''}","${t.hospcode||''}","${(t.hospname||'').replace(/"/g,'""')}","${t.didstd||''}","${(t.dname||'').replace(/"/g,'""')}",${t.amount||0},${t.price||0},${t.cost||0},"${t.uploadTime || 'ข้อมูลจำลอง'}"\n`;
+                csv += `"${t.month||''}","${t.amphurName||''}","${t.hospcode||''}","${(t.hospname||'').replace(/"/g,'""')}","${t.didstd||''}","${(t.dname||'').replace(/"/g,'""')}",${t.amount||0},${t.price||0},${t.cost||0},"${t.uploadTime || 'System (Auto)'}"\n`;
             });
             downloadCSV(`raw_data_export_${new Date().toISOString().slice(0,10)}.csv`, csv);
         }
