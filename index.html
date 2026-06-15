@@ -2714,6 +2714,22 @@
             return { hosname: `หน่วยบริการ ${hospcode}`, amp_code: "4901", amp_name: "เมืองมุกดาหาร" };
         }
 
+        // Thai Month-Year Formatter
+        function getThaiMonthYearName(yearMonthStr) {
+            if(!yearMonthStr || yearMonthStr === 'all') return 'แสดงทุกเดือน';
+            const parts = yearMonthStr.split('-');
+            if(parts.length < 2) return yearMonthStr;
+            const year = parts[0];
+            const month = parts[1];
+            const thaiMonths = [
+                "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+            ];
+            const monthIndex = parseInt(month) - 1;
+            const thaiYear = parseInt(year) + 543;
+            return `${thaiMonths[monthIndex]} ${thaiYear}`;
+        }
+
         // Dynamically get unique years, months, districts, and drugs to populate dropdowns,
         // and delegate hospital population based on active district selection.
         function updateHospitalsDropdown(districtVal) {
