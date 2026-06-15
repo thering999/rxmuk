@@ -58,120 +58,33 @@ ksort($stats['import_dates']);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .navbar-brand {
-            font-size: 24px;
-            font-weight: 700;
-            color: white !important;
-        }
-        
         .main-container {
             padding: 30px 0;
         }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 25px;
-            animation: fadeInUp 0.5s ease-out;
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 15px 15px 0 0;
-            padding: 20px;
-        }
-        
-        .card-header h5 {
-            margin: 0;
-            font-weight: 600;
-        }
-        
-        .stat-box {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .stat-box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-        
-        .stat-number {
-            font-size: 36px;
-            font-weight: 700;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        
-        .stat-label {
-            color: #999;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .stat-icon {
-            font-size: 48px;
-            color: #667eea;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-        
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 350px;
             margin-bottom: 20px;
         }
-        
         .type-badge {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            color: var(--c-primary);
             padding: 8px 15px;
             border-radius: 8px;
             margin: 5px;
             font-size: 13px;
             font-weight: 600;
         }
-        
         .type-count {
             display: inline-block;
-            background: #f0f0f0;
-            padding: 8px 12px;
-            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
             margin-left: 8px;
             font-weight: 700;
-            color: #667eea;
+            color: #fff;
         }
     </style>
 </head>
@@ -377,9 +290,13 @@ ksort($stats['import_dates']);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.min.js"></script>
     <script>
+        // Set Chart.js defaults for dark theme
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+
         // Colors
-        const primaryColor = '#667eea';
-        const secondaryColor = '#764ba2';
+        const primaryColor = '#00f2fe';
+        const secondaryColor = '#c084fc';
         
         // File Types Chart
         const fileTypesCtx = document.getElementById('fileTypesChart').getContext('2d');
@@ -396,20 +313,20 @@ ksort($stats['import_dates']);
                     <?php endforeach; ?>
                 ],
                 backgroundColor: [
-                    'rgba(102, 126, 234, 0.8)',
-                    'rgba(118, 75, 162, 0.8)',
-                    'rgba(159, 168, 218, 0.8)',
-                    'rgba(186, 177, 209, 0.8)',
-                    'rgba(219, 112, 147, 0.8)',
-                    'rgba(100, 200, 200, 0.8)'
+                    'rgba(0, 242, 254, 0.6)',
+                    'rgba(192, 132, 252, 0.6)',
+                    'rgba(16, 185, 129, 0.6)',
+                    'rgba(245, 158, 11, 0.6)',
+                    'rgba(239, 68, 68, 0.6)',
+                    'rgba(79, 172, 254, 0.6)'
                 ],
                 borderColor: [
-                    '#667eea',
-                    '#764ba2',
-                    '#9fa8da',
-                    '#bab1d1',
-                    '#db7093',
-                    '#64c8c8'
+                    '#00f2fe',
+                    '#c084fc',
+                    '#10b981',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#4facfe'
                 ],
                 borderWidth: 2
             }]
@@ -445,7 +362,7 @@ ksort($stats['import_dates']);
                     <?php endforeach; ?>
                 ],
                 borderColor: primaryColor,
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                backgroundColor: 'rgba(0, 242, 254, 0.1)',
                 borderWidth: 2,
                 fill: true,
                 tension: 0.4

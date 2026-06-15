@@ -57,228 +57,32 @@ $imports = $importer->getImportedFiles(); // Get all files, not just current use
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .navbar-brand {
-            font-size: 24px;
-            font-weight: 700;
-            color: white !important;
-        }
-        
-        .navbar-brand i {
-            margin-right: 8px;
-        }
-        
         .main-container {
             padding: 30px 0;
         }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            margin-bottom: 25px;
-            animation: fadeInUp 0.5s ease-out;
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 15px 15px 0 0;
-            padding: 20px;
-        }
-        
-        .card-header h5 {
-            margin: 0;
-            font-weight: 600;
-        }
-        
-        .dropzone {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-        }
-        
-        .dropzone:hover {
-            border-color: #764ba2;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-        }
-        
-        .dropzone.drag-over {
-            border-color: #764ba2;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-        }
-        
-        .dropzone i {
-            font-size: 48px;
-            color: #667eea;
-            display: block;
-            margin-bottom: 15px;
-        }
-        
-        .dropzone p {
-            margin: 0;
-            color: #333;
-            font-size: 16px;
-            font-weight: 500;
-        }
-        
-        .dropzone .file-input {
-            display: none;
-        }
-        
-        .btn-upload {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-top: 15px;
-        }
-        
-        .btn-upload:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-            color: white;
-        }
-        
-        .file-list {
-            margin-top: 20px;
-        }
-        
-        .file-item {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .file-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-        
-        .file-icon {
-            font-size: 32px;
-            color: #667eea;
-            margin-right: 15px;
-            min-width: 40px;
-        }
-        
-        .file-info {
-            flex: 1;
-        }
-        
-        .file-name {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 3px;
-        }
-        
-        .file-date {
-            font-size: 13px;
-            color: #999;
-        }
-        
-        .file-actions {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .btn-sm {
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 13px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background: #667eea;
-            border: none;
-        }
-        
-        .btn-primary:hover {
-            background: #764ba2;
-            transform: translateY(-1px);
-        }
-        
-        .btn-danger:hover {
-            transform: translateY(-1px);
-        }
-        
-        .alert {
-            border-radius: 10px;
-            border: none;
-            animation: slideDown 0.3s ease-out;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-        
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        .dropzone .file-input {
+            display: none;
         }
-        
-        .stat-number {
-            font-size: 32px;
+        .btn-upload {
+            background: var(--gradient-1) !important;
+            border: none !important;
+            color: #0b0f19 !important;
+            border-radius: 10px;
+            padding: 10px 20px;
             font-weight: 700;
-            color: #667eea;
+            transition: all 0.3s ease;
+            margin-top: 15px;
         }
-        
-        .stat-label {
-            color: #999;
-            font-size: 14px;
-            margin-top: 5px;
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
+            color: #0b0f19 !important;
         }
     </style>
 </head>

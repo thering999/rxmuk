@@ -166,201 +166,46 @@ $current_user_id = Auth::getUserId();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body {
-            background: #f5f7fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 24px;
-        }
-
         .page-header {
-            background: white;
+            background: transparent !important;
             padding: 30px 0;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--card-border);
             margin-bottom: 30px;
         }
-
-        .page-header h1 {
-            color: #333;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .page-header p {
-            color: #999;
-            margin: 5px 0 0 0;
-        }
-
-        .card {
-            border: none;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-            transition: box-shadow 0.3s;
-        }
-
-        .card:hover {
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 20px;
-            font-weight: 600;
-        }
-
-        .card-body {
-            padding: 25px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #6a3a8a 100%);
-        }
-
-        .btn-action {
-            padding: 5px 10px;
-            font-size: 13px;
-        }
-
         .user-table {
             margin-bottom: 0;
         }
-
         .user-table thead th {
-            background: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
-            color: #555;
-            font-weight: 600;
-            padding: 15px;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--card-border) !important;
         }
-
         .user-table tbody tr {
-            border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
+            border-bottom: 1px solid var(--card-border) !important;
         }
-
-        .user-table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        .user-table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-        }
-
-        .user-badge {
-            display: inline-block;
-            background: #e3f2fd;
-            color: #1976d2;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .user-badge.current {
-            background: #e8f5e9;
-            color: #388e3c;
-        }
-
-        .alert {
-            border-radius: 8px;
-            border: none;
-            padding: 15px 20px;
-        }
-
-        .form-group label {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .form-control {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-size: 14px;
-        }
-
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
         .nav-tabs {
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid var(--card-border) !important;
         }
-
         .nav-tabs .nav-link {
-            color: #666;
-            border: none;
-            padding: 12px 20px;
-            font-weight: 600;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+            color: var(--text-muted) !important;
         }
-
-        .nav-tabs .nav-link:hover {
-            color: #667eea;
-        }
-
         .nav-tabs .nav-link.active {
-            color: #667eea;
-            background: transparent;
-            border-bottom-color: #667eea;
+            color: var(--c-primary) !important;
+            border-bottom-color: var(--c-primary) !important;
         }
-
-        .tab-content {
-            padding-top: 20px;
-        }
-
         .back-button {
             margin-bottom: 20px;
         }
-
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .modal-body {
-            padding: 30px;
-        }
-
         .confirmation-text {
-            color: #d32f2f;
+            color: var(--c-red);
             font-weight: 600;
             margin-top: 15px;
         }
-
         .info-box {
-            background: #f8f9fa;
-            padding: 15px;
-            border-left: 4px solid #667eea;
             border-radius: 4px;
             margin-bottom: 20px;
             font-size: 14px;
         }
-
         .created-date {
-            color: #999;
+            color: var(--text-muted);
             font-size: 12px;
         }
 
