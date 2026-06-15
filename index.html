@@ -4098,7 +4098,8 @@
         updateDashboardOverview();
 
         // Auto-load real CSV data if present in uploads/s_tmp_drug_opd.csv on page load
-        fetch('uploads/s_tmp_drug_opd.csv')
+        // Use a cache-buster query parameter to bypass GitHub Pages aggressive caching
+        fetch('uploads/s_tmp_drug_opd.csv?v=' + new Date().getTime(), { cache: 'no-store' })
             .then(res => {
                 if (res.ok) return res.arrayBuffer();
                 throw new Error('No uploaded real CSV file found on server path.');
