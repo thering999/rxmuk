@@ -194,11 +194,6 @@ if (Auth::isLoggedIn()) {
                 
                 <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
             </form>
-            
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--card-border); text-align: center; color: var(--text-muted); font-size: 13px;">
-                <p>ข้อมูลเริ่มต้น:</p>
-                <p>ชื่อผู้ใช้: <strong style="color: var(--c-primary);">admin</strong><br>รหัสผ่าน: <strong style="color: var(--c-primary);">123456</strong></p>
-            </div>
         </div>
         
         <div class="footer-text">

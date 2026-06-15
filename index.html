@@ -814,6 +814,53 @@
             0%, 100% { transform: translateY(0); opacity: 0.4; }
             50% { transform: translateY(-4px); opacity: 1; }
         }
+
+        /* Print Report styles */
+        @media print {
+            header, .navbar, .nav-links, .filter-row, .secured-lock, .config-bar, .chat-input-area, .btn, button, .hero-badge, .footer-links, .upload-zone, .user-status-area {
+                display: none !important;
+            }
+            body {
+                background: #fff !important;
+                color: #000 !important;
+                padding-bottom: 0 !important;
+            }
+            .container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .panel {
+                background: #fff !important;
+                border: 1px solid #eee !important;
+                box-shadow: none !important;
+                margin-bottom: 20px !important;
+                page-break-inside: avoid;
+            }
+            .tab-content {
+                display: block !important;
+                padding-top: 0 !important;
+            }
+            .tab-content:not(.active) {
+                display: none !important;
+            }
+            .stat-card {
+                background: #f8f9fa !important;
+                border: 1px solid #ddd !important;
+                color: #333 !important;
+            }
+            .data-table th {
+                background: #eee !important;
+                color: #000 !important;
+            }
+            .data-table td {
+                color: #000 !important;
+            }
+            #hero-title, #hero-subtitle {
+                color: #000 !important;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -835,6 +882,7 @@
                 <li><a class="tab-btn" data-tab="abc-ved">ABC-VED Matrix</a></li>
                 <li><a class="tab-btn" data-tab="quality">คะแนนคุณภาพข้อมูล</a></li>
                 <li><a class="tab-btn" data-tab="map">แผนที่จ่ายยา</a></li>
+                <li><a class="tab-btn" data-tab="access-index">ดัชนีเข้าถึงยา</a></li>
             </ul>
             <div class="user-status-area">
                 <div class="status-pill" id="login-status-pill" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--c-red);">
@@ -897,7 +945,10 @@
                         <span>📈</span>
                         แผงควบคุมติดตามวิเคราะห์งบประมาณจัดซื้อยา (Overall Monthly Trend)
                     </h3>
-                    <span id="dash-trend-source" class="badge-status success" style="font-size: 0.75rem;">ข้อมูลปัจจุบัน</span>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="printCurrentReport()" style="padding: 4px 10px; font-size: 0.75rem;">🖨️ พิมพ์รายงาน</button>
+                        <span id="dash-trend-source" class="badge-status success" style="font-size: 0.75rem;">ข้อมูลปัจจุบัน</span>
+                    </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 24px; min-height: 180px;">
                     <!-- SVG Trend Area -->
@@ -1026,6 +1077,36 @@
                     <div class="chat-input-area">
                         <input type="text" id="chat-input" class="chat-input" placeholder="พิมพ์ข้อความของคุณที่นี่..." autocomplete="off">
                         <button class="btn btn-primary" id="chat-send" style="padding: 10px 20px;">ส่ง ⚡</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deployment & Technical Guide (Helpful for GitHub Pages) -->
+        <section class="container" style="margin-top: 30px;">
+            <div class="panel" style="background: rgba(192, 132, 252, 0.05); border: 1px dashed rgba(192, 132, 252, 0.3);">
+                <div class="panel-header" style="margin-bottom: 15px;">
+                    <h3 class="panel-title" style="color: var(--c-secondary);">
+                        <span>🚀</span>
+                        คู่มือการนำระบบขึ้นใช้งาน (GitHub Pages Deployment Guide)
+                    </h3>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 10px;">
+                    <div>
+                        <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: #fff;">1. การเตรียมข้อมูล (Data Preparation)</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-muted); list-style: disc; padding-left: 20px; line-height: 1.8;">
+                            <li>ส่งออกไฟล์ <code>tmp_drug_opd</code> หรือ <code>s_tmp_drug_opd</code> จากระบบ HDC</li>
+                            <li>หากต้องการให้ระบบโหลดข้อมูลอัตโนมัติ ให้นำไฟล์ไปวางในโฟลเดอร์ <code>uploads/s_tmp_drug_opd.csv</code></li>
+                            <li>ระบบรองรับไฟล์ดิบ (Large CSV) ได้สูงสุด 2 ล้านแถว ผ่านระบบ Streaming Parser</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: #fff;">2. การเผยแพร่บน GitHub (Online Hosting)</h4>
+                        <ul style="font-size: 0.85rem; color: var(--text-muted); list-style: disc; padding-left: 20px; line-height: 1.8;">
+                            <li>อัปโหลดไฟล์ <code>index.html</code> และ <code>hospitals_db.js</code> ขึ้น GitHub Repository</li>
+                            <li>ไปที่ Settings > Pages และเลือก Branch "main" เพื่อเปิดใช้งาน GitHub Pages</li>
+                            <li>ข้อมูลของคุณจะถูกประมวลผลบน <span style="color: var(--c-primary);">"เบราว์เซอร์ของผู้ใช้"</span> เท่านั้น (Client-side Only) ไม่มีการส่งข้อมูลกลับไปยังเซิร์ฟเวอร์ ปลอดภัยตามหลัก <strong>PDPA</strong></li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -1210,7 +1291,7 @@
                             <span>💊</span>
                             สรุปรายละเอียดประวัติการจ่ายยาแยกตามตัวยา (Drug Breakdown)
                         </h3>
-                        <span class="badge-status success" id="drug-data-source">แหล่งข้อมูล: Mock Database</span>
+                        <span class="badge-status warning" id="drug-data-source">กำลังตรวจสอบไฟล์ข้อมูลจริง...</span>
                     </div>
 
                     <!-- Summary Stats Bar - Drug -->
@@ -1264,14 +1345,22 @@
                             <option value="all">💊 ทุกรายการยา</option>
                         </select>
 
+                        <select id="drug-abc-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">⭐ ทุกระดับ ABC</option>
+                            <option value="A">🔴 กลุ่ม A (มูลค่าสูง)</option>
+                            <option value="B">🟡 กลุ่ม B (มูลค่าปานกลาง)</option>
+                            <option value="C">🟢 กลุ่ม C (มูลค่าต่ำ)</option>
+                        </select>
+
                         <button class="btn btn-secondary" onclick="resetDrugTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportDrugExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-secondary" onclick="window.print()">🖨️ พิมพ์รายงาน (PDF)</button>
                         <button class="btn btn-primary" onclick="exportDrugCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
                 <!-- Split Workspace Layout -->
-                <div class="workspace-layout" style="grid-template-columns: 1.6fr 1.4fr;">
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
                     <!-- Table Panel -->
                     <div class="panel" style="overflow-x: auto;">
                         <div class="panel-header" style="margin-bottom: 15px;">
@@ -1284,12 +1373,12 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
-                                        <th>ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
-                                        <th>จำนวนจ่ายสะสม (Amount)</th>
-                                        <th>ราคารวมสะสม (SumPrice)</th>
-                                        <th>ต้นทุนสะสม (SumCost)</th>
-                                        <th>ระดับผลกระทบมูลค่า (ABC Class)</th>
+                                        <th id="th-drug-didstd" onclick="changeDrugSort('didstd')" style="cursor: pointer; user-select: none;">รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
+                                        <th id="th-drug-name" onclick="changeDrugSort('name')" style="cursor: pointer; user-select: none;">ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
+                                        <th id="th-drug-amount" onclick="changeDrugSort('amount')" style="cursor: pointer; user-select: none;">จำนวนจ่ายสะสม (Amount)</th>
+                                        <th id="th-drug-price" onclick="changeDrugSort('price')" style="cursor: pointer; user-select: none;">ราคารวมสะสม (SumPrice)</th>
+                                        <th id="th-drug-cost" onclick="changeDrugSort('cost')" style="cursor: pointer; user-select: none;">ต้นทุนสะสม (SumCost)</th>
+                                        <th id="th-drug-abc" onclick="changeDrugSort('abc')" style="cursor: pointer; user-select: none;">ระดับผลกระทบมูลค่า (ABC Class)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="drug-breakdown-body">
@@ -1378,6 +1467,7 @@
 
                         <button class="btn btn-secondary" onclick="resetDistrictTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportDistrictExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-secondary" onclick="window.print()">🖨️ พิมพ์รายงาน (PDF)</button>
                         <button class="btn btn-primary" onclick="exportDistrictCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
@@ -1448,7 +1538,7 @@
                             <span>🏥</span>
                             สรุปสถิตินำเข้าและมูลค่ายาแยกรายหน่วยบริการ (Hospcode / Hospital)
                         </h3>
-                        <span class="badge-status success" id="hosp-data-source">แหล่งข้อมูล: Mock Database</span>
+                        <span class="badge-status warning" id="hosp-data-source">กำลังตรวจสอบไฟล์ข้อมูลจริง...</span>
                     </div>
 
                     <!-- Summary Stats Bar - Hosp -->
@@ -1505,7 +1595,7 @@
                 </div>
 
                 <!-- Split Workspace Layout -->
-                <div class="workspace-layout" style="grid-template-columns: 1.6fr 1.4fr;">
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
                     <!-- Table Panel -->
                     <div class="panel" style="overflow-x: auto;">
                         <div class="panel-header" style="margin-bottom: 15px;">
@@ -1618,7 +1708,7 @@
                     </div>
                 </div>
 
-                <div class="workspace-layout" style="grid-template-columns: 1.6fr 1.4fr;">
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
                     <!-- Left: Variance Table -->
                     <div class="panel" style="overflow-x: auto;">
                         <div class="panel-header" style="margin-bottom: 15px;">
@@ -1731,7 +1821,7 @@
                     </div>
                 </div>
 
-                <div class="workspace-layout" style="grid-template-columns: 1.7fr 1.3fr;">
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
                     <!-- Left: 3x3 Grid -->
                     <div class="panel">
                         <div class="panel-header" style="margin-bottom: 20px;">
@@ -2008,7 +2098,7 @@
                     </div>
                 </div>
 
-                <div class="workspace-layout" style="grid-template-columns: 1.62fr 1.38fr;">
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
                     <!-- Left: Scorecard Table -->
                     <div class="panel" style="overflow-x: auto;">
                         <div class="panel-header" style="margin-bottom: 15px;">
@@ -2089,9 +2179,13 @@
                         <div style="font-size:0.75rem;color:var(--text-muted);">💰 มูลค่ายารวมเฉพาะกลุ่ม</div>
                         <div id="map-stat-budget" style="font-size:1.4rem;font-weight:800;color:var(--c-green);">—</div>
                     </div>
+                    <div style="flex:1 1 150px;background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">👥 จำนวนประชากรกลางปี</div>
+                        <div id="map-stat-pop" style="font-size:1.4rem;font-weight:800;color:var(--c-secondary);">—</div>
+                    </div>
                     <div style="flex:1 1 150px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px 16px;">
-                        <div style="font-size:0.75rem;color:var(--text-muted);">📋 จำนวนเรคคอร์ดสถิติ</div>
-                        <div id="map-stat-count" style="font-size:1.4rem;font-weight:800;color:var(--c-yellow);">—</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);">📉 มูลค่าต่อหัวประชากร</div>
+                        <div id="map-stat-percapita" style="font-size:1.4rem;font-weight:800;color:var(--c-yellow);">—</div>
                     </div>
                 </div>
 
@@ -2129,7 +2223,7 @@
                     </div>
                 </div>
 
-                <div class="workspace-layout" style="grid-template-columns: 1.25fr 0.75fr;">
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
                     <!-- Left: Stylized Interactive SVG Map -->
                     <div class="panel" style="text-align: center; position: relative;">
                         <div class="panel-header" style="margin-bottom: 15px;">
@@ -2199,8 +2293,10 @@
                             <!-- Tooltip popup overlay -->
                             <div id="map-tooltip" style="position: absolute; display: none; background: rgba(11, 15, 25, 0.95); border: 1px solid var(--c-primary); border-radius: 8px; padding: 10px; font-size: 0.78rem; text-align: left; box-shadow: 0 4px 15px rgba(0,242,254,0.3); pointer-events: none; z-index: 10;">
                                 <strong id="map-tooltip-name" style="color:#fff;">อำเภอ</strong><br>
+                                <span id="map-tooltip-pop" style="color:var(--c-secondary);">ประชากร: 0 คน</span><br>
                                 <span id="map-tooltip-budget" style="color:var(--c-green); font-weight:bold;">0 บาท</span><br>
-                                <span id="map-tooltip-share" style="color:var(--text-muted);">0% สัดส่วน</span>
+                                <span id="map-tooltip-percapita" style="color:var(--c-yellow); font-weight:bold;">0.00 บาท/คน</span><br>
+                                <span id="map-tooltip-share" style="color:var(--text-muted);">0% สัดส่วนจังหวัด</span>
                             </div>
                         </div>
                     </div>
@@ -2246,6 +2342,135 @@
                 </div>
             </div>
             <div class="secured-lock" style="display: none;"></div>
+        </section>
+    </div>
+
+    <!-- Tab: Drug Access Index (Per Capita Analysis) -->
+    <div id="tab-access-index" class="tab-content">
+        <section class="container">
+            <div class="secured-content">
+                <!-- Summary Stats Bar -->
+                <div id="access-stats-bar" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                    <div style="flex:1 1 180px;background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">👥 ประชากรทั้งจังหวัด</div>
+                        <div id="access-stat-pop" style="font-size:1.4rem;font-weight:800;color:var(--c-secondary);">—</div>
+                    </div>
+                    <div style="flex:1 1 180px;background:rgba(0,242,254,0.08);border:1px solid rgba(0,242,254,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">💰 ค่าเฉลี่ยการเข้าถึงยา/หัว</div>
+                        <div id="access-stat-percapita" style="font-size:1.4rem;font-weight:800;color:var(--c-primary);">—</div>
+                    </div>
+                    <div style="flex:1 1 180px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">📊 อัตราการรับยา (ต่อประชากร)</div>
+                        <div id="access-stat-rate" style="font-size:1.4rem;font-weight:800;color:var(--c-yellow);">—</div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom: 20px;">
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 0;">
+                        <select id="access-year-select" class="select-control" style="flex: 1 1 120px;">
+                            <option value="all">📅 ทุกปี</option>
+                        </select>
+                        <select id="access-month-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">📅 ทุกเดือน</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="resetAccessIndexTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportAccessIndexExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);">🟢 ส่งออก Excel</button>
+                    </div>
+                </div>
+
+                <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
+                    <div class="panel" style="background: rgba(0, 242, 254, 0.03); border: 1px solid rgba(0, 242, 254, 0.15);">
+                        <div class="panel-header" style="margin-bottom: 10px;">
+                            <h3 class="panel-title">
+                                <span>⚖️</span>
+                                ระบบเปรียบเทียบความเหลื่อมล้ำรายพื้นที่ (District Side-by-Side Comparison)
+                            </h3>
+                        </div>
+                        <div style="display: flex; gap: 20px; align-items: center; justify-content: center; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                            <div style="flex: 1; max-width: 300px; text-align: center;">
+                                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">พื้นที่เปรียบเทียบที่ 1</label>
+                                <select id="compare-district-1" class="select-control" style="width: 100%;" onchange="renderAccessComparison()">
+                                    <option value="4901" selected>เมืองมุกดาหาร</option>
+                                    <option value="4902">นิคมคำสร้อย</option>
+                                    <option value="4903">ดอนตาล</option>
+                                    <option value="4904">ดงหลวง</option>
+                                    <option value="4905">คำชะอี</option>
+                                    <option value="4906">หว้านใหญ่</option>
+                                    <option value="4907">หนองสูง</option>
+                                </select>
+                                <div id="compare-stat-1" style="margin-top: 15px; background: rgba(0, 242, 254, 0.08); padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 242, 254, 0.2);">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">มูลค่าต่อหัว (Per Capita)</div>
+                                    <div id="compare-pc-1" style="font-size: 1.5rem; font-weight: bold; color: var(--c-primary);">0.00 ฿</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">อัตราการใช้ยา/ประชากร</div>
+                                    <div id="compare-rate-1" style="font-size: 1.2rem; font-weight: bold; color: var(--text-main);">0.0%</div>
+                                </div>
+                            </div>
+                            
+                            <div style="font-size: 2rem; color: var(--text-muted); font-weight: bold; padding: 0 10px;">VS</div>
+
+                            <div style="flex: 1; max-width: 300px; text-align: center;">
+                                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">พื้นที่เปรียบเทียบที่ 2</label>
+                                <select id="compare-district-2" class="select-control" style="width: 100%;" onchange="renderAccessComparison()">
+                                    <option value="4901">เมืองมุกดาหาร</option>
+                                    <option value="4902" selected>นิคมคำสร้อย</option>
+                                    <option value="4903">ดอนตาล</option>
+                                    <option value="4904">ดงหลวง</option>
+                                    <option value="4905">คำชะอี</option>
+                                    <option value="4906">หว้านใหญ่</option>
+                                    <option value="4907">หนองสูง</option>
+                                </select>
+                                <div id="compare-stat-2" style="margin-top: 15px; background: rgba(245, 158, 11, 0.08); padding: 15px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">มูลค่าต่อหัว (Per Capita)</div>
+                                    <div id="compare-pc-2" style="font-size: 1.5rem; font-weight: bold; color: var(--c-yellow);">0.00 ฿</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">อัตราการใช้ยา/ประชากร</div>
+                                    <div id="compare-rate-2" style="font-size: 1.2rem; font-weight: bold; color: var(--text-main);">0.0%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="compare-verdict" style="text-align: center; margin-top: 15px; font-size: 0.9rem; color: var(--text-muted);">
+                            กำลังวิเคราะห์ข้อมูล...
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>📉</span>
+                                ดัชนีการเข้าถึงยาจำแนกรายอำเภอ (Access Index Ranking)
+                            </h3>
+                            <button class="btn btn-secondary" onclick="printCurrentReport()" style="padding: 4px 10px; font-size: 0.75rem;">🖨️ พิมพ์รายงาน</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่ออำเภอ</th>
+                                        <th>จำนวนประชากร</th>
+                                        <th>มูลค่าจัดซื้อรวม</th>
+                                        <th>มูลค่าต่อหัว (Per Capita)</th>
+                                        <th>จำนวนการรับยา</th>
+                                        <th>อัตราการใช้ยา/ประชากร</th>
+                                        <th>สถานะความเหลื่อมล้ำ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="access-index-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>📊</span>
+                                เปรียบเทียบมูลค่าการเข้าถึงยาต่อหัวประชากร
+                            </h3>
+                        </div>
+                        <div style="height: 350px; position: relative;">
+                            <svg id="access-chart-svg" viewBox="0 0 400 300" style="width: 100%; height: 100%;"></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -2367,6 +2592,10 @@
             map: {
                 title: "แผนที่สถิติการสั่งจ่ายยาเชิงภูมิศาสตร์ (Geospatial Distribution)",
                 subtitle: "จำลองภาพความหนาแน่นเชิงสถิติและงบประมาณการจัดสรรยาโรคเรื้อรังหลัก (DM, Lipid, HT) ในแต่ละอำเภอของมุกดาหาร"
+            },
+            "access-index": {
+                title: "ดัชนีความเท่าเทียมในการเข้าถึงยา (Access Index)",
+                subtitle: "วิเคราะห์ความสอดคล้องระหว่างปริมาณงบประมาณยาเทียบกับจำนวนประชากรรายพื้นที่ เพื่อประเมินความเหลื่อมล้ำในการเข้าถึงเวชภัณฑ์"
             }
         };
 
@@ -2383,6 +2612,15 @@
                 content.classList.remove('active');
             });
             document.getElementById(`tab-${targetTab}`).classList.add('active');
+
+            if (targetTab === 'drugs') renderDrugBreakdown();
+            if (targetTab === 'district') renderDistrictBreakdown();
+            if (targetTab === 'hosp') renderHospBreakdown();
+            if (targetTab === 'variance') renderPriceVarianceReport();
+            if (targetTab === 'abc-ved') renderAbcVedMatrix();
+            if (targetTab === 'quality') renderDataQualityScorecard();
+            if (targetTab === 'map') renderGeospatialMap();
+            if (targetTab === 'access-index') renderAccessIndex();
 
             if (tabDetails[targetTab]) {
                 heroTitle.textContent = tabDetails[targetTab].title;
@@ -2455,8 +2693,35 @@
             { code: "4907", name: "หนองสูง" }
         ];
 
+        const MUKDAHAN_POPULATION = {
+            "4901": { name: "เมืองมุกดาหาร", pop: 137485 },
+            "4902": { name: "นิคมคำสร้อย", pop: 44311 },
+            "4903": { name: "ดอนตาล", pop: 44349 },
+            "4904": { name: "ดงหลวง", pop: 38820 },
+            "4905": { name: "คำชะอี", pop: 47268 },
+            "4906": { name: "หว้านใหญ่", pop: 19553 },
+            "4907": { name: "หนองสูง", pop: 20716 }
+        };
+
         // Global Transaction Log
         let rawTransactions = [];
+        let mapSelectedDistrict = "";
+        let varianceSelectedDrug = "";
+        let qualitySelectedHosp = "";
+
+        // Sorting state for drug breakdown table
+        let drugSortColumn = 'price';
+        let drugSortDirection = 'desc';
+
+        function changeDrugSort(column) {
+            if (drugSortColumn === column) {
+                drugSortDirection = drugSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                drugSortColumn = column;
+                drugSortDirection = (column === 'didstd' || column === 'name' || column === 'abc') ? 'asc' : 'desc';
+            }
+            renderDrugBreakdown();
+        }
 
         // Check if hospital is government (excl. clinics, private hospitals, private clinics)
         function isGovtHospCode(hospcode) {
@@ -2591,7 +2856,7 @@
         }
 
         // Initialize transaction database
-        rawTransactions = generateMockTransactions();
+        rawTransactions = [];
 
         // Dynamically get unique years, months, districts, and drugs to populate dropdowns,
         // and delegate hospital population based on active district selection.
@@ -2608,7 +2873,7 @@
             });
             hospitals.sort((a, b) => a.name.localeCompare(b.name));
 
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
             suffixList.forEach(prefix => {
                 const hSelect = document.getElementById(`${prefix}-hosp-select`);
                 if (hSelect) {
@@ -2755,6 +3020,7 @@
             const body = document.getElementById('drug-breakdown-body');
             if(!body) return;
             const searchVal = document.getElementById('drug-breakdown-search').value.toLowerCase();
+            const abcVal = document.getElementById('drug-abc-select') ? document.getElementById('drug-abc-select').value : 'all';
 
             // Filter transactions
             let txs = getFilteredTransactions('drug');
@@ -2775,13 +3041,31 @@
                 return d;
             });
 
+            // Apply ABC filter
+            if (abcVal !== 'all') {
+                list = list.filter(d => d.abc === abcVal);
+            }
+
             // Apply search filter
             if (searchVal) {
                 list = list.filter(d => d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal));
             }
 
-            // Sort by price descending
-            list.sort((a, b) => b.price - a.price);
+            // Sort list based on current sort column and direction
+            list.sort((a, b) => {
+                let valA = a[drugSortColumn];
+                let valB = b[drugSortColumn];
+                
+                if (typeof valA === 'string') {
+                    valA = valA.toLowerCase();
+                    valB = valB.toLowerCase();
+                    return drugSortDirection === 'asc' 
+                        ? valA.localeCompare(valB, 'th') 
+                        : valB.localeCompare(valA, 'th');
+                }
+                
+                return drugSortDirection === 'asc' ? valA - valB : valB - valA;
+            });
 
             // Render UI rows
             body.innerHTML = '';
@@ -2805,12 +3089,33 @@
             });
             updateDrugStats(list);
 
+            // Update sort indicators in headers
+            const cols = {
+                didstd: { id: 'th-drug-didstd', label: 'รหัสยามาตรฐาน (DID/STD 24 หลัก)' },
+                name: { id: 'th-drug-name', label: 'ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)' },
+                amount: { id: 'th-drug-amount', label: 'จำนวนจ่ายสะสม (Amount)' },
+                price: { id: 'th-drug-price', label: 'ราคารวมสะสม (SumPrice)' },
+                cost: { id: 'th-drug-cost', label: 'ต้นทุนสะสม (SumCost)' },
+                abc: { id: 'th-drug-abc', label: 'ระดับผลกระทบมูลค่า (ABC Class)' }
+            };
+            
+            Object.keys(cols).forEach(colKey => {
+                const th = document.getElementById(cols[colKey].id);
+                if (th) {
+                    let indicator = '';
+                    if (drugSortColumn === colKey) {
+                        indicator = drugSortDirection === 'asc' ? ' 🔼' : ' 🔽';
+                    }
+                    th.textContent = cols[colKey].label + indicator;
+                }
+            });
+
             // Render SVG Bars Chart
             const chartG = document.getElementById('chart-bars-drug');
             if (chartG) {
                 chartG.innerHTML = '';
                 const top10 = list.slice(0, 10);
-                const maxVal = top10[0] ? top10[0].price : 1;
+                const maxVal = (top10[0] && top10[0].price > 0) ? top10[0].price : 1;
                 const totalDrugBudget = list.reduce((acc, curr) => acc + curr.price, 0) || 1;
                 
                 top10.forEach((d, idx) => {
@@ -2841,6 +3146,7 @@
             document.getElementById('drug-breakdown-search').value = '';
             document.getElementById('drug-year-select').value = 'all';
             document.getElementById('drug-month-select').value = 'all';
+            if (document.getElementById('drug-abc-select')) document.getElementById('drug-abc-select').value = 'all';
             if (document.getElementById('drug-start-date')) document.getElementById('drug-start-date').value = '';
             if (document.getElementById('drug-end-date')) document.getElementById('drug-end-date').value = '';
             document.getElementById('drug-district-select').value = 'all';
@@ -2893,9 +3199,10 @@
             const chartG = document.getElementById('chart-bars-district');
             if(chartG) {
                 chartG.innerHTML = '';
-                const maxVal = list[0] ? list[0].budget : 1;
+                const maxVal = (list[0] && list[0].budget > 0) ? list[0].budget : 1;
+                const totalDistrictBudget = totalBudget || 1;
                 list.forEach((d, idx) => {
-                    const percent = ((d.budget / totalBudget) * 100).toFixed(1);
+                    const percent = ((d.budget / totalDistrictBudget) * 100).toFixed(1);
                     const yPos = 20 + (idx * 40);
                     const barWidth = Math.max(8, (d.budget / maxVal) * 380);
 
@@ -2971,7 +3278,7 @@
             if (chartG) {
                 chartG.innerHTML = '';
                 const top10 = list.slice(0, 10);
-                const maxVal = top10[0] ? top10[0].budget : 1;
+                const maxVal = (top10[0] && top10[0].budget > 0) ? top10[0].budget : 1;
                 const totalHospBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
                 
                 top10.forEach((h, idx) => {
@@ -3359,7 +3666,7 @@
             rawTransactions = newTxs;
 
             // Reset all filters to 'all' first
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
             suffixList.forEach(prefix => {
                 ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
@@ -3370,8 +3677,16 @@
             // Re-populate all selectors
             populateAllFilterDropdowns();
 
-            document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
-            document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+            const drugSource = document.getElementById('drug-data-source');
+            if (drugSource) {
+                drugSource.textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+                drugSource.className = 'badge-status success';
+            }
+            const hospSource = document.getElementById('hosp-data-source');
+            if (hospSource) {
+                hospSource.textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+                hospSource.className = 'badge-status success';
+            }
 
             renderDrugBreakdown();
             renderDistrictBreakdown();
@@ -3394,7 +3709,7 @@
             rawTransactions = rows;
 
             // Reset all filters to 'all' first
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
             suffixList.forEach(prefix => {
                 ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
@@ -3405,8 +3720,16 @@
             // Re-populate all selectors
             populateAllFilterDropdowns();
 
-            document.getElementById('drug-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
-            document.getElementById('hosp-data-source').textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+            const drugSourcePre = document.getElementById('drug-data-source');
+            if (drugSourcePre) {
+                drugSourcePre.textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+                drugSourcePre.className = 'badge-status success';
+            }
+            const hospSourcePre = document.getElementById('hosp-data-source');
+            if (hospSourcePre) {
+                hospSourcePre.textContent = `แหล่งข้อมูล: อัปโหลดจาก ${filename}`;
+                hospSourcePre.className = 'badge-status success';
+            }
 
             renderDrugBreakdown();
             renderDistrictBreakdown();
@@ -3550,7 +3873,7 @@
                 }
                 const monthStr = dateStr.slice(0, 7);
 
-                const aggKey = `${hospcode}|${didstd}|${dateStr}`;
+                const aggKey = `${hospcode}|${didstd}|${monthStr}`;
                 if (!agg[aggKey]) {
                     const hInfo = getHospitalInfo(hospcode);
                     agg[aggKey] = {
@@ -3560,7 +3883,7 @@
                         hospname: hInfo.hosname,
                         amphurCode: hInfo.amp_code,
                         amphurName: hInfo.amp_name,
-                        date: dateStr,
+                        date: `${monthStr}-01`, // use first day of month as canonical date
                         month: monthStr,
                         amount: 0,
                         price: 0,
@@ -3576,10 +3899,13 @@
 
         // Dashboard overview stats & SVG Trend graph updater
         function updateDashboardOverview() {
-            const totalBudget = rawTransactions.reduce((acc, curr) => acc + curr.price, 0);
-            const records = rawTransactions.length;
-            const uniqueDrugs = new Set(rawTransactions.map(t => t.didstd)).size;
-            const uniqueHosps = new Set(rawTransactions.map(t => t.hospcode)).size;
+            // Use filtered transactions for the dashboard (synced across all tabs)
+            const txs = getFilteredTransactions('drug');
+            
+            const totalBudget = txs.reduce((acc, curr) => acc + curr.price, 0);
+            const records = txs.length;
+            const uniqueDrugs = new Set(txs.map(t => t.didstd)).size;
+            const uniqueHosps = new Set(txs.map(t => t.hospcode)).size;
 
             const budgetEl = document.getElementById('dash-total-budget');
             const itemsEl = document.getElementById('dash-total-items');
@@ -3591,10 +3917,10 @@
             if (hospsEl) hospsEl.textContent = `${uniqueHosps.toLocaleString()} แห่ง`;
             
             if (recordsEl) {
-                if (records === 42972) {
+                if (records === 42972 && rawTransactions.length === 42972) {
                     recordsEl.textContent = '42,972 แถว (สรุปรายเดือน)';
-                } else if (rawTransactions[0] && rawTransactions[0].uploadTime && (rawTransactions[0].uploadTime.includes('tmp_drug_opd.csv') || rawTransactions[0].uploadTime.includes('สตรีมมิ่ง'))) {
-                    recordsEl.textContent = '2,003,386 แถว (สตรีมมิ่ง)';
+                } else if (txs[0] && txs[0].uploadTime && (txs[0].uploadTime.includes('tmp_drug_opd.csv') || txs[0].uploadTime.includes('สตรีมมิ่ง'))) {
+                    recordsEl.textContent = `${records.toLocaleString()} แถว (Monthly Aggregated)`;
                 } else {
                     recordsEl.textContent = `${records.toLocaleString()} แถว`;
                 }
@@ -3607,7 +3933,7 @@
                 
                 // Group by Month
                 const monthMap = {};
-                rawTransactions.forEach(t => {
+                txs.forEach(t => {
                     const m = t.month || 'Unknown';
                     if (!monthMap[m]) monthMap[m] = 0;
                     monthMap[m] += t.price;
@@ -3665,49 +3991,82 @@
                             </text>
                         `;
                     });
+                } else {
+                    trendElements.innerHTML = `<text x="300" y="80" fill="var(--text-muted)" font-size="14" font-weight="600" text-anchor="middle">ยังไม่มีข้อมูลสำหรับแสดงแนวโน้ม (กรุณานำเข้าไฟล์ข้อมูล)</text>`;
                 }
             }
 
             // Populate AI Quick Insights
             const aiInsightEl = document.getElementById('dash-ai-insight');
             if (aiInsightEl) {
-                const hospMap = {};
-                const drugMap = {};
-                rawTransactions.forEach(t => {
-                    if (!hospMap[t.hospname]) hospMap[t.hospname] = 0;
-                    hospMap[t.hospname] += t.price;
+                if (txs.length === 0) {
+                    aiInsightEl.innerHTML = `
+                        • ยังไม่มีข้อมูลในระบบจัดเก็บหลัก
+                        <br>
+                        • กรุณานำเข้าไฟล์ข้อมูล Excel/CSV (เช่น <code>s_tmp_drug_opd.csv</code> หรือ <code>tmp_drug_opd.csv</code>) ที่หน้า <strong>"นำเข้าข้อมูล"</strong>
+                        <br>
+                        • ข้อมูลจริงจะถูกโหลดเข้ามาเพื่อวิเคราะห์โดยอัตโนมัติทันที
+                    `;
+                } else {
+                    const hospMap = {};
+                    const drugMap = {};
+                    txs.forEach(t => {
+                        if (!hospMap[t.hospname]) hospMap[t.hospname] = 0;
+                        hospMap[t.hospname] += t.price;
 
-                    if (!drugMap[t.dname]) drugMap[t.dname] = 0;
-                    drugMap[t.dname] += t.price;
-                });
+                        if (!drugMap[t.dname]) drugMap[t.dname] = 0;
+                        drugMap[t.dname] += t.price;
+                    });
 
-                let topHosp = 'N/A';
-                let topHospVal = 0;
-                Object.entries(hospMap).forEach(([name, val]) => {
-                    if (val > topHospVal) {
-                        topHosp = name;
-                        topHospVal = val;
-                    }
-                });
+                    let topHosp = 'N/A';
+                    let topHospVal = 0;
+                    Object.entries(hospMap).forEach(([name, val]) => {
+                        if (val > topHospVal) {
+                            topHosp = name;
+                            topHospVal = val;
+                        }
+                    });
 
-                let topDrug = 'N/A';
-                let topDrugVal = 0;
-                Object.entries(drugMap).forEach(([name, val]) => {
-                    if (val > topDrugVal) {
-                        topDrug = name;
-                        topDrugVal = val;
-                    }
-                });
+                    let topDrug = 'N/A';
+                    let topDrugVal = 0;
+                    Object.entries(drugMap).forEach(([name, val]) => {
+                        if (val > topDrugVal) {
+                            topDrug = name;
+                            topDrugVal = val;
+                        }
+                    });
 
-                aiInsightEl.innerHTML = `
-                    • พบสถิติการนำเข้ายาครอบคลุมหน่วยบริการของรัฐ <strong>${uniqueHosps} แห่ง</strong> ในจังหวัดมุกดาหาร
-                    <br>
-                    • หน่วยบริการที่มีมูลค่าจัดซื้อสะสมสูงสุด: <strong>${topHosp}</strong> (${(topHospVal / 1000000).toFixed(1)} ล้านบาท)
-                    <br>
-                    • ตัวยาที่มีอัตราการจัดซื้อสะสมสูงสุด: <strong>${topDrug.substring(0, 30)}${topDrug.length > 30 ? '...' : ''}</strong> (${(topDrugVal / 1000000).toFixed(1)} ล้านบาท)
-                    <br>
-                    • งบประมาณจัดซื้อยาสะสมรวมทั้งหมด: <strong style="color: var(--c-primary);">${(totalBudget / 1000000).toFixed(1)} ล้านบาท</strong>
-                `;
+                    // Access Index Insights
+                    const districtAgg = {};
+                    txs.forEach(t => {
+                        const code = t.amphurCode || '4901';
+                        if (!districtAgg[code]) districtAgg[code] = 0;
+                        districtAgg[code] += t.price;
+                    });
+
+                    let highAccessDist = 'N/A';
+                    let highAccessVal = 0;
+                    Object.entries(districtAgg).forEach(([code, budget]) => {
+                        const pop = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].pop : 1;
+                        const perCapita = budget / pop;
+                        if (perCapita > highAccessVal) {
+                            highAccessVal = perCapita;
+                            highAccessDist = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].name : code;
+                        }
+                    });
+
+                    aiInsightEl.innerHTML = `
+                        • พบสถิติครอบคลุมหน่วยบริการ <strong>${uniqueHosps} แห่ง</strong> ในจังหวัดมุกดาหาร
+                        <br>
+                        • งบประมาณเวชภัณฑ์รวม: <strong style="color: var(--c-primary);">${(totalBudget / 1000000).toFixed(1)} ล้านบาท</strong>
+                        <br>
+                        • อำเภอที่มีมูลค่าการเข้าถึงยาต่อหัวสูงสุด: <strong>อำเภอ${highAccessDist}</strong> (${highAccessVal.toFixed(2)} บาท/คน)
+                        <br>
+                        • ตัวยาที่มีอัตราการสั่งใช้สูงสุด: <strong>${topDrug.substring(0, 25)}${topDrug.length > 25 ? '...' : ''}</strong> (${(topDrugVal / 1000000).toFixed(1)} ล้านบาท)
+                        <br>
+                        <div style="margin-top: 8px; font-style: italic; color: var(--c-secondary);">* ระบบประเมินว่าควรตรวจสอบความเหลื่อมล้ำในพื้นที่ที่มีค่า Per Capita ต่ำกว่าค่าเฉลี่ยจังหวัด</div>
+                    `;
+                }
             }
         }
 
@@ -3836,7 +4195,7 @@
         checkAuthState();
 
         // Initialize selectors & data
-        rawTransactions = generateMockTransactions();
+        rawTransactions = [];
         populateAllFilterDropdowns();
         renderDrugBreakdown();
         renderDistrictBreakdown();
@@ -3845,6 +4204,7 @@
         renderAbcVedMatrix();
         renderDataQualityScorecard();
         renderGeospatialMap();
+        renderAccessIndex();
         updateDashboardOverview();
 
         // Auto-load real CSV data if present in uploads/s_tmp_drug_opd.csv on page load
@@ -3882,54 +4242,55 @@
                 }
             })
             .catch(err => {
-                console.log('Real data auto-load skipped, using mock data:', err.message);
+                console.log('Real data auto-load skipped, no mock data fallback:', err.message);
+                const drugSource = document.getElementById('drug-data-source');
+                if (drugSource) {
+                    drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+                    drugSource.className = 'badge-status danger';
+                }
+                const hospSource = document.getElementById('hosp-data-source');
+                if (hospSource) {
+                    hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+                    hospSource.className = 'badge-status danger';
+                }
             });
 
         // Centralized Filter Synchronization & Cascading Logic
         function handleFilterChange(selectorType, val) {
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
 
+            // 1. Synchronize the primary value across all prefixes
+            suffixList.forEach(prefix => {
+                let el;
+                if (selectorType === 'start-date' || selectorType === 'end-date') {
+                    el = document.getElementById(`${prefix}-${selectorType}`);
+                } else {
+                    el = document.getElementById(`${prefix}-${selectorType}-select`);
+                }
+                if (el) el.value = val;
+            });
+
+            // 2. Handle cascades
             if (selectorType === 'hosp') {
+                // If a specific hospital is selected, sync its district
                 if (val !== 'all') {
                     const hInfo = getHospitalInfo(val);
                     if (hInfo && hInfo.amp_code) {
-                        // Sync district values
                         suffixList.forEach(prefix => {
                             const dSelect = document.getElementById(`${prefix}-district-select`);
                             if (dSelect) dSelect.value = hInfo.amp_code;
                         });
-                        // Update hospital dropdown options to match this district
+                        // Update hospital dropdowns to show hospitals in this district (keeping selection)
                         updateHospitalsDropdown(hInfo.amp_code);
-                        // Restore hospital selection across all tabs
-                        suffixList.forEach(prefix => {
-                            const hSelect = document.getElementById(`${prefix}-hosp-select`);
-                            if (hSelect) hSelect.value = val;
-                        });
                     }
                 }
             } else if (selectorType === 'district') {
-                // Sync district values
-                suffixList.forEach(prefix => {
-                    const dSelect = document.getElementById(`${prefix}-district-select`);
-                    if (dSelect) dSelect.value = val;
-                });
-                // Update hospital dropdown options based on new district
+                // If district changes, update hospital dropdowns (usually resets to 'all')
                 updateHospitalsDropdown(val);
-            } else if (selectorType === 'start-date' || selectorType === 'end-date') {
-                // Sync start/end date inputs
-                suffixList.forEach(prefix => {
-                    const el = document.getElementById(`${prefix}-${selectorType}`);
-                    if (el) el.value = val;
-                });
-            } else {
-                // For year, month, item: just sync the value across all tabs
-                suffixList.forEach(prefix => {
-                    const el = document.getElementById(`${prefix}-${selectorType}-select`);
-                    if (el) el.value = val;
-                });
             }
 
-            // Re-render all breakdown tabs to reflect the new filter state
+            // 3. Re-render all breakdown tabs and dashboard to reflect the new filter state
+            updateDashboardOverview();
             renderDrugBreakdown();
             renderDistrictBreakdown();
             renderHospBreakdown();
@@ -3937,11 +4298,12 @@
             renderAbcVedMatrix();
             renderDataQualityScorecard();
             renderGeospatialMap();
+            renderAccessIndex();
         }
 
         // Bind change events to all 5 dropdown filters for drug, district, and hosp
-        const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map'];
-        suffixList.forEach(prefix => {
+        const currentSuffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+        currentSuffixList.forEach(prefix => {
             ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                 const el = document.getElementById(`${prefix}-${selectorType}-select`);
                 if (el) {
@@ -3962,6 +4324,10 @@
 
         // Bind input searches and extra selections
         document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
+        const drugAbcSelect = document.getElementById('drug-abc-select');
+        if (drugAbcSelect) {
+            drugAbcSelect.addEventListener('change', renderDrugBreakdown);
+        }
         document.getElementById('hosp-search').addEventListener('input', renderHospBreakdown);
         document.getElementById('variance-search').addEventListener('input', renderPriceVarianceReport);
         document.getElementById('quality-search').addEventListener('input', renderDataQualityScorecard);
@@ -3987,13 +4353,39 @@
             localStorage.setItem('rxmuk_gemini_key', geminiKeyInput.value.trim());
         });
 
+        // Get a text summary of current filtered data to help the AI
+        function getAnalysisDataSummary() {
+            const txs = getFilteredTransactions('drug');
+            if (txs.length === 0) return "ไม่มีข้อมูลที่ถูกกรองในขณะนี้";
+
+            const totalBudget = txs.reduce((acc, curr) => acc + curr.price, 0);
+            const uniqueDrugs = new Set(txs.map(t => t.didstd)).size;
+            const uniqueHosps = new Set(txs.map(t => t.hospcode)).size;
+            
+            // Get top 3 drugs
+            const drugAgg = {};
+            txs.forEach(t => {
+                if(!drugAgg[t.dname]) drugAgg[t.dname] = 0;
+                drugAgg[t.dname] += t.price;
+            });
+            const top3 = Object.entries(drugAgg)
+                .sort((a,b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([name, val]) => `${name} (${Math.round(val).toLocaleString()} บาท)`)
+                .join(", ");
+
+            return `สรุปข้อมูลปัจจุบัน: งบประมาณรวม ${Math.round(totalBudget).toLocaleString()} บาท, ยา ${uniqueDrugs} รายการ, หน่วยบริการ ${uniqueHosps} แห่ง. ตัวยาที่ใช้สูง 3 อันดับแรก: ${top3}`;
+        }
+
         async function callGeminiAPI(userMsg) {
             let apiKey = geminiKeyInput.value.trim();
             if (!apiKey) {
-                apiKey = 'AIzaSyApt3F3OqbhFMnx1YJ617OFYlH--CaRzxg';
+                return null;
             }
 
+            const dataSummary = getAnalysisDataSummary();
             const sysPrompt = `คุณคือ RxMuk AI Assistant ผู้เชี่ยวชาญด้านระบบวิเคราะห์ข้อมูลสาธารณสุข 43 แฟ้ม และการนำเข้าเวชภัณฑ์จังหวัดมุกดาหาร
+            ข้อมูลสถิติปัจจุบันจากหน้าจอที่ผู้ใช้กำลังดูอยู่คือ: ${dataSummary}
             ตอบเป็นภาษาไทย กระชับ เข้าใจง่าย ให้คำแนะนำเป็นขั้นเป็นตอน หากต้องการให้เขียนโค้ด SQL หรือวิธีจัดการตาราง s_tmp_drug_opd ให้เสนอแนวทางแก้ไขที่ใช้จริงได้ดี`;
 
             try {
@@ -4469,6 +4861,10 @@ WHERE t1.id < t2.id
 
         // --- NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
 
+        function printCurrentReport() {
+            window.print();
+        }
+
         const drugVedMap = {
             "100245200000000000000000": "V", // Aerobidol
             "124846000003972121781421": "V", // Clopidogrel
@@ -4515,7 +4911,6 @@ WHERE t1.id < t2.id
             return "other";
         }
 
-        let varianceSelectedDrug = "";
         function renderPriceVarianceReport() {
             const body = document.getElementById('variance-breakdown-body');
             if(!body) return;
@@ -4604,6 +4999,12 @@ WHERE t1.id < t2.id
             list.forEach(d => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
+                
+                const isAnomaly = d.variancePercent > 20;
+                if (isAnomaly) {
+                    tr.style.background = 'rgba(239, 68, 68, 0.05)';
+                }
+                
                 if (varianceSelectedDrug === d.didstd) {
                     tr.style.background = 'rgba(0, 242, 254, 0.1)';
                 }
@@ -4617,12 +5018,18 @@ WHERE t1.id < t2.id
 
                 tr.innerHTML = `
                     <td><code>${d.didstd.substring(0, 10)}...</code></td>
-                    <td><strong>${d.name}</strong></td>
+                    <td>
+                        <strong>${d.name}</strong>
+                        ${isAnomaly ? '<span class="badge-status danger" style="padding: 2px 6px; font-size: 0.65rem; margin-left: 8px;">Anomaly</span>' : ''}
+                    </td>
                     <td>${d.minPrice.toFixed(2)} บาท</td>
                     <td>${d.maxPrice.toFixed(2)} บาท</td>
                     <td>${d.avgPrice.toFixed(2)} บาท</td>
                     <td>${d.diff.toFixed(2)} บาท</td>
-                    <td><span class="badge-class" style="background: ${varBadgeColor}">${d.variancePercent.toFixed(1)}%</span></td>
+                    <td style="color: ${isAnomaly ? 'var(--c-red)' : 'inherit'}; font-weight: ${isAnomaly ? 'bold' : 'normal'};">
+                        <span class="badge-class" style="background: ${varBadgeColor}">${d.variancePercent.toFixed(1)}%</span>
+                        ${isAnomaly ? ' ⚠️' : ''}
+                    </td>
                     <td><button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.72rem; height: auto;">🔎 ดู</button></td>
                 `;
 
@@ -5029,7 +5436,6 @@ WHERE t1.id < t2.id
             renderAbcVedMatrix();
         }
 
-        let qualitySelectedHosp = "";
         function renderDataQualityScorecard() {
             const body = document.getElementById('quality-breakdown-body');
             if(!body) return;
@@ -5141,7 +5547,7 @@ WHERE t1.id < t2.id
             });
 
             let selectedItem = list.find(h => h.hospcode === qualitySelectedHosp);
-            if (!selectedItem) {
+            if (!selectedItem && list.length > 0) {
                 selectedItem = list[0];
                 qualitySelectedHosp = selectedItem.hospcode;
             }
@@ -5214,7 +5620,6 @@ WHERE t1.id < t2.id
             renderDataQualityScorecard();
         }
 
-        let mapSelectedDistrict = "";
         function renderGeospatialMap() {
             let txs = getFilteredTransactions('map');
 
@@ -5226,8 +5631,18 @@ WHERE t1.id < t2.id
             const totalBudget = txs.reduce((acc, curr) => acc + curr.price, 0);
             const totalCount = txs.length;
 
+            // Provincial population calculation
+            let provincialPop = 0;
+            Object.values(MUKDAHAN_POPULATION).forEach(p => provincialPop += p.pop);
+            const provincialPerCapita = totalBudget / (provincialPop || 1);
+
             document.getElementById('map-stat-budget').textContent = `${Math.round(totalBudget).toLocaleString()} บาท`;
-            document.getElementById('map-stat-count').textContent = `${totalCount.toLocaleString()} ครั้ง`;
+            if (document.getElementById('map-stat-pop')) {
+                document.getElementById('map-stat-pop').textContent = `${provincialPop.toLocaleString()} คน`;
+            }
+            if (document.getElementById('map-stat-percapita')) {
+                document.getElementById('map-stat-percapita').textContent = `${provincialPerCapita.toFixed(2)} บาท/คน`;
+            }
 
             const districtMapAgg = {};
             baseDistricts.forEach(d => {
@@ -5267,6 +5682,16 @@ WHERE t1.id < t2.id
                         
                         if (tooltip) {
                             tooltipName.textContent = dist.name;
+                            const dPop = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].pop : 0;
+                            const dPerCapita = dPop > 0 ? (dist.budget / dPop) : 0;
+                            
+                            if (document.getElementById('map-tooltip-pop')) {
+                                document.getElementById('map-tooltip-pop').textContent = `ประชากร: ${dPop.toLocaleString()} คน`;
+                            }
+                            if (document.getElementById('map-tooltip-percapita')) {
+                                document.getElementById('map-tooltip-percapita').textContent = `${dPerCapita.toFixed(2)} บาท/คน`;
+                            }
+                            
                             tooltipBudget.textContent = `${Math.round(dist.budget).toLocaleString()} บาท`;
                             const share = totalBudget > 0 ? ((dist.budget / totalBudget) * 100).toFixed(1) : '0.0';
                             tooltipShare.textContent = `${share}% สัดส่วนจังหวัด`;
@@ -5298,7 +5723,17 @@ WHERE t1.id < t2.id
 
             if (mapSelectedDistrict) {
                 const distInfo = districtMapAgg[mapSelectedDistrict];
+                const dPop = MUKDAHAN_POPULATION[mapSelectedDistrict] ? MUKDAHAN_POPULATION[mapSelectedDistrict].pop : 0;
+                const dPerCapita = dPop > 0 ? (distInfo.budget / dPop) : 0;
+                
                 statDistrictName.textContent = distInfo.name;
+                if (document.getElementById('map-stat-pop')) {
+                    document.getElementById('map-stat-pop').textContent = `${dPop.toLocaleString()} คน`;
+                }
+                if (document.getElementById('map-stat-percapita')) {
+                    document.getElementById('map-stat-percapita').textContent = `${dPerCapita.toFixed(2)} บาท/คน`;
+                }
+                
                 detailDistrictName.textContent = `อำเภอ${distInfo.name} (คลิกรูปแผนที่ซ้ำเพื่อเลือกทั้งจังหวัด)`;
 
                 const sortedDrugs = Object.entries(distInfo.topDrugs)
@@ -5372,6 +5807,182 @@ WHERE t1.id < t2.id
             document.getElementById('map-item-select').value = 'all';
             mapSelectedDistrict = "";
             renderGeospatialMap();
+        }
+
+        function renderAccessIndex() {
+            const txs = getFilteredTransactions('access-index');
+            const body = document.getElementById('access-index-body');
+            const chartSvg = document.getElementById('access-chart-svg');
+            if (!body) return;
+
+            const districtAgg = {};
+            baseDistricts.forEach(d => {
+                districtAgg[d.code] = { code: d.code, name: d.name, budget: 0, count: 0 };
+            });
+
+            txs.forEach(t => {
+                const code = t.amphurCode || '4901';
+                if (!districtAgg[code]) {
+                    districtAgg[code] = { code, name: t.amphurName || `อำเภอ ${code}`, budget: 0, count: 0 };
+                }
+                districtAgg[code].budget += t.price;
+                districtAgg[code].count++;
+            });
+
+            const totalBudget = txs.reduce((acc, curr) => acc + curr.price, 0);
+            const totalCount = txs.length;
+            let provincialPop = 0;
+            Object.values(MUKDAHAN_POPULATION).forEach(p => provincialPop += p.pop);
+            const provincialPerCapita = totalBudget / (provincialPop || 1);
+
+            document.getElementById('access-stat-pop').textContent = `${provincialPop.toLocaleString()} คน`;
+            document.getElementById('access-stat-percapita').textContent = `${provincialPerCapita.toFixed(2)} บาท/คน`;
+            document.getElementById('access-stat-rate').textContent = `${((totalCount / (provincialPop || 1)) * 100).toFixed(2)}%`;
+
+            const list = Object.values(districtAgg).map(d => {
+                const pop = MUKDAHAN_POPULATION[d.code] ? MUKDAHAN_POPULATION[d.code].pop : 0;
+                const perCapita = pop > 0 ? (d.budget / pop) : 0;
+                const usageRate = pop > 0 ? (d.count / pop) : 0;
+                
+                // Disparity status
+                let status = "ปกติ (Average)";
+                let statusClass = "success";
+                if (perCapita > provincialPerCapita * 1.5) { status = "เข้าถึงสูงผิดปกติ (High)"; statusClass = "error"; }
+                else if (perCapita < provincialPerCapita * 0.5) { status = "เข้าถึงต่ำ (Low Access)"; statusClass = "warning"; }
+
+                return { ...d, pop, perCapita, usageRate, status, statusClass };
+            });
+
+            list.sort((a, b) => b.perCapita - a.perCapita);
+
+            body.innerHTML = '';
+            list.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${d.name}</strong></td>
+                    <td>${d.pop.toLocaleString()}</td>
+                    <td>${Math.round(d.budget).toLocaleString()} บาท</td>
+                    <td style="color: var(--c-primary); font-weight:bold;">${d.perCapita.toFixed(2)}</td>
+                    <td>${d.count.toLocaleString()}</td>
+                    <td>${(d.usageRate * 100).toFixed(2)}%</td>
+                    <td><span class="badge-status ${d.statusClass}">${d.status}</span></td>
+                `;
+                body.appendChild(tr);
+            });
+
+            // Render SVG Chart for Access Index
+            if (chartSvg) {
+                chartSvg.innerHTML = '';
+                const maxPC = Math.max(...list.map(d => d.perCapita)) || 1;
+                list.forEach((d, idx) => {
+                    const yPos = 30 + (idx * 42);
+                    const barWidth = (d.perCapita / maxPC) * 280;
+                    
+                    chartSvg.innerHTML += `
+                        <text x="10" y="${yPos - 5}" fill="var(--text-light)" font-size="12" font-weight="600">${d.name}</text>
+                        <text x="390" y="${yPos - 5}" fill="var(--c-primary)" font-size="11" font-weight="bold" text-anchor="end">${d.perCapita.toFixed(2)} บาท/คน</text>
+                        <rect x="10" y="${yPos}" width="380" height="8" fill="rgba(255,255,255,0.05)" rx="4"/>
+                        <rect x="10" y="${yPos}" width="${barWidth}" height="8" fill="url(#cyan-gradient)" rx="4">
+                            <animate attributeName="width" from="0" to="${barWidth}" dur="0.8s" fill="freeze" />
+                        </rect>
+                    `;
+                });
+            }
+
+            // Sync comparison panel
+            if (typeof renderAccessComparison === 'function') {
+                renderAccessComparison();
+            }
+        }
+
+        function renderAccessComparison() {
+            const code1 = document.getElementById('compare-district-1').value;
+            const code2 = document.getElementById('compare-district-2').value;
+            
+            const txs = getFilteredTransactions('access-index');
+            
+            const d1Agg = { budget: 0, count: 0 };
+            const d2Agg = { budget: 0, count: 0 };
+
+            txs.forEach(t => {
+                const code = t.amphurCode || '4901';
+                if (code === code1) {
+                    d1Agg.budget += t.price;
+                    d1Agg.count++;
+                }
+                if (code === code2) {
+                    d2Agg.budget += t.price;
+                    d2Agg.count++;
+                }
+            });
+
+            const pop1 = MUKDAHAN_POPULATION[code1] ? MUKDAHAN_POPULATION[code1].pop : 1;
+            const pop2 = MUKDAHAN_POPULATION[code2] ? MUKDAHAN_POPULATION[code2].pop : 1;
+
+            const pc1 = d1Agg.budget / pop1;
+            const pc2 = d2Agg.budget / pop2;
+
+            const rate1 = (d1Agg.count / pop1) * 100;
+            const rate2 = (d2Agg.count / pop2) * 100;
+
+            document.getElementById('compare-pc-1').textContent = `${pc1.toFixed(2)} ฿`;
+            document.getElementById('compare-rate-1').textContent = `${rate1.toFixed(2)}%`;
+
+            document.getElementById('compare-pc-2').textContent = `${pc2.toFixed(2)} ฿`;
+            document.getElementById('compare-rate-2').textContent = `${rate2.toFixed(2)}%`;
+
+            const verdictEl = document.getElementById('compare-verdict');
+            if (code1 === code2) {
+                verdictEl.innerHTML = `<span style="color: var(--text-muted);">เลือกอำเภอที่แตกต่างกันเพื่อเปรียบเทียบ</span>`;
+            } else {
+                const diff = Math.abs(pc1 - pc2);
+                const higherName = pc1 > pc2 ? MUKDAHAN_POPULATION[code1].name : MUKDAHAN_POPULATION[code2].name;
+                const lowerName = pc1 < pc2 ? MUKDAHAN_POPULATION[code1].name : MUKDAHAN_POPULATION[code2].name;
+                const pctDiff = Math.max(pc1, pc2) > 0 ? (diff / Math.max(pc1, pc2)) * 100 : 0;
+
+                let icon = '⚖️';
+                let color = 'var(--text-muted)';
+                if (pctDiff > 30) {
+                    icon = '⚠️';
+                    color = 'var(--c-red)';
+                } else if (pctDiff > 10) {
+                    icon = '📊';
+                    color = 'var(--c-yellow)';
+                }
+
+                verdictEl.innerHTML = `
+                    <span style="color: ${color}; font-weight: 600;">
+                        ${icon} อำเภอ${higherName} มีการเข้าถึงยาต่อหัวสูงกว่า ${lowerName} อยู่ <strong>${diff.toFixed(2)} บาท</strong> (แตกต่าง ${pctDiff.toFixed(1)}%)
+                    </span>
+                `;
+            }
+        }
+
+        function resetAccessIndexTable() {
+            document.getElementById('access-year-select').value = 'all';
+            document.getElementById('access-month-select').value = 'all';
+            renderAccessIndex();
+        }
+
+        function exportAccessIndexExcel() {
+            const txs = getFilteredTransactions('access-index');
+            const districtAgg = {};
+            baseDistricts.forEach(d => districtAgg[d.code] = { name: d.name, budget: 0, count: 0 });
+            txs.forEach(t => {
+                const code = t.amphurCode || '4901';
+                if (districtAgg[code]) {
+                    districtAgg[code].budget += t.price;
+                    districtAgg[code].count++;
+                }
+            });
+
+            const list = Object.entries(districtAgg).map(([code, d]) => {
+                const pop = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].pop : 0;
+                return [d.name, pop, d.budget, pop > 0 ? (d.budget/pop) : 0, d.count, pop > 0 ? (d.count/pop)*100 : 0];
+            });
+
+            const headers = ["อำเภอ", "ประชากร", "งบประมาณรวม", "งบประมาณต่อหัว", "จำนวนรับยา", "อัตราการรับยา (%)"];
+            downloadExcel(`access_index_${new Date().toISOString().slice(0,10)}.xlsx`, headers, list, "Access Index");
         }
 
         // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---

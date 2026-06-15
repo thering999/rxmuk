@@ -6,7 +6,7 @@ class Database {
     private $host = 'mysql-docker';
     private $db_name = 'rxmuk_db';
     private $user = 'root';
-    private $pass = 'Ssj4900036!@#';
+    private $pass = '123456';
     private $conn;
 
     public function connect() {

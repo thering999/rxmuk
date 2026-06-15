@@ -9,7 +9,7 @@ services:
     environment:   
       DB_HOST: mysql-docker
       DB_USER: root
-      DB_PASS: "Ssj4900036!@#"
+      DB_PASSWORD: 123456
       DB_NAME: rxmuk_db
       TZ: Asia/Bangkok
     volumes:
