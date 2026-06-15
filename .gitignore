@@ -19,6 +19,7 @@ vendor/
 # Uploads
 uploads/*
 !uploads/.gitkeep
+!uploads/s_tmp_drug_opd.csv
 
 # IDE
 .vscode/

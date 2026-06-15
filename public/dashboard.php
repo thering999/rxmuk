@@ -103,6 +103,11 @@ $imports = $importer->getImportedFiles(); // Get all files, not just current use
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="advanced-dashboard.html" target="_blank">
+                            <i class="bi bi-cpu"></i> Advanced Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="user-management.php">
                             <i class="bi bi-people"></i> จัดการผู้ใช้
                         </a>
