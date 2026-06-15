@@ -2367,10 +2367,10 @@
 
                 <div class="panel" style="margin-bottom: 20px;">
                     <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 0;">
-                        <select id="access-year-select" class="select-control" style="flex: 1 1 120px;">
+                        <select id="access-index-year-select" class="select-control" style="flex: 1 1 120px;">
                             <option value="all">📅 ทุกปี</option>
                         </select>
-                        <select id="access-month-select" class="select-control" style="flex: 1 1 150px;">
+                        <select id="access-index-month-select" class="select-control" style="flex: 1 1 150px;">
                             <option value="all">📅 ทุกเดือน</option>
                         </select>
                         <button class="btn btn-secondary" onclick="resetAccessIndexTable()">🔄 รีเซ็ต</button>
@@ -2767,25 +2767,38 @@
         }
 
         function populateAllFilterDropdowns() {
-            // Extract unique values
-            const years = [...new Set(rawTransactions.map(t => t.month ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
+            try {
+                if (!rawTransactions || rawTransactions.length === 0) {
+                    console.log('No data to populate filters.');
+                    return;
+                }
+            // Extract unique values with safety guards
+            const years = [...new Set(rawTransactions.map(t => (t.month && typeof t.month === 'string') ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
             const months = [...new Set(rawTransactions.map(t => t.month))].filter(Boolean).sort();
             
-            // Districts
-            const districts = [...new Set(rawTransactions.map(t => JSON.stringify({ code: t.amphurCode, name: t.amphurName })))].map(str => JSON.parse(str)).sort((a, b) => a.code.localeCompare(b.code));
+            // Districts with safety guards
+            const districtSet = new Set();
+            const districts = [];
+            rawTransactions.forEach(t => {
+                if (t.amphurCode && !districtSet.has(t.amphurCode)) {
+                    districtSet.add(t.amphurCode);
+                    districts.push({ code: t.amphurCode, name: t.amphurName || `อำเภอ ${t.amphurCode}` });
+                }
+            });
+            districts.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
             
-            // Drugs
+            // Drugs with safety guards
             const drugs = [];
             const seenDrugs = new Set();
             rawTransactions.forEach(t => {
                 if (t.didstd && !seenDrugs.has(t.didstd)) {
                     seenDrugs.add(t.didstd);
-                    drugs.push({ code: t.didstd, name: t.dname });
+                    drugs.push({ code: t.didstd, name: t.dname || `รหัส ${t.didstd}` });
                 }
             });
-            drugs.sort((a, b) => a.name.localeCompare(b.name));
+            drugs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
 
             suffixList.forEach(prefix => {
                 // Populate Years
@@ -2848,6 +2861,9 @@
             // Initialize hospitals dropdown based on the active district
             const activeDistrict = document.getElementById('drug-district-select') ? document.getElementById('drug-district-select').value : 'all';
             updateHospitalsDropdown(activeDistrict);
+            } catch (err) {
+                console.error('Critical Error in populateAllFilterDropdowns:', err);
+            }
         }
 
         // Shared dynamic filter resolver
@@ -3492,6 +3508,7 @@
 
         // Process parsed JSON row data and replace rawTransactions!
         function processParsedExcelData(rows, filename, uploadTimeStr) {
+            console.log(`Processing file: ${filename} with ${rows.length} rows`);
             const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
             const keys = Object.keys(rows[0] || {});
             
@@ -3562,6 +3579,7 @@
 
             // Update global transactions
             rawTransactions = newTxs;
+            console.log(`Updated rawTransactions: ${rawTransactions.length} records`);
 
             // Reset all filters to 'all' first
             const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
@@ -3600,11 +3618,13 @@
 
         // Process pre-aggregated data (specifically for large CSV streaming)
         function processPreAggregatedData(rows, filename, uploadTimeStr) {
+            console.log(`Processing pre-aggregated data: ${filename} with ${rows.length} rows`);
             const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
             rows.forEach(r => {
                 r.uploadTime = uploadTime;
             });
             rawTransactions = rows;
+            console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records`);
 
             // Reset all filters to 'all' first
             const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
@@ -5879,8 +5899,8 @@ WHERE t1.id < t2.id
         }
 
         function resetAccessIndexTable() {
-            document.getElementById('access-year-select').value = 'all';
-            document.getElementById('access-month-select').value = 'all';
+            document.getElementById('access-index-year-select').value = 'all';
+            document.getElementById('access-index-month-select').value = 'all';
             renderAccessIndex();
         }
 
