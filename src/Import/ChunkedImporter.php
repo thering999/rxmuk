@@ -253,9 +253,15 @@ class ChunkedImporter {
         // First clear any existing aggregation for this import
         $this->conn->query("DELETE FROM s_drug_opd WHERE import_id = " . intval($import_id));
 
-        $sql = "INSERT INTO s_drug_opd (`import_id`, `HOSPCODE`, `AMPHUR`, `DIDSTD`, `DNAME`, `SumAmount`, `Count`, `SumDrugCost`, `SumDrugPrice`)
+        $sql = "INSERT INTO s_drug_opd (`import_id`, `report_month`, `HOSPCODE`, `AMPHUR`, `DIDSTD`, `DNAME`, `SumAmount`, `Count`, `SumDrugCost`, `SumDrugPrice`)
                 SELECT 
                     `import_id`,
+                    COALESCE(
+                        LEFT(`date_serv`, 7), 
+                        LEFT(NULLIF(`D_UPDATE`, ''), 7), 
+                        LEFT(NULLIF(`HDC_DATE`, ''), 7), 
+                        '2026-06'
+                    ) as `report_month`,
                     `hospcode`,
                     COALESCE(`AMPHUR`, '') as `AMPHUR`,
                     `didstd`,
@@ -266,7 +272,7 @@ class ChunkedImporter {
                     SUM(CAST(COALESCE(`price`, `DRUGPRICE`, 0) AS DECIMAL(15,2))) as `SumDrugPrice`
                 FROM `drug_opd`
                 WHERE `import_id` = ?
-                GROUP BY `import_id`, `hospcode`, `AMPHUR`, `didstd`, `dname`";
+                GROUP BY `import_id`, `report_month`, `hospcode`, `AMPHUR`, `didstd`, `dname`";
 
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -277,7 +283,7 @@ class ChunkedImporter {
         $stmt->bind_param("i", $import_id);
         
         if ($stmt->execute()) {
-            echo "Aggregation complete for import ID: $import_id\n";
+            echo "Aggregation complete for import ID: $import_id (Split by Month)\n";
             return true;
         } else {
             echo "Aggregation EXECUTE failed: " . $stmt->error . "\n";
