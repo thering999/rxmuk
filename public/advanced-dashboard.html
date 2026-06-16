@@ -3505,6 +3505,7 @@ ORDER BY name;
             const maxVariety = 1000; // Assuming 1000 drugs is max
 
             // Quality score calculation based on error rows
+            const txs = getFilteredTransactions('hosp');
             const totalRows = txs.filter(t => t.hospcode === selected.hospcode).reduce((s, t) => s + (t.totalRows || 1), 0);
             const errorRows = txs.filter(t => t.hospcode === selected.hospcode).reduce((s, t) => s + (t.errorRows || 0), 0);
             const qScore = totalRows > 0 ? Math.max(0, ((totalRows - errorRows) / totalRows) * 100) : 100;
@@ -3560,7 +3561,6 @@ ORDER BY name;
                 polyG.innerHTML += `<circle cx="${x}" cy="${y}" r="4" fill="var(--c-primary)" filter="drop-shadow(0 0 4px var(--c-primary))"/>`;
             });
             polyG.innerHTML = `<path d="${polyPath} Z" fill="rgba(0, 242, 254, 0.15)" stroke="var(--c-primary)" stroke-width="2.5" filter="drop-shadow(0 0 8px rgba(0, 242, 254, 0.4))"/>` + polyG.innerHTML;
-        }
         }
 
         function resetDistrictTable() {
@@ -4198,27 +4198,27 @@ ORDER BY name;
                         missingDid: 0,
                         invalidDid: 0,
                         zeroPrice: 0
-                        };
-                        }
-                        agg[aggKey].amount += amount;
-                        agg[aggKey].price += price;
-                        agg[aggKey].cost += cost;
-                        agg[aggKey].totalRows++;
-                        if (pid !== 'Unknown') agg[aggKey].pids.add(pid);
+                    };
+                }
+                agg[aggKey].amount += amount;
+                agg[aggKey].price += price;
+                agg[aggKey].cost += cost;
+                agg[aggKey].totalRows++;
+                if (pid !== 'Unknown') agg[aggKey].pids.add(pid);
 
-                        if (didstd === 'N/A' || didstd === '' || didstd === 'Unknown') {
-                        agg[aggKey].errorRows++;
-                        agg[aggKey].missingDid++;
-                        } else if (didstd.length < 24) {
-                        agg[aggKey].errorRows++;
-                        agg[aggKey].invalidDid++;
-                        }
-                        if (price <= 0) {
-                        agg[aggKey].errorRows++;
-                        agg[aggKey].zeroPrice++;
-                        }
-                        }
-                        }
+                if (didstd === 'N/A' || didstd === '' || didstd === 'Unknown') {
+                    agg[aggKey].errorRows++;
+                    agg[aggKey].missingDid++;
+                } else if (didstd.length < 24) {
+                    agg[aggKey].errorRows++;
+                    agg[aggKey].invalidDid++;
+                }
+                if (price <= 0) {
+                    agg[aggKey].errorRows++;
+                    agg[aggKey].zeroPrice++;
+                }
+            }
+        }
 
         // Dashboard overview stats & SVG Trend graph updater
         function updateDashboardOverview() {
@@ -4263,7 +4263,7 @@ ORDER BY name;
             // ----------------------------------------
 
             if (recordsEl) {
-                if (txs[0] && txs[0].uploadTime && (txs[0].uploadTime.includes('tmp_drug_opd.csv') || txs[0].uploadTime.includes('สตรีมมิ่ง'))) {
+                if (txs[0] && txs[0].uploadTime && (txs[0].uploadTime.includes('tmp_drug_opd.csv') || txs[0].uploadTime.includes('Streaming') || txs[0].uploadTime.includes('Auto'))) {   
                     recordsEl.textContent = `${records.toLocaleString()} แถว (Monthly Aggregated)`;
                 } else {
                     recordsEl.textContent = `${records.toLocaleString()} แถว`;
@@ -5290,7 +5290,12 @@ WHERE t1.id < t2.id
         // Polypharmacy (Unique PIDs with > 5 drugs)
         const pidGroups = {};
         txs.forEach(t => {
-            if (t.pid && t.pid !== 'Unknown') {
+            if (t.pids) {
+                t.pids.forEach(p => {
+                    if (!pidGroups[p]) pidGroups[p] = new Set();
+                    pidGroups[p].add(t.didstd);
+                });
+            } else if (t.pid && t.pid !== 'Unknown') {
                 if (!pidGroups[t.pid]) pidGroups[t.pid] = new Set();
                 pidGroups[t.pid].add(t.didstd);
             }
