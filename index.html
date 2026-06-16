@@ -1343,13 +1343,8 @@
                         </div>
 
                         <div style="border-top: 1px solid var(--card-border); padding-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-                            <h4 style="font-size: 0.9rem; color: #fff;">📂 ไฟล์สุ่มตรวจวัด / ไฟล์เทมเพลตมาตรฐาน:</h4>
-                            <ul style="padding-left: 20px; font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
-                                <li><strong>tmp_drug_opd.csv</strong> (ไฟล์นำเข้าราย Record - ข้อมูลจ่ายยาผู้ป่วยนอกรายคน)</li>
-                                <li><strong>s_tmp_drug_opd.csv</strong> (ไฟล์สรุปภาพรวมรายเดือน - สถิติจ่ายยาสรุปรวมรายเดือนสะสม)</li>
-                            </ul>
                             <div style="font-size: 0.75rem; color: var(--c-yellow); margin-top: 5px;">
-                                * คุณสามารถลากและวางไฟล์จริงของคุณในเครื่องลงไปในกล่องอัปโหลดด้านบนเพื่อทดสอบการประมวลผลได้เลย (รองรับไฟล์ขนาดใหญ่ 500MB+ ด้วยระบบสตรีมมิ่ง)
+                                * คุณสามารถลากและวางไฟล์จริงของคุณในเครื่องลงไปในกล่องอัปโหลดด้านบนเพื่อประมวลผลได้เลย (รองรับไฟล์ขนาดใหญ่ 500MB+ ด้วยระบบสตรีมมิ่ง)
                             </div>
                         </div>
                     </div>
@@ -3509,8 +3504,10 @@ ORDER BY name;
             const maxAmount = Math.max(...allHosps.map(h => h.amount)) || 1;
             const maxVariety = 1000; // Assuming 1000 drugs is max
 
-            // Quality score from quality dashboard (simplified simulation)
-            const qScore = 95; // Mock quality score for now
+            // Quality score calculation based on error rows
+            const totalRows = txs.filter(t => t.hospcode === selected.hospcode).reduce((s, t) => s + (t.totalRows || 1), 0);
+            const errorRows = txs.filter(t => t.hospcode === selected.hospcode).reduce((s, t) => s + (t.errorRows || 0), 0);
+            const qScore = totalRows > 0 ? Math.max(0, ((totalRows - errorRows) / totalRows) * 100) : 100;
 
             const metrics = [
                 { name: 'Budget', val: (selected.budget / maxBudget) * 100 },
@@ -3845,6 +3842,16 @@ ORDER BY name;
 
                 // If standard string date
                 const dateStr = String(val).trim();
+                
+                // YYYYMMDD format
+                if (dateStr.length === 8 && /^\d{8}$/.test(dateStr)) {
+                    let y = parseInt(dateStr.substring(0, 4));
+                    let m = dateStr.substring(4, 6);
+                    let d = dateStr.substring(6, 8);
+                    if (y > 2500) y -= 543;
+                    return `${y}-${m}-${d}`;
+                }
+
                 const matchFull = dateStr.match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
                 if (matchFull) {
                     return `${matchFull[1]}-${matchFull[2]}-${matchFull[3]}`;
@@ -3892,6 +3899,7 @@ ORDER BY name;
             const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code' || k.toLowerCase().includes('did') || k.toLowerCase().includes('รหัสยา'));
             const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice' || k.toLowerCase().includes('price') || k.toLowerCase().includes('ราคา'));
             const costKey = keys.find(k => k.toLowerCase() === 'cost' || k.toLowerCase() === 'sumdrugcost' || k.toLowerCase().includes('cost') || k.toLowerCase().includes('ทุน'));
+            const pidKey = keys.find(k => k.toLowerCase() === 'pid' || k.toLowerCase() === 'patient_id' || k.toLowerCase().includes('pid') || k.toLowerCase().includes('idผู้ป่วย'));
             
             // Date column keys
             const dateKeys = keys.filter(k => 
@@ -3925,6 +3933,7 @@ ORDER BY name;
 
                 const didstd = row[didstdKey] !== undefined ? String(row[didstdKey]).trim() : 'N/A';
                 const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
+                const pid = row[pidKey] !== undefined ? String(row[pidKey]).trim() : 'Unknown';
                 const amount = parseFloat(row[amountKey]) || 1;
                 const price = parseFloat(row[priceKey]) || (amount * 5);
                 const cost = parseFloat(row[costKey]) || (price * 0.7);
@@ -3935,6 +3944,7 @@ ORDER BY name;
                 const monthStr = dateStr.slice(0, 7);
 
                 newTxs.push({
+                    pid,
                     didstd,
                     dname,
                     hospcode,
@@ -4108,6 +4118,7 @@ ORDER BY name;
             const ampIdx = headers.findIndex(h => h.toLowerCase() === 'amphur');
             const didstdIdx = headers.findIndex(h => h.toLowerCase() === 'didstd');
             const dnameIdx = headers.findIndex(h => h.toLowerCase() === 'dname' || h.toLowerCase() === 'drug_name');
+            const pidIdx = headers.findIndex(h => h.toLowerCase() === 'pid' || h.toLowerCase() === 'patient_id');
             const amountIdx = headers.findIndex(h => h.toLowerCase() === 'amount' || h.toLowerCase() === 'sumamount' || h.toLowerCase() === 'qty');
             const priceIdx = headers.findIndex(h => h.toLowerCase() === 'drugprice' || h.toLowerCase() === 'sumdrugprice' || h.toLowerCase() === 'price');
             const costIdx = headers.findIndex(h => h.toLowerCase() === 'drugcost' || h.toLowerCase() === 'sumdrugcost' || h.toLowerCase() === 'cost');
@@ -4144,6 +4155,7 @@ ORDER BY name;
 
                 const didstd = values[didstdIdx] !== undefined ? String(values[didstdIdx]).trim() : 'N/A';
                 const dname = values[dnameIdx] || 'ไม่ระบุตัวยา';
+                const pid = pidIdx !== -1 && values[pidIdx] !== undefined ? String(values[pidIdx]).trim() : 'Unknown';
                 const amount = parseFloat(values[amountIdx]) || 1;
                 const price = parseFloat(values[priceIdx]) || (amount * 5);
                 const cost = parseFloat(values[costIdx]) || (price * 0.7);
@@ -4168,6 +4180,7 @@ ORDER BY name;
                 if (!agg[aggKey]) {
                     const hInfo = getHospitalInfo(hospcode);
                     agg[aggKey] = {
+                        pid, // Note: This will be the FIRST pid encountered for this aggregate
                         didstd,
                         dname,
                         hospcode,
@@ -4178,15 +4191,34 @@ ORDER BY name;
                         month: monthStr,
                         amount: 0,
                         price: 0,
-                        cost: 0
-                    };
-                }
+                        cost: 0,
+                        pids: new Set(),
+                        errorRows: 0,
+                        totalRows: 0,
+                        missingDid: 0,
+                        invalidDid: 0,
+                        zeroPrice: 0
+                        };
+                        }
+                        agg[aggKey].amount += amount;
+                        agg[aggKey].price += price;
+                        agg[aggKey].cost += cost;
+                        agg[aggKey].totalRows++;
+                        if (pid !== 'Unknown') agg[aggKey].pids.add(pid);
 
-                agg[aggKey].amount += amount;
-                agg[aggKey].price += price;
-                agg[aggKey].cost += cost;
-            }
-        }
+                        if (didstd === 'N/A' || didstd === '' || didstd === 'Unknown') {
+                        agg[aggKey].errorRows++;
+                        agg[aggKey].missingDid++;
+                        } else if (didstd.length < 24) {
+                        agg[aggKey].errorRows++;
+                        agg[aggKey].invalidDid++;
+                        }
+                        if (price <= 0) {
+                        agg[aggKey].errorRows++;
+                        agg[aggKey].zeroPrice++;
+                        }
+                        }
+                        }
 
         // Dashboard overview stats & SVG Trend graph updater
         function updateDashboardOverview() {
@@ -4207,8 +4239,8 @@ ORDER BY name;
             if (itemsEl) itemsEl.textContent = `${uniqueDrugs.toLocaleString()} รายการ`;
             if (hospsEl) hospsEl.textContent = `${uniqueHosps.toLocaleString()} แห่ง`;
             
-            // --- STRATEGIC BURN RATE CALCULATION ---
-            const annualBudget = 150000000; // 150M THB Assumption
+            // --- DYNAMIC BUDGET TRACKING (Assumption: 250M Provincial Budget) ---
+            const annualBudget = 250000000; 
             const burnPct = Math.min(100, (totalBudget / annualBudget) * 100);
             const burnPctEl = document.getElementById('dash-burn-pct');
             const burnBarEl = document.getElementById('dash-burn-bar');
@@ -4218,13 +4250,13 @@ ORDER BY name;
             if (burnBarEl) burnBarEl.style.width = `${burnPct}%`;
             if (burnStatusEl) {
                 if (burnPct > 90) {
-                    burnStatusEl.textContent = '⚠️ วิกฤต: งบประมาณใกล้หมด';
+                    burnStatusEl.textContent = '⚠️ แจ้งเตือน: งบประมาณการจัดซื้อระดับจังหวัดสูงกว่า 90%';
                     burnStatusEl.style.color = 'var(--c-red)';
                 } else if (burnPct > 70) {
-                    burnStatusEl.textContent = '🟡 เฝ้าระวัง: อัตราการใช้เงินสูงกว่าปกติ';
+                    burnStatusEl.textContent = '🟡 เฝ้าระวัง: อัตราการใช้งบประมาณระดับจังหวัดเกิน 70%';
                     burnStatusEl.style.color = 'var(--c-yellow)';
                 } else {
-                    burnStatusEl.textContent = '✅ ปกติ: งบประมาณเพียงพอถึงสิ้นปี';
+                    burnStatusEl.textContent = '✅ สถานะปกติ: ข้อมูลเบิกจ่ายสะสมยังอยู่ในกรอบงบประมาณ';
                     burnStatusEl.style.color = 'var(--c-green)';
                 }
             }
@@ -4599,8 +4631,8 @@ ORDER BY name;
         renderAccessIndex();
         updateDashboardOverview();
 
-        // Auto-load real CSV data if present in uploads/s_tmp_drug_opd.csv on page load
-        // Use a cache-buster query parameter to bypass GitHub Pages aggressive caching
+        // Auto-load disabled as per user request to remove all mockup/pre-loaded data
+        /*
         fetch('uploads/s_tmp_drug_opd.csv?v=' + new Date().getTime(), { cache: 'no-store' })
             .then(res => {
                 if (res.ok) return res.arrayBuffer();
@@ -4617,49 +4649,24 @@ ORDER BY name;
                 }
                 const rows = parseCSV(text);
                 if (rows && rows.length > 0) {
-                    console.log('Successfully auto-loaded real CSV data:', rows.length, 'rows');
-                    try {
-                        processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
-
-                        // Add record to import history table
-                        const newTr = document.createElement('tr');
-                        newTr.innerHTML = `
-                            <td>${new Date().toLocaleString('th-TH', {hour12: false})}</td>
-                            <td><code>uploads/s_tmp_drug_opd.csv</code></td>
-                            <td>${rows.length.toLocaleString()} แถว</td>
-                            <td><span class="badge-status success">System (Auto)</span></td>
-                        `;
-                        const importHist = document.getElementById('import-history-body');
-                        if (importHist) {
-                            importHist.insertBefore(newTr, importHist.firstChild);
-                        }
-                    } catch (innerErr) {
-                        console.error('Error during processParsedExcelData:', innerErr);
-                        const drugSource = document.getElementById('drug-data-source');
-                        if (drugSource) {
-                            drugSource.textContent = `แหล่งข้อมูล: อัปโหลดจาก s_tmp_drug_opd.csv (สำเร็จแต่เกิดข้อผิดพลาด: ${innerErr.message})`;
-                            drugSource.className = 'badge-status warning';
-                        }
-                    }
+                    processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
                 }
-
             })
             .catch(err => {
-                console.log('Real data auto-load skipped, no mock data fallback:', err.message);
-                // Only show "No Data" if the user hasn't already manually uploaded something
-                if (rawTransactions.length === 0) {
-                    const drugSource = document.getElementById('drug-data-source');
-                    if (drugSource) {
-                        drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
-                        drugSource.className = 'badge-status danger';
-                    }
-                    const hospSource = document.getElementById('hosp-data-source');
-                    if (hospSource) {
-                        hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
-                        hospSource.className = 'badge-status danger';
-                    }
-                }
+                console.log('Real data auto-load skipped:', err.message);
             });
+        */
+
+        const drugSource = document.getElementById('drug-data-source');
+        if (drugSource && rawTransactions.length === 0) {
+            drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+            drugSource.className = 'badge-status danger';
+        }
+        const hospSource = document.getElementById('hosp-data-source');
+        if (hospSource && rawTransactions.length === 0) {
+            hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+            hospSource.className = 'badge-status danger';
+        }
 
         // Centralized Filter Synchronization & Cascading Logic
         function handleFilterChange(selectorType, val) {
@@ -5264,7 +5271,6 @@ WHERE t1.id < t2.id
 - **"คุณภาพ"** หรือ **"qc"** (เกณฑ์คุณภาพข้อมูล)
 - **"อำเภอ"** (รายชื่อรหัสอำเภอของมุกดาหาร)`;
         }
-        }
 
         function renderRduMonitoring() {
         const txs = getFilteredTransactions('rdu');
@@ -5281,10 +5287,20 @@ WHERE t1.id < t2.id
         const hadBudget = hadTxs.reduce((s, t) => s + t.price, 0);
         const hadCount = hadTxs.length;
 
+        // Polypharmacy (Unique PIDs with > 5 drugs)
+        const pidGroups = {};
+        txs.forEach(t => {
+            if (t.pid && t.pid !== 'Unknown') {
+                if (!pidGroups[t.pid]) pidGroups[t.pid] = new Set();
+                pidGroups[t.pid].add(t.didstd);
+            }
+        });
+        const polyCount = Object.values(pidGroups).filter(set => set.size >= 5).length;
+
         // Update Stats Bar
         document.getElementById('rdu-stat-antibiotic').textContent = `${antiPct.toFixed(1)}%`;
         document.getElementById('rdu-stat-had').textContent = `${hadCount.toLocaleString()} รายการ`;
-        document.getElementById('rdu-stat-poly').textContent = (totalCount / 100).toFixed(1); // Simulation
+        document.getElementById('rdu-stat-poly').textContent = polyCount.toLocaleString();
 
         // Antibiotic Table
         const antiBody = document.getElementById('rdu-antibiotic-body');

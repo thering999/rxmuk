@@ -428,11 +428,40 @@
         }
 
         .data-table tbody tr {
-            transition: background 0.2s;
+            transition: all 0.2s ease;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.01);
         }
 
         .data-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(0, 242, 254, 0.05);
+            transform: translateX(4px);
+        }
+
+        /* Global Transitions & Effects */
+        .panel, .stat-card, .btn, .tab-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-content {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Glassmorphism Tooltip Enhancement */
+        .custom-tooltip {
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            background-color: rgba(17, 25, 40, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.125);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
         .badge-status {
@@ -817,6 +846,9 @@
 
         /* Print Report styles */
         @media print {
+            #print-executive-header {
+                display: block !important;
+            }
             header, .navbar, .nav-links, .filter-row, .secured-lock, .config-bar, .chat-input-area, .btn, button, .hero-badge, .footer-links, .upload-zone, .user-status-area {
                 display: none !important;
             }
@@ -883,6 +915,7 @@
                 <li><a class="tab-btn" data-tab="quality">คะแนนคุณภาพข้อมูล</a></li>
                 <li><a class="tab-btn" data-tab="map">แผนที่จ่ายยา</a></li>
                 <li><a class="tab-btn" data-tab="access-index">ดัชนีเข้าถึงยา</a></li>
+                <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
             </ul>
             <div class="user-status-area">
                 <div class="status-pill" id="login-status-pill" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--c-red);">
@@ -968,6 +1001,21 @@
                     <!-- Quick insights -->
                     <div style="background: rgba(255,255,255,0.03); padding: 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
+                            <!-- Strategic Burn Rate Section -->
+                            <div style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+                                <h4 style="margin-top: 0; color: var(--c-primary); margin-bottom: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+                                    <span>⚡</span> Strategic Burn Rate
+                                </h4>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px;">
+                                    <span>อัตราการใช้งบประมาณรายปี</span>
+                                    <span id="dash-burn-pct">0%</span>
+                                </div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; position: relative;">
+                                    <div id="dash-burn-bar" style="height: 100%; width: 0%; background: var(--gradient-1); transition: width 1s ease-in-out;"></div>
+                                </div>
+                                <div id="dash-burn-status" style="font-size: 0.7rem; color: var(--c-green); margin-top: 5px; font-weight: 600;">สถานะปกติ: งบประมาณเพียงพอถึงสิ้นปี</div>
+                            </div>
+
                             <h4 style="margin-top: 0; color: var(--c-primary); margin-bottom: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
                                 <span>💡</span> AI Quick Insights
                             </h4>
@@ -977,6 +1025,74 @@
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
                             วิเคราะห์โดยระบบสถิติอัจฉริยะ RxMuk
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Top Performance Leaderboards -->
+        <section class="container" style="margin-bottom: 30px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <!-- Budget Leaderboard -->
+                <div class="panel" style="margin-bottom: 0;">
+                    <div class="panel-header">
+                        <h3 class="panel-title" style="font-size: 1rem;"><span>🏆</span> 5 อันดับหน่วยบริการเบิกจ่ายสูงสุด</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>หน่วยบริการ</th>
+                                    <th style="text-align: right;">งบประมาณรวม</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-budget-leaderboard">
+                                <!-- Populated dynamically -->
+                                <tr><td colspan="2" style="text-align: center; color: var(--text-muted);">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Quality Leaderboard -->
+                <div class="panel" style="margin-bottom: 0;">
+                    <div class="panel-header">
+                        <h3 class="panel-title" style="font-size: 1rem;"><span>✨</span> 5 อันดับหน่วยบริการคุณภาพข้อมูลดีเยี่ยม</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>หน่วยบริการ</th>
+                                    <th style="text-align: right;">คะแนนคุณภาพ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-quality-leaderboard">
+                                <!-- Populated dynamically -->
+                                <tr><td colspan="2" style="text-align: center; color: var(--text-muted);">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cross-Indicator Correlation Analysis -->
+        <section class="container" style="margin-bottom: 30px;">
+            <div class="panel">
+                <div class="panel-header">
+                    <h3 class="panel-title"><span>🕸️</span> Cross-Indicator Correlation Analysis (ความสัมพันธ์ของคุณภาพและการเข้าถึง)</h3>
+                </div>
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: center;">
+                    <div style="height: 250px; position: relative; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 20px;">
+                        <svg id="correlation-scatter-svg" viewBox="0 0 400 200" style="width: 100%; height: 100%; overflow: visible;"></svg>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+                        <h4 style="color: var(--c-primary); margin-bottom: 8px;">🔍 บทวิเคราะห์ความเชื่อมโยง</h4>
+                        <p id="correlation-verdict">ระบบกำลังประมวลผลความสัมพันธ์ระหว่าง <strong>คะแนนคุณภาพข้อมูล (QC Score)</strong> และ <strong>ดัชนีการเข้าถึงยา (Access Index)</strong> ของแต่ละหน่วยบริการเพื่อค้นหาจุดบกพร่องเชิงระบบ...</p>
+                        <div style="margin-top: 15px; display: flex; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 5px;"><span style="display:inline-block; width:10px; height:10px; background:var(--c-primary); border-radius:50%;"></span> หน่วยบริการปกติ</div>
+                            <div style="display: flex; align-items: center; gap: 5px;"><span style="display:inline-block; width:10px; height:10px; background:var(--c-red); border-radius:50%;"></span> จุดวิกฤต (ความเสี่ยงสูง)</div>
                         </div>
                     </div>
                 </div>
@@ -1227,13 +1343,8 @@
                         </div>
 
                         <div style="border-top: 1px solid var(--card-border); padding-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-                            <h4 style="font-size: 0.9rem; color: #fff;">📂 ไฟล์สุ่มตรวจวัด / ไฟล์เทมเพลตมาตรฐาน:</h4>
-                            <ul style="padding-left: 20px; font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
-                                <li><strong>tmp_drug_opd.csv</strong> (ไฟล์นำเข้าราย Record - ข้อมูลจ่ายยาผู้ป่วยนอกรายคน)</li>
-                                <li><strong>s_tmp_drug_opd.csv</strong> (ไฟล์สรุปภาพรวมรายเดือน - สถิติจ่ายยาสรุปรวมรายเดือนสะสม)</li>
-                            </ul>
                             <div style="font-size: 0.75rem; color: var(--c-yellow); margin-top: 5px;">
-                                * คุณสามารถลากและวางไฟล์จริงของคุณในเครื่องลงไปในกล่องอัปโหลดด้านบนเพื่อทดสอบการประมวลผลได้เลย (รองรับไฟล์ขนาดใหญ่ 500MB+ ด้วยระบบสตรีมมิ่ง)
+                                * คุณสามารถลากและวางไฟล์จริงของคุณในเครื่องลงไปในกล่องอัปโหลดด้านบนเพื่อประมวลผลได้เลย (รองรับไฟล์ขนาดใหญ่ 500MB+ ด้วยระบบสตรีมมิ่ง)
                             </div>
                         </div>
                     </div>
@@ -1376,6 +1487,7 @@
                                         <th id="th-drug-didstd" onclick="changeDrugSort('didstd')" style="cursor: pointer; user-select: none;">รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
                                         <th id="th-drug-name" onclick="changeDrugSort('name')" style="cursor: pointer; user-select: none;">ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
                                         <th id="th-drug-amount" onclick="changeDrugSort('amount')" style="cursor: pointer; user-select: none;">จำนวนจ่ายสะสม (Amount)</th>
+                                        <th id="th-drug-adc" onclick="changeDrugSort('adc')" style="cursor: pointer; user-select: none;">จ่ายเฉลี่ยรายวัน (ADC)</th>
                                         <th id="th-drug-price" onclick="changeDrugSort('price')" style="cursor: pointer; user-select: none;">ราคารวมสะสม (SumPrice)</th>
                                         <th id="th-drug-cost" onclick="changeDrugSort('cost')" style="cursor: pointer; user-select: none;">ต้นทุนสะสม (SumCost)</th>
                                         <th id="th-drug-abc" onclick="changeDrugSort('abc')" style="cursor: pointer; user-select: none;">ระดับผลกระทบมูลค่า (ABC Class)</th>
@@ -1623,25 +1735,34 @@
                         </div>
                     </div>
 
-                    <!-- Chart Panel -->
+                    <!-- Chart Panel: Radar Analysis -->
                     <div class="panel">
                         <div class="panel-header" style="margin-bottom: 15px;">
                             <h3 class="panel-title">
-                                <span>📊</span>
-                                10 อันดับหน่วยบริการมูลค่ายาสูงสุด
+                                <span>🛡️</span>
+                                Hospital Performance Radar (การเปรียบเทียบประสิทธิภาพรอบด้าน)
                             </h3>
+                            <span id="radar-selected-hosp" style="font-size:0.8rem; color:var(--c-primary); font-weight:600;">เลือกหน่วยบริการเพื่อวิเคราะห์</span>
                         </div>
-                        <svg viewBox="0 0 400 450" style="width: 100%; height: 430px;">
-                            <defs>
-                                <linearGradient id="emerald-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#10b981" />
-                                    <stop offset="100%" stop-color="#059669" />
-                                </linearGradient>
-                            </defs>
-                            <g id="chart-bars-hosp">
-                                <!-- Populated dynamically -->
-                            </g>
-                        </svg>
+                        <div style="text-align: center; position: relative; height: 380px;">
+                            <svg viewBox="0 0 400 400" style="width: 100%; height: 100%;" id="hosp-radar-svg">
+                                <defs>
+                                    <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                                        <stop offset="0%" stop-color="var(--c-primary)" stop-opacity="0.2" />
+                                        <stop offset="100%" stop-color="var(--c-primary)" stop-opacity="0" />
+                                    </radialGradient>
+                                </defs>
+                                <g id="radar-grid"></g>
+                                <g id="radar-polygon"></g>
+                                <g id="radar-labels"></g>
+                            </svg>
+                        </div>
+                        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.72rem; color: var(--text-muted);">
+                            <div>💠 <strong>Budget</strong>: มูลค่าการเบิกจ่ายเทียบกับเฉลี่ย</div>
+                            <div>💠 <strong>Quality</strong>: คะแนน QC ข้อมูล</div>
+                            <div>💠 <strong>Variety</strong>: ความหลากหลายของรายการยา</div>
+                            <div>💠 <strong>Volume</strong>: ปริมาณการจ่ายยา (Amount)</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1705,7 +1826,6 @@
 
                         <button class="btn btn-secondary" onclick="resetVarianceTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportVarianceExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
-                        <button class="btn btn-primary" onclick="exportVarianceCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -1819,7 +1939,6 @@
 
                         <button class="btn btn-secondary" onclick="resetAbcVedTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportAbcVedExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
-                        <button class="btn btn-primary" onclick="exportAbcVedCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2097,7 +2216,6 @@
 
                         <button class="btn btn-secondary" onclick="resetQualityTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportQualityExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
-                        <button class="btn btn-primary" onclick="exportQualityCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2150,6 +2268,17 @@
                             <svg viewBox="0 0 400 180" style="width: 100%; height: 160px;" id="quality-chart-svg">
                                 <!-- Populated dynamically by JS -->
                             </svg>
+                        </div>
+
+                        <!-- Error Categories Breakdown -->
+                        <div style="margin-bottom: 20px; padding: 12px; background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                            <div style="font-size: 0.82rem; color: var(--c-red); margin-bottom: 10px; font-weight: 600;">⚠️ สัดส่วนประเภทข้อผิดพลาด (Province Error Distribution)</div>
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <svg id="quality-error-pie" viewBox="0 0 100 100" style="width: 80px; height: 80px;"></svg>
+                                <div id="quality-error-legend" style="font-size: 0.75rem; color: var(--text-muted); flex: 1;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Recommendations list -->
@@ -2223,7 +2352,6 @@
 
                         <button class="btn btn-secondary" onclick="resetMapDashboard()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportMapExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
-                        <button class="btn btn-primary" onclick="exportMapCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2235,7 +2363,14 @@
                                 <span>🗺️</span>
                                 แผนที่ความหนาแน่นเชิงภูมิศาสตร์แสดงการจ่ายยาแยกตามอำเภอ (จ.มุกดาหาร)
                             </h3>
-                            <span style="font-size: 0.72rem; color: var(--text-muted);">โหมด: แสดงความหนาแน่นงบประมาณตามสีความเข้ม</span>
+                            <div style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--card-border);">
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">เลือกโหมดสี:</span>
+                                <select id="map-mode-select" class="select-control" style="font-size: 0.72rem; padding: 2px 6px; border: none; background: transparent;" onchange="renderGeospatialMap()">
+                                    <option value="budget">💰 งบประมาณรวม (Total Budget)</option>
+                                    <option value="percapita">📉 งบประมาณต่อหัว (Per Capita)</option>
+                                    <option value="hotspot">🔥 ความหนาแน่นโรค (Hotspot)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div style="position: relative; width: 100%; max-width: 500px; margin: 0 auto; background: rgba(0,0,0,0.1); border-radius: 12px; padding: 15px; border: 1px solid var(--card-border);">
@@ -2379,7 +2514,6 @@
                         </select>
                         <button class="btn btn-secondary" onclick="resetAccessIndexTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportAccessIndexExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);">🟢 ส่งออก Excel</button>
-                        <button class="btn btn-primary" onclick="exportAccessIndexCSV()" style="background: var(--gradient-2);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2472,6 +2606,103 @@
                         </div>
                         <div style="height: 350px; position: relative;">
                             <svg id="access-chart-svg" viewBox="0 0 400 300" style="width: 100%; height: 100%;"></svg>
+                        </div>
+                    </div>
+
+                    <!-- Category Access Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>🏥</span>
+                                ดัชนีการเข้าถึงแยกตามกลุ่มโรคสำคัญ (Category Access Breakdown)
+                            </h3>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;" id="access-category-grid">
+                            <!-- Populated by JS -->
+                            <div style="text-align: center; color: var(--text-muted); padding: 20px; grid-column: 1/-1;">กำลังประมวลผลข้อมูลกลุ่มโรค...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- TAB: RDU Monitoring (Phase 4) -->
+    <div id="tab-rdu" class="tab-content">
+        <section class="container">
+            <div class="secured-content">
+                <!-- RDU Stats Bar -->
+                <div id="rdu-stats-bar" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                    <div style="flex:1 1 180px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">💊 Antibiotics Use Rate</div>
+                        <div id="rdu-stat-antibiotic" style="font-size:1.4rem;font-weight:800;color:var(--c-green);">—</div>
+                    </div>
+                    <div style="flex:1 1 180px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">⚠️ High Alert Drugs (HAD)</div>
+                        <div id="rdu-stat-had" style="font-size:1.4rem;font-weight:800;color:var(--c-red);">—</div>
+                    </div>
+                    <div style="flex:1 1 180px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">📊 Polypharmacy Risk Score</div>
+                        <div id="rdu-stat-poly" style="font-size:1.4rem;font-weight:800;color:var(--c-yellow);">—</div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom: 20px;">
+                    <div class="filter-row" style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 0;">
+                        <select id="rdu-year-select" class="select-control" style="flex: 1 1 120px;">
+                            <option value="all">📅 ทุกปี</option>
+                        </select>
+                        <select id="rdu-month-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">📅 ทุกเดือน</option>
+                        </select>
+                        <select id="rdu-district-select" class="select-control" style="flex: 1 1 150px;">
+                            <option value="all">🗺️ ทุกอำเภอ</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="resetRduDashboard()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-primary" onclick="exportRduExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);">🟢 ส่งออก Excel</button>
+                    </div>
+                </div>
+
+                <div class="workspace-layout" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Antibiotic Analysis -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><span>🦠</span> การติดตามการใช้ยาปฏิชีวนะ (Antibiotic Tracking)</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อยา</th>
+                                        <th>จำนวนจ่าย</th>
+                                        <th>สัดส่วนจังหวัด</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rdu-antibiotic-body">
+                                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ยังไม่มีข้อมูล</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- High Alert Drug Analysis -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><span>⚠️</span> บัญชียาที่ต้องระวังสูง (HAD Monitoring)</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อยา</th>
+                                        <th>งบประมาณที่ใช้</th>
+                                        <th>สถานะเฝ้าระวัง</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rdu-had-body">
+                                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ยังไม่มีข้อมูล</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -2601,6 +2832,10 @@
             "access-index": {
                 title: "ดัชนีความเท่าเทียมในการเข้าถึงยา (Access Index)",
                 subtitle: "วิเคราะห์ความสอดคล้องระหว่างปริมาณงบประมาณยาเทียบกับจำนวนประชากรรายพื้นที่ เพื่อประเมินความเหลื่อมล้ำในการเข้าถึงเวชภัณฑ์"
+            },
+            "rdu": {
+                title: "💊 Rational Drug Use Monitoring (RDU)",
+                subtitle: "ระบบติดตามการใช้ยาอย่างสมเหตุผล ติดตามยาปฏิชีวนะและรายการยาเฝ้าระวังสูง (HAD) ระดับจังหวัด"
             }
         };
 
@@ -2626,6 +2861,7 @@
             if (targetTab === 'quality') renderDataQualityScorecard();
             if (targetTab === 'map') renderGeospatialMap();
             if (targetTab === 'access-index') renderAccessIndex();
+            if (targetTab === 'rdu') renderRduMonitoring();
 
             if (tabDetails[targetTab]) {
                 heroTitle.textContent = tabDetails[targetTab].title;
@@ -2657,31 +2893,14 @@
         ];
 
         const MUKDAHAN_POPULATION = {
-            "4901": { name: "เมืองมุกดาหาร", pop: 138120 },
-            "4902": { name: "นิคมคำสร้อย", pop: 44550 },
-            "4903": { name: "ดอนตาล", pop: 44620 },
-            "4904": { name: "ดงหลวง", pop: 39100 },
-            "4905": { name: "คำชะอี", pop: 47580 },
-            "4906": { name: "หว้านใหญ่", pop: 19820 },
-            "4907": { name: "หนองสูง", pop: 20950 }
+            "4901": { name: "เมืองมุกดาหาร", pop: 137485 },
+            "4902": { name: "นิคมคำสร้อย", pop: 44311 },
+            "4903": { name: "ดอนตาล", pop: 44349 },
+            "4904": { name: "ดงหลวง", pop: 38820 },
+            "4905": { name: "คำชะอี", pop: 47268 },
+            "4906": { name: "หว้านใหญ่", pop: 19553 },
+            "4907": { name: "หนองสูง", pop: 20716 }
         };
-
-        // Advanced Drug Grouping Regex (Chronic Diseases)
-        function getDrugGroup(didstd, dname = "") {
-            const name = (dname || "").toLowerCase();
-            const code = String(didstd);
-            
-            // Diabetes (DM)
-            if (name.includes('metformin') || name.includes('glipizide') || name.includes('insulin') || name.includes('pioglitazone') || name.includes('gliclazide') || code.startsWith('101434')) return 'dm';
-            
-            // Hypertension & Cardio (HT)
-            if (name.includes('amlodipine') || name.includes('enalapril') || name.includes('losartan') || name.includes('atenolol') || name.includes('propranolol') || name.includes('hydrochlorothiazide') || code.startsWith('124846')) return 'ht';
-            
-            // Dyslipidemia (Lipid)
-            if (name.includes('simvastatin') || name.includes('atorvastatin') || name.includes('rosuvastatin') || name.includes('gemfibrozil') || name.includes('fenofibrate') || code.startsWith('105573')) return 'lip';
-            
-            return 'other';
-        }
 
         // Global Transaction Log
         let rawTransactions = [];
@@ -2767,7 +2986,7 @@
             });
             hospitals.sort((a, b) => a.name.localeCompare(b.name));
 
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
             suffixList.forEach(prefix => {
                 const hSelect = document.getElementById(`${prefix}-hosp-select`);
                 if (hSelect) {
@@ -2820,7 +3039,7 @@
             });
             drugs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
 
             suffixList.forEach(prefix => {
                 // Populate Years
@@ -2926,6 +3145,66 @@
         }
 
         // Render functions for breakdown tables with comprehensive dynamic filters
+        function copySqlToClipboard(hospcode) {
+            const sql = `-- RxMuk Auto-Fix Script for Hospcode: ${hospcode}
+-- Purpose: Identify drugs with missing or invalid DIDSTD 24-bit codes
+SELECT icode, name, strength, units, did
+FROM drugitems 
+WHERE (did IS NULL OR LENGTH(did) < 24 OR did = '') 
+AND istatus = 'Y' 
+ORDER BY name;
+
+-- For JHCIS (drughosp)
+-- SELECT drug_hosp_id, drug_name, drug_did FROM drughosp WHERE drug_did IS NULL OR LENGTH(drug_did) < 24;`;
+            
+            navigator.clipboard.writeText(sql).then(() => {
+                alert('✓ ก๊อปปี้สคริปต์ SQL สำหรับแก้ไขข้อมูลสำเร็จ! สามารถนำไปรันในระบบ HosXP/JHCIS ได้ทันที');
+            }).catch(err => {
+                console.error('Failed to copy SQL:', err);
+            });
+        }
+
+        function renderCorrelationScatter(hospList) {
+            const svg = document.getElementById('correlation-scatter-svg');
+            const verdictEl = document.getElementById('correlation-verdict');
+            if (!svg || !hospList.length) return;
+
+            svg.innerHTML = '';
+            const width = 400, height = 200, padding = 30;
+            
+            // X-Axis (Quality Score 0-100)
+            svg.innerHTML += `<line x1="${padding}" y1="${height-padding}" x2="${width-padding}" y2="${height-padding}" stroke="rgba(255,255,255,0.2)"/>`;
+            svg.innerHTML += `<text x="${width/2}" y="${height-5}" fill="var(--text-muted)" font-size="9" text-anchor="middle">คะแนนคุณภาพข้อมูล (QC Score %)</text>`;
+            
+            // Y-Axis (Budget Intensity - Normalized)
+            svg.innerHTML += `<line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height-padding}" stroke="rgba(255,255,255,0.2)"/>`;
+            svg.innerHTML += `<text x="10" y="${height/2}" fill="var(--text-muted)" font-size="9" text-anchor="middle" transform="rotate(-90 10,${height/2})">ความเข้มข้นการเบิกจ่าย</text>`;
+
+            const maxBudget = Math.max(...hospList.map(h => h.budget)) || 1;
+
+            hospList.forEach(h => {
+                const x = padding + (h.score / 100) * (width - 2 * padding);
+                const y = (height - padding) - (h.budget / maxBudget) * (height - 2 * padding);
+                const color = h.score < 80 ? 'var(--c-red)' : 'var(--c-primary)';
+                
+                svg.innerHTML += `
+                    <circle cx="${x}" cy="${y}" r="4" fill="${color}" opacity="0.7">
+                        <title>${h.name}\nQC: ${h.score.toFixed(1)}%\nBudget: ${Math.round(h.budget).toLocaleString()}</title>
+                    </circle>
+                `;
+            });
+
+            // AI Verdict Logic
+            const riskyUnits = hospList.filter(h => h.score < 85).length;
+            if (verdictEl) {
+                if (riskyUnits > 0) {
+                    verdictEl.innerHTML = `ตรวจพบหน่วยบริการ <strong>${riskyUnits} แห่ง</strong> ที่มีคะแนนคุณภาพข้อมูลต่ำกว่าเกณฑ์ (<85%) แต่มีสัดส่วนการเบิกจ่ายยาสูง <strong style="color:var(--c-red)">มีความเสี่ยงสูงต่อความคลาดเคลื่อนทางบัญชี</strong> แนะนำให้ตรวจสอบระบบ HIS โดยด่วน`;
+                } else {
+                    verdictEl.innerHTML = `ภาพรวมจังหวัดมีความสัมพันธ์ในเชิงบวก (Positive Correlation) หน่วยบริการส่วนใหญ่รักษามาตรฐานข้อมูลได้ดีเยี่ยม สอดคล้องกับงบประมาณที่ใช้จริง`;
+                }
+            }
+        }
+
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
             if(!body) return;
@@ -2939,15 +3218,21 @@
             const drugAgg = {};
             txs.forEach(t => {
                 if (!drugAgg[t.didstd]) {
-                    drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, amount: 0, price: 0, cost: 0, abc: "C" };
+                    drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, amount: 0, price: 0, cost: 0, abc: "C", unitPrices: [] };
                 }
                 drugAgg[t.didstd].amount += t.amount;
                 drugAgg[t.didstd].price += t.price;
                 drugAgg[t.didstd].cost += t.cost;
+                if (t.amount > 0) drugAgg[t.didstd].unitPrices.push(t.price / t.amount);
             });
 
             let list = Object.values(drugAgg).map(d => {
                 d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
+                
+                // Anomaly Detection: Price Outliers
+                const avgPrice = d.unitPrices.length > 0 ? d.unitPrices.reduce((a,b)=>a+b,0)/d.unitPrices.length : 0;
+                d.isAnomaly = d.unitPrices.some(p => Math.abs(p - avgPrice) > avgPrice * 1.5); // > 150% deviation
+                
                 return d;
             });
 
@@ -2986,11 +3271,17 @@
 
             list.forEach(d => {
                 const tr = document.createElement('tr');
-                const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)');
+                const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : (d.abc === 'C' ? 'var(--c-green)' : 'var(--text-muted)'));
+                const anomalyBadge = d.isAnomaly ? `<span class="badge-status danger" style="font-size:0.65rem; margin-left:8px;" title="ตรวจพบความผิดปกติของราคาต่อหน่วย">⚠️ Anomaly</span>` : '';
+                
+                // Inventory Logic: ADC (Assume 30 days for the period)
+                const adc = (d.amount / 30).toFixed(1);
+                
                 tr.innerHTML = `
                     <td><code>${d.didstd}</code></td>
-                    <td><strong>${d.name}</strong></td>
+                    <td><strong>${d.name}</strong> ${anomalyBadge}</td>
                     <td>${d.amount.toLocaleString()}</td>
+                    <td style="color:var(--c-primary); font-weight:bold;">${adc}</td>
                     <td>${d.price.toLocaleString()} บาท</td>
                     <td>${d.cost.toLocaleString()} บาท</td>
                     <td><span class="badge-class" style="background: ${badgeColor}">${d.abc}</span></td>
@@ -3171,6 +3462,10 @@
 
             list.forEach(h => {
                 const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                if (qualitySelectedHosp === h.hospcode) {
+                    tr.style.background = 'rgba(0, 242, 254, 0.1)';
+                }
                 tr.innerHTML = `
                     <td><code>${h.hospcode}</code></td>
                     <td><strong>${h.name}</strong></td>
@@ -3179,40 +3474,93 @@
                     <td>${h.budget.toLocaleString()} บาท</td>
                     <td><span class="badge-status success">${h.qc}</span></td>
                 `;
+                tr.onclick = () => {
+                    qualitySelectedHosp = h.hospcode;
+                    renderHospBreakdown();
+                };
                 body.appendChild(tr);
             });
             updateHospStats(list);
 
-            // Render SVG Bars Chart
-            const chartG = document.getElementById('chart-bars-hosp');
-            if (chartG) {
-                chartG.innerHTML = '';
-                const top10 = list.slice(0, 10);
-                const maxVal = (top10[0] && top10[0].budget > 0) ? top10[0].budget : 1;
-                const totalHospBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
-                
-                top10.forEach((h, idx) => {
-                    const percent = ((h.budget / totalHospBudget) * 100).toFixed(1);
-                    const yPos = 18 + (idx * 42);
-                    const barWidth = Math.max(8, (h.budget / maxVal) * 380);
-                    // Shorten hospital name for display if it's too long
-                    const shortName = h.name.length > 42 ? h.name.substring(0, 40) + '...' : h.name;
+            // Render Radar Chart
+            renderHospRadar(list, qualitySelectedHosp || (list[0] ? list[0].hospcode : null));
+        }
 
-                    chartG.innerHTML += `
-                        <!-- Hospital Name (Left) -->
-                        <text x="10" y="${yPos}" fill="var(--text-light)" font-size="12" font-weight="600">${shortName}</text>
-                        
-                        <!-- Value & Percent (Right) -->
-                        <text x="390" y="${yPos}" fill="var(--c-green)" font-size="11" font-weight="bold" text-anchor="end">${Math.round(h.budget).toLocaleString()} บาท (${percent}%)</text>
-                        
-                        <!-- Bar Track -->
-                        <rect x="10" y="${yPos + 8}" width="380" height="7" fill="rgba(255,255,255,0.06)" rx="3.5"/>
-                        
-                        <!-- Bar Fill -->
-                        <rect x="10" y="${yPos + 8}" width="${barWidth}" height="7" fill="url(#emerald-gradient)" rx="3.5"/>
-                    `;
+        function renderHospRadar(allHosps, selectedCode) {
+            const svg = document.getElementById('hosp-radar-svg');
+            const gridG = document.getElementById('radar-grid');
+            const polyG = document.getElementById('radar-polygon');
+            const labelG = document.getElementById('radar-labels');
+            const selectedLabel = document.getElementById('radar-selected-hosp');
+            
+            if (!svg || !allHosps.length || !selectedCode) return;
+            
+            const selected = allHosps.find(h => h.hospcode === selectedCode);
+            if (!selected) return;
+            selectedLabel.textContent = `📍 ${selected.name}`;
+
+            // Calculate Metrics (0-100 scale)
+            const maxBudget = Math.max(...allHosps.map(h => h.budget)) || 1;
+            const maxAmount = Math.max(...allHosps.map(h => h.amount)) || 1;
+            const maxVariety = 1000; // Assuming 1000 drugs is max
+
+            // Quality score calculation based on error rows
+            const totalRows = txs.filter(t => t.hospcode === selected.hospcode).reduce((s, t) => s + (t.totalRows || 1), 0);
+            const errorRows = txs.filter(t => t.hospcode === selected.hospcode).reduce((s, t) => s + (t.errorRows || 0), 0);
+            const qScore = totalRows > 0 ? Math.max(0, ((totalRows - errorRows) / totalRows) * 100) : 100;
+
+            const metrics = [
+                { name: 'Budget', val: (selected.budget / maxBudget) * 100 },
+                { name: 'Volume', val: (selected.amount / maxAmount) * 100 },
+                { name: 'Variety', val: Math.min(100, (selected.count / maxVariety) * 100) },
+                { name: 'Quality', val: qScore }
+            ];
+
+            const centerX = 200, centerY = 200, radius = 150;
+            const angleStep = (Math.PI * 2) / metrics.length;
+
+            gridG.innerHTML = '';
+            polyG.innerHTML = '';
+            labelG.innerHTML = '';
+
+            // Draw Grid Rings
+            for (let r = 1; r <= 5; r++) {
+                const rVal = (radius / 5) * r;
+                let gridPath = '';
+                metrics.forEach((m, i) => {
+                    const x = centerX + rVal * Math.cos(i * angleStep - Math.PI/2);
+                    const y = centerY + rVal * Math.sin(i * angleStep - Math.PI/2);
+                    gridPath += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
                 });
+                gridG.innerHTML += `<path d="${gridPath} Z" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
             }
+
+            // Draw Axis Lines
+            metrics.forEach((m, i) => {
+                const x = centerX + radius * Math.cos(i * angleStep - Math.PI/2);
+                const y = centerY + radius * Math.sin(i * angleStep - Math.PI/2);
+                gridG.innerHTML += `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+                
+                // Labels
+                const lx = centerX + (radius + 25) * Math.cos(i * angleStep - Math.PI/2);
+                const ly = centerY + (radius + 20) * Math.sin(i * angleStep - Math.PI/2);
+                labelG.innerHTML += `<text x="${lx}" y="${ly}" fill="var(--text-muted)" font-size="11" font-weight="bold" text-anchor="middle">${m.name}</text>`;
+                labelG.innerHTML += `<text x="${lx}" y="${ly + 12}" fill="var(--c-primary)" font-size="10" font-weight="800" text-anchor="middle">${m.val.toFixed(0)}%</text>`;
+            });
+
+            // Draw Selected Polygon
+            let polyPath = '';
+            metrics.forEach((m, i) => {
+                const rVal = (radius * m.val) / 100;
+                const x = centerX + rVal * Math.cos(i * angleStep - Math.PI/2);
+                const y = centerY + rVal * Math.sin(i * angleStep - Math.PI/2);
+                polyPath += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+                
+                // Data points
+                polyG.innerHTML += `<circle cx="${x}" cy="${y}" r="4" fill="var(--c-primary)" filter="drop-shadow(0 0 4px var(--c-primary))"/>`;
+            });
+            polyG.innerHTML = `<path d="${polyPath} Z" fill="rgba(0, 242, 254, 0.15)" stroke="var(--c-primary)" stroke-width="2.5" filter="drop-shadow(0 0 8px rgba(0, 242, 254, 0.4))"/>` + polyG.innerHTML;
+        }
         }
 
         function resetDistrictTable() {
@@ -3423,7 +3771,7 @@
                     rawTransactions = [];
                     
                     // Reset all filters to 'all'
-                    const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+                    const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
                     suffixList.forEach(prefix => {
                         ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                             const el = document.getElementById(`${prefix}-${selectorType}-select`);
@@ -3494,6 +3842,16 @@
 
                 // If standard string date
                 const dateStr = String(val).trim();
+                
+                // YYYYMMDD format
+                if (dateStr.length === 8 && /^\d{8}$/.test(dateStr)) {
+                    let y = parseInt(dateStr.substring(0, 4));
+                    let m = dateStr.substring(4, 6);
+                    let d = dateStr.substring(6, 8);
+                    if (y > 2500) y -= 543;
+                    return `${y}-${m}-${d}`;
+                }
+
                 const matchFull = dateStr.match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
                 if (matchFull) {
                     return `${matchFull[1]}-${matchFull[2]}-${matchFull[3]}`;
@@ -3541,6 +3899,7 @@
             const didstdKey = keys.find(k => k.toLowerCase() === 'didstd' || k.toLowerCase() === 'drug_code' || k.toLowerCase().includes('did') || k.toLowerCase().includes('รหัสยา'));
             const priceKey = keys.find(k => k.toLowerCase() === 'price' || k.toLowerCase() === 'sumdrugprice' || k.toLowerCase().includes('price') || k.toLowerCase().includes('ราคา'));
             const costKey = keys.find(k => k.toLowerCase() === 'cost' || k.toLowerCase() === 'sumdrugcost' || k.toLowerCase().includes('cost') || k.toLowerCase().includes('ทุน'));
+            const pidKey = keys.find(k => k.toLowerCase() === 'pid' || k.toLowerCase() === 'patient_id' || k.toLowerCase().includes('pid') || k.toLowerCase().includes('idผู้ป่วย'));
             
             // Date column keys
             const dateKeys = keys.filter(k => 
@@ -3574,6 +3933,7 @@
 
                 const didstd = row[didstdKey] !== undefined ? String(row[didstdKey]).trim() : 'N/A';
                 const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
+                const pid = row[pidKey] !== undefined ? String(row[pidKey]).trim() : 'Unknown';
                 const amount = parseFloat(row[amountKey]) || 1;
                 const price = parseFloat(row[priceKey]) || (amount * 5);
                 const cost = parseFloat(row[costKey]) || (price * 0.7);
@@ -3584,6 +3944,7 @@
                 const monthStr = dateStr.slice(0, 7);
 
                 newTxs.push({
+                    pid,
                     didstd,
                     dname,
                     hospcode,
@@ -3604,7 +3965,7 @@
             console.log(`Updated rawTransactions: ${rawTransactions.length} records`);
 
             // Reset all filters to 'all' first
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
             suffixList.forEach(prefix => {
                 ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
@@ -3649,7 +4010,7 @@
             console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records`);
 
             // Reset all filters to 'all' first
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
             suffixList.forEach(prefix => {
                 ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
@@ -3757,6 +4118,7 @@
             const ampIdx = headers.findIndex(h => h.toLowerCase() === 'amphur');
             const didstdIdx = headers.findIndex(h => h.toLowerCase() === 'didstd');
             const dnameIdx = headers.findIndex(h => h.toLowerCase() === 'dname' || h.toLowerCase() === 'drug_name');
+            const pidIdx = headers.findIndex(h => h.toLowerCase() === 'pid' || h.toLowerCase() === 'patient_id');
             const amountIdx = headers.findIndex(h => h.toLowerCase() === 'amount' || h.toLowerCase() === 'sumamount' || h.toLowerCase() === 'qty');
             const priceIdx = headers.findIndex(h => h.toLowerCase() === 'drugprice' || h.toLowerCase() === 'sumdrugprice' || h.toLowerCase() === 'price');
             const costIdx = headers.findIndex(h => h.toLowerCase() === 'drugcost' || h.toLowerCase() === 'sumdrugcost' || h.toLowerCase() === 'cost');
@@ -3793,6 +4155,7 @@
 
                 const didstd = values[didstdIdx] !== undefined ? String(values[didstdIdx]).trim() : 'N/A';
                 const dname = values[dnameIdx] || 'ไม่ระบุตัวยา';
+                const pid = pidIdx !== -1 && values[pidIdx] !== undefined ? String(values[pidIdx]).trim() : 'Unknown';
                 const amount = parseFloat(values[amountIdx]) || 1;
                 const price = parseFloat(values[priceIdx]) || (amount * 5);
                 const cost = parseFloat(values[costIdx]) || (price * 0.7);
@@ -3817,6 +4180,7 @@
                 if (!agg[aggKey]) {
                     const hInfo = getHospitalInfo(hospcode);
                     agg[aggKey] = {
+                        pid, // Note: This will be the FIRST pid encountered for this aggregate
                         didstd,
                         dname,
                         hospcode,
@@ -3827,15 +4191,34 @@
                         month: monthStr,
                         amount: 0,
                         price: 0,
-                        cost: 0
-                    };
-                }
+                        cost: 0,
+                        pids: new Set(),
+                        errorRows: 0,
+                        totalRows: 0,
+                        missingDid: 0,
+                        invalidDid: 0,
+                        zeroPrice: 0
+                        };
+                        }
+                        agg[aggKey].amount += amount;
+                        agg[aggKey].price += price;
+                        agg[aggKey].cost += cost;
+                        agg[aggKey].totalRows++;
+                        if (pid !== 'Unknown') agg[aggKey].pids.add(pid);
 
-                agg[aggKey].amount += amount;
-                agg[aggKey].price += price;
-                agg[aggKey].cost += cost;
-            }
-        }
+                        if (didstd === 'N/A' || didstd === '' || didstd === 'Unknown') {
+                        agg[aggKey].errorRows++;
+                        agg[aggKey].missingDid++;
+                        } else if (didstd.length < 24) {
+                        agg[aggKey].errorRows++;
+                        agg[aggKey].invalidDid++;
+                        }
+                        if (price <= 0) {
+                        agg[aggKey].errorRows++;
+                        agg[aggKey].zeroPrice++;
+                        }
+                        }
+                        }
 
         // Dashboard overview stats & SVG Trend graph updater
         function updateDashboardOverview() {
@@ -3856,6 +4239,29 @@
             if (itemsEl) itemsEl.textContent = `${uniqueDrugs.toLocaleString()} รายการ`;
             if (hospsEl) hospsEl.textContent = `${uniqueHosps.toLocaleString()} แห่ง`;
             
+            // --- DYNAMIC BUDGET TRACKING (Assumption: 250M Provincial Budget) ---
+            const annualBudget = 250000000; 
+            const burnPct = Math.min(100, (totalBudget / annualBudget) * 100);
+            const burnPctEl = document.getElementById('dash-burn-pct');
+            const burnBarEl = document.getElementById('dash-burn-bar');
+            const burnStatusEl = document.getElementById('dash-burn-status');
+
+            if (burnPctEl) burnPctEl.textContent = `${burnPct.toFixed(1)}%`;
+            if (burnBarEl) burnBarEl.style.width = `${burnPct}%`;
+            if (burnStatusEl) {
+                if (burnPct > 90) {
+                    burnStatusEl.textContent = '⚠️ แจ้งเตือน: งบประมาณการจัดซื้อระดับจังหวัดสูงกว่า 90%';
+                    burnStatusEl.style.color = 'var(--c-red)';
+                } else if (burnPct > 70) {
+                    burnStatusEl.textContent = '🟡 เฝ้าระวัง: อัตราการใช้งบประมาณระดับจังหวัดเกิน 70%';
+                    burnStatusEl.style.color = 'var(--c-yellow)';
+                } else {
+                    burnStatusEl.textContent = '✅ สถานะปกติ: ข้อมูลเบิกจ่ายสะสมยังอยู่ในกรอบงบประมาณ';
+                    burnStatusEl.style.color = 'var(--c-green)';
+                }
+            }
+            // ----------------------------------------
+
             if (recordsEl) {
                 if (txs[0] && txs[0].uploadTime && (txs[0].uploadTime.includes('tmp_drug_opd.csv') || txs[0].uploadTime.includes('สตรีมมิ่ง'))) {
                     recordsEl.textContent = `${records.toLocaleString()} แถว (Monthly Aggregated)`;
@@ -3863,6 +4269,50 @@
                     recordsEl.textContent = `${records.toLocaleString()} แถว`;
                 }
             }
+
+            // --- DASHBOARD LEADERBOARDS ---
+            const hospAgg = {};
+            txs.forEach(t => {
+                if (!hospAgg[t.hospcode]) {
+                    hospAgg[t.hospcode] = { name: t.hospname, budget: 0, total: 0, errors: 0 };
+                }
+                hospAgg[t.hospcode].budget += t.price;
+                hospAgg[t.hospcode].total++;
+                const isErr = (!t.didstd || t.didstd === 'N/A' || t.didstd.length !== 24 || t.price <= 0);
+                if (isErr) hospAgg[t.hospcode].errors++;
+            });
+
+            const hospList = Object.values(hospAgg).map(h => ({
+                ...h,
+                score: h.total > 0 ? ((h.total - h.errors) / h.total) * 100 : 100
+            }));
+
+            // Budget Leaderboard (Top 5)
+            const budgetLeaderboard = document.getElementById('dash-budget-leaderboard');
+            if (budgetLeaderboard) {
+                const topBudget = [...hospList].sort((a,b) => b.budget - a.budget).slice(0, 5);
+                budgetLeaderboard.innerHTML = topBudget.length ? topBudget.map(h => `
+                    <tr>
+                        <td><strong>${h.name}</strong></td>
+                        <td style="text-align: right; color: var(--c-green); font-weight: bold;">${Math.round(h.budget).toLocaleString()} ฿</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูล</td></tr>';
+            }
+
+            // Quality Leaderboard (Top 5)
+            const qualityLeaderboard = document.getElementById('dash-quality-leaderboard');
+            if (qualityLeaderboard) {
+                const topQuality = [...hospList].sort((a,b) => b.score - a.score || b.total - a.total).slice(0, 5);
+                qualityLeaderboard.innerHTML = topQuality.length ? topQuality.map(h => `
+                    <tr>
+                        <td><strong>${h.name}</strong></td>
+                        <td style="text-align: right; color: var(--c-primary); font-weight: bold;">${h.score.toFixed(1)}%</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูล</td></tr>';
+            }
+            // --- END LEADERBOARDS ---
+
+            renderCorrelationScatter(hospList);
 
             // Draw Trend SVG
             const trendElements = document.getElementById('dash-trend-elements');
@@ -3879,16 +4329,32 @@
                 
                 const sortedMonths = Object.keys(monthMap).sort();
                 if (sortedMonths.length > 0) {
-                    const maxMonthVal = Math.max(...Object.values(monthMap)) || 1;
+                    const values = sortedMonths.map(m => monthMap[m]);
+                    
+                    // Simple Linear Forecasting (Average growth)
+                    let forecastVal = values[values.length - 1];
+                    if (values.length >= 2) {
+                        const last = values[values.length - 1];
+                        const prev = values[values.length - 2];
+                        const avgGrowth = (last - prev);
+                        forecastVal = Math.max(0, last + avgGrowth);
+                    }
+                    
+                    const maxValWithForecast = Math.max(...values, forecastVal) || 1;
                     const points = [];
-                    const stepX = sortedMonths.length > 1 ? 520 / (sortedMonths.length - 1) : 520;
+                    const stepX = 520 / (sortedMonths.length); // +1 for forecast
                     
                     sortedMonths.forEach((m, idx) => {
                         const val = monthMap[m];
                         const x = 40 + (idx * stepX);
-                        const y = 140 - ((val / maxMonthVal) * 110);
+                        const y = 140 - ((val / maxValWithForecast) * 110);
                         points.push({ x, y, month: m, val });
                     });
+                    
+                    // Forecast point
+                    const lastP = points[points.length - 1];
+                    const fX = lastP.x + stepX;
+                    const fY = 140 - ((forecastVal / maxValWithForecast) * 110);
                     
                     // Build path D
                     let pathD = '';
@@ -3909,6 +4375,9 @@
                     // Draw Stroke Line
                     trendElements.innerHTML += `<path d="${pathD}" fill="none" stroke="#00f2fe" stroke-width="2.5" filter="drop-shadow(0px 2px 4px rgba(0, 242, 254, 0.4))"/>`;
                     
+                    // Draw Forecast Line (Dashed)
+                    trendElements.innerHTML += `<line x1="${lastP.x}" y1="${lastP.y}" x2="${fX}" y2="${fY}" stroke="#c084fc" stroke-width="2" stroke-dasharray="5 3" />`;
+                    
                     // Draw grid line at y=140 (floor)
                     trendElements.innerHTML += `<line x1="30" y1="140" x2="570" y2="140" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
                     
@@ -3918,17 +4387,24 @@
                             <circle cx="${p.x}" cy="${p.y}" r="4" fill="#00f2fe"/>
                             <circle cx="${p.x}" cy="${p.y}" r="8" fill="none" stroke="#00f2fe" stroke-opacity="0.3" stroke-width="2"/>
                             
-                            <!-- Value tooltip text -->
                             <text x="${p.x}" y="${p.y - 10}" fill="#00f2fe" font-size="9" font-weight="bold" text-anchor="middle">
                                 ${(p.val / 1000000).toFixed(1)}M
                             </text>
                             
-                            <!-- Month label -->
                             <text x="${p.x}" y="156" fill="var(--text-muted)" font-size="9" text-anchor="middle">
                                 ${p.month}
                             </text>
                         `;
                     });
+
+                    // Forecast Label
+                    trendElements.innerHTML += `
+                        <circle cx="${fX}" cy="${fY}" r="4" fill="#c084fc"/>
+                        <text x="${fX}" y="${fY - 10}" fill="#c084fc" font-size="9" font-weight="bold" text-anchor="middle">
+                            Forecast: ${(forecastVal / 1000000).toFixed(1)}M
+                        </text>
+                        <text x="${fX}" y="156" fill="#c084fc" font-size="8" font-weight="bold" text-anchor="middle">Next Month</text>
+                    `;
                 } else {
                     trendElements.innerHTML = `<text x="300" y="80" fill="var(--text-muted)" font-size="14" font-weight="600" text-anchor="middle">ยังไม่มีข้อมูลสำหรับแสดงแนวโน้ม (กรุณานำเข้าไฟล์ข้อมูล)</text>`;
                 }
@@ -4155,8 +4631,8 @@
         renderAccessIndex();
         updateDashboardOverview();
 
-        // Auto-load real CSV data if present in uploads/s_tmp_drug_opd.csv on page load
-        // Use a cache-buster query parameter to bypass GitHub Pages aggressive caching
+        // Auto-load disabled as per user request to remove all mockup/pre-loaded data
+        /*
         fetch('uploads/s_tmp_drug_opd.csv?v=' + new Date().getTime(), { cache: 'no-store' })
             .then(res => {
                 if (res.ok) return res.arrayBuffer();
@@ -4173,53 +4649,28 @@
                 }
                 const rows = parseCSV(text);
                 if (rows && rows.length > 0) {
-                    console.log('Successfully auto-loaded real CSV data:', rows.length, 'rows');
-                    try {
-                        processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
-
-                        // Add record to import history table
-                        const newTr = document.createElement('tr');
-                        newTr.innerHTML = `
-                            <td>${new Date().toLocaleString('th-TH', {hour12: false})}</td>
-                            <td><code>uploads/s_tmp_drug_opd.csv</code></td>
-                            <td>${rows.length.toLocaleString()} แถว</td>
-                            <td><span class="badge-status success">System (Auto)</span></td>
-                        `;
-                        const importHist = document.getElementById('import-history-body');
-                        if (importHist) {
-                            importHist.insertBefore(newTr, importHist.firstChild);
-                        }
-                    } catch (innerErr) {
-                        console.error('Error during processParsedExcelData:', innerErr);
-                        const drugSource = document.getElementById('drug-data-source');
-                        if (drugSource) {
-                            drugSource.textContent = `แหล่งข้อมูล: อัปโหลดจาก s_tmp_drug_opd.csv (สำเร็จแต่เกิดข้อผิดพลาด: ${innerErr.message})`;
-                            drugSource.className = 'badge-status warning';
-                        }
-                    }
+                    processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
                 }
-
             })
             .catch(err => {
-                console.log('Real data auto-load skipped, no mock data fallback:', err.message);
-                // Only show "No Data" if the user hasn't already manually uploaded something
-                if (rawTransactions.length === 0) {
-                    const drugSource = document.getElementById('drug-data-source');
-                    if (drugSource) {
-                        drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
-                        drugSource.className = 'badge-status danger';
-                    }
-                    const hospSource = document.getElementById('hosp-data-source');
-                    if (hospSource) {
-                        hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
-                        hospSource.className = 'badge-status danger';
-                    }
-                }
+                console.log('Real data auto-load skipped:', err.message);
             });
+        */
+
+        const drugSource = document.getElementById('drug-data-source');
+        if (drugSource && rawTransactions.length === 0) {
+            drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+            drugSource.className = 'badge-status danger';
+        }
+        const hospSource = document.getElementById('hosp-data-source');
+        if (hospSource && rawTransactions.length === 0) {
+            hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+            hospSource.className = 'badge-status danger';
+        }
 
         // Centralized Filter Synchronization & Cascading Logic
         function handleFilterChange(selectorType, val) {
-            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
 
             // 1. Synchronize the primary value across all prefixes
             suffixList.forEach(prefix => {
@@ -4682,76 +5133,6 @@
             downloadCSV(filename, csv);
         }
 
-        function exportAccessIndexCSV() {
-            const txs = getFilteredTransactions('access-index');
-            const districtAgg = {};
-            baseDistricts.forEach(d => districtAgg[d.code] = { name: d.name, budget: 0, count: 0 });
-            txs.forEach(t => {
-                const code = t.amphurCode || '4901';
-                if (districtAgg[code]) {
-                    districtAgg[code].budget += t.price;
-                    districtAgg[code].count++;
-                }
-            });
-
-            let csv = "อำเภอ,ประชากร,งบประมาณรวม,งบประมาณต่อหัว,จำนวนรับยา,อัตราการรับยา (%)\n";
-            Object.entries(districtAgg).forEach(([code, d]) => {
-                const pop = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].pop : 0;
-                const pc = pop > 0 ? (d.budget/pop) : 0;
-                const rate = pop > 0 ? (d.count/pop)*100 : 0;
-                csv += `"${d.name}",${pop},${d.budget},${pc.toFixed(2)},${d.count},${rate.toFixed(2)}\n`;
-            });
-
-            downloadCSV(`access_index_${new Date().toISOString().slice(0,10)}.csv`, csv);
-        }
-
-        function exportAbcVedCSV() {
-            let txs = getFilteredTransactions('abc-ved');
-            const drugAgg = {};
-            txs.forEach(t => {
-                if (!t.didstd || t.didstd === 'N/A') return;
-                if (!drugAgg[t.didstd]) drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, price: 0 };
-                drugAgg[t.didstd].price += t.price;
-            });
-            const drugList = Object.values(drugAgg).sort((a,b) => b.price - a.price);
-            const totalBudget = drugList.reduce((acc, curr) => acc + curr.price, 0) || 1;
-            
-            let runningSum = 0;
-            let csv = "รหัสยามาตรฐาน 24 หลัก,ชื่อทางการค้า/ชื่อสามัญ,ราคาจัดซื้อสะสม (บาท),คลาส ABC,หมวด VED,ระดับการควบคุม\n";
-            drugList.forEach(d => {
-                runningSum += d.price;
-                const pct = runningSum / totalBudget;
-                const abc = pct <= 0.7 ? 'A' : (pct <= 0.9 ? 'B' : 'C');
-                const ved = getDrugVed(d.didstd);
-                const cat = ['AV', 'AE', 'AD', 'BV', 'CV'].includes(abc + ved) ? 'Category I' : (abc + ved === 'CD' ? 'Category III' : 'Category II');
-                csv += `"${d.didstd}","${d.name.replace(/"/g, '""')}",${d.price},"${abc}","${ved}","${cat}"\n`;
-            });
-            downloadCSV(`abc_ved_matrix_${new Date().toISOString().slice(0,10)}.csv`, csv);
-        }
-
-        function exportVarianceCSV() {
-            let txs = getFilteredTransactions('variance');
-            const drugAgg = {};
-            txs.forEach(t => {
-                if (!t.didstd || t.didstd.length !== 24) return;
-                if (!drugAgg[t.didstd]) drugAgg[t.didstd] = { name: t.dname, prices: [], totalAmount: 0, totalBudget: 0 };
-                drugAgg[t.didstd].prices.push(t.price / t.amount);
-                drugAgg[t.didstd].totalAmount += t.amount;
-                drugAgg[t.didstd].totalBudget += t.price;
-            });
-            
-            let csv = "รหัสยา,ชื่อสามัญ,ราคาซื้อต่ำสุด,ราคาซื้อสูงสุด,ราคาเฉลี่ย,ราคาต่าง,ดัชนีความแปรปรวน (%)\n";
-            Object.entries(drugAgg).forEach(([didstd, d]) => {
-                const minP = Math.min(...d.prices);
-                const maxP = Math.max(...d.prices);
-                const avgP = d.totalBudget / d.totalAmount;
-                const diff = maxP - minP;
-                const varPct = minP > 0 ? (diff / minP) * 100 : 0;
-                csv += `"${didstd}","${d.name.replace(/"/g, '""')}",${minP},${maxP},${avgP},${diff},${varPct.toFixed(2)}\n`;
-            });
-            downloadCSV(`price_variance_${new Date().toISOString().slice(0,10)}.csv`, csv);
-        }
-
         // ─── Live Summary Stats updaters ──────────────────────────
         function updateDrugStats(list) {
             const totalItems = list.length;
@@ -4891,10 +5272,97 @@ WHERE t1.id < t2.id
 - **"อำเภอ"** (รายชื่อรหัสอำเภอของมุกดาหาร)`;
         }
 
-        // --- NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
+        function renderRduMonitoring() {
+        const txs = getFilteredTransactions('rdu');
+        const totalBudget = txs.reduce((s, t) => s + t.price, 0);
+        const totalCount = txs.length || 1;
+
+        // Antibiotic Stats
+        const antiTxs = txs.filter(t => isAntibiotic(t.didstd));
+        const antiCount = antiTxs.length;
+        const antiPct = (antiCount / totalCount) * 100;
+
+        // HAD Stats
+        const hadTxs = txs.filter(t => isHighAlertDrug(t.didstd));
+        const hadBudget = hadTxs.reduce((s, t) => s + t.price, 0);
+        const hadCount = hadTxs.length;
+
+        // Polypharmacy (Unique PIDs with > 5 drugs)
+        const pidGroups = {};
+        txs.forEach(t => {
+            if (t.pid && t.pid !== 'Unknown') {
+                if (!pidGroups[t.pid]) pidGroups[t.pid] = new Set();
+                pidGroups[t.pid].add(t.didstd);
+            }
+        });
+        const polyCount = Object.values(pidGroups).filter(set => set.size >= 5).length;
+
+        // Update Stats Bar
+        document.getElementById('rdu-stat-antibiotic').textContent = `${antiPct.toFixed(1)}%`;
+        document.getElementById('rdu-stat-had').textContent = `${hadCount.toLocaleString()} รายการ`;
+        document.getElementById('rdu-stat-poly').textContent = polyCount.toLocaleString();
+
+        // Antibiotic Table
+        const antiBody = document.getElementById('rdu-antibiotic-body');
+        if (antiBody) {
+            const antiAgg = {};
+            antiTxs.forEach(t => {
+                antiAgg[t.dname] = (antiAgg[t.dname] || 0) + 1;
+            });
+            const sortedAnti = Object.entries(antiAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([name, count]) => `
+                <tr>
+                    <td><strong>${name}</strong></td>
+                    <td>${count.toLocaleString()}</td>
+                    <td>${((count/antiCount)*100).toFixed(1)}%</td>
+                </tr>
+            `).join('') : '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ไม่พบการใช้ยาปฏิชีวนะ</td></tr>';
+        }
+
+        // HAD Table
+        const hadBody = document.getElementById('rdu-had-body');
+        if (hadBody) {
+            const hadAgg = {};
+            hadTxs.forEach(t => {
+                hadAgg[t.dname] = (hadAgg[t.dname] || 0) + t.price;
+            });
+            const sortedHad = Object.entries(hadAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            hadBody.innerHTML = sortedHad.length ? sortedHad.map(([name, budget]) => `
+                <tr>
+                    <td><strong>${name}</strong></td>
+                    <td>${Math.round(budget).toLocaleString()} ฿</td>
+                    <td><span class="badge-status danger">High Alert</span></td>
+                </tr>
+            `).join('') : '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ไม่พบการใช้ยา HAD</td></tr>';
+        }
+        }
+
+        function resetRduDashboard() {
+        document.getElementById('rdu-year-select').value = 'all';
+        document.getElementById('rdu-month-select').value = 'all';
+        document.getElementById('rdu-district-select').value = 'all';
+        renderRduMonitoring();
+        }
+
+        // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
 
         function printCurrentReport() {
+            // Add a temporary print header for professional look
+            const header = document.createElement('div');
+            header.id = 'print-executive-header';
+            header.style.display = 'none';
+            header.innerHTML = `
+                <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h1 style="margin:0; font-size:1.5rem;">รายงานสรุปสถานการณ์เวชภัณฑ์ยา จังหวัดมุกดาหาร</h1>
+                    <p style="margin:5px 0; font-size:0.9rem;">ข้อมูล ณ วันที่ ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+            `;
+            document.body.prepend(header);
+            
             window.print();
+            
+            // Cleanup
+            header.remove();
         }
 
         const drugVedMap = {
@@ -4937,10 +5405,31 @@ WHERE t1.id < t2.id
         }
 
         function getDrugGroup(didstd) {
-            if (didstd === "101434000004493121781506") return "dm";
-            if (didstd === "105573000003721120381202" || didstd === "100582000004203120181168") return "lip";
-            if (didstd === "124846000003972121781421") return "ht";
+            if (!didstd) return "other";
+            const d = String(didstd);
+            // Diabetes (Metformin, Glibenclamide, etc.)
+            if (d.startsWith("101434") || d.startsWith("101431")) return "dm";
+            // Dyslipidemia (Simvastatin, Atorvastatin, Gemfibrozil)
+            if (d.startsWith("105573") || d.startsWith("100582") || d.startsWith("101662")) return "lip";
+            // Hypertension / Cardiovascular (Amlodipine, Enalapril, Losartan, Atenolol)
+            if (d.startsWith("124846") || d.startsWith("103859") || d.startsWith("100600") || d.startsWith("100245")) return "ht";
             return "other";
+        }
+
+        function isAntibiotic(didstd) {
+            if (!didstd) return false;
+            const d = String(didstd);
+            // Amoxicillin (100127), Ceftriaxone (100227), Azithromycin (100221)
+            const prefixes = ["100127", "100227", "100221", "100125", "100412"];
+            return prefixes.some(p => d.startsWith(p));
+        }
+
+        function isHighAlertDrug(didstd) {
+            if (!didstd) return false;
+            const d = String(didstd);
+            // Insulin (101432), Warfarin (101667), Heparin (101663), Chemotherapy
+            const prefixes = ["101432", "101667", "101663", "101668"];
+            return prefixes.some(p => d.startsWith(p));
         }
 
         function renderPriceVarianceReport() {
@@ -5259,30 +5748,9 @@ WHERE t1.id < t2.id
             const headers = ["รหัสหน่วยบริการ", "ชื่อหน่วยบริการ", "จำนวนธุรกรรมทั้งหมด (แถว)", "ขาดรหัสยามาตรฐาน (แถว)", "รหัสยาไม่ครบ 24 หลัก (แถว)", "ราคาซื้อเป็น 0 หรือติดลบ (แถว)", "จำนวนแถวที่ผิดพลาดสะสม", "คะแนนคุณภาพข้อมูล (%)", "เกรดประเมิน"];
             const rows = list.map(h => [h.hospcode, h.hospname, h.totalRows, h.missingDid, h.invalidDid, h.zeroPrice, h.errorRows, parseFloat(h.score.toFixed(2)), h.grade]);
 
-            const filename = `quality_scorecard_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const filename = `data_quality_scorecard_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "Quality Scorecard");
-            }
-
-            function exportQualityCSV() {
-            let txs = getFilteredTransactions('quality');
-            const hospAgg = {};
-            txs.forEach(t => {
-                if (!hospAgg[t.hospcode]) {
-                    hospAgg[t.hospcode] = { name: t.hospname, total: 0, errors: 0 };
-                }
-                hospAgg[t.hospcode].total++;
-                if (!t.didstd || t.didstd.length !== 24 || t.price <= 0) hospAgg[t.hospcode].errors++;
-            });
-
-            let csv = "รหัสหน่วยบริการ,ชื่อหน่วยบริการ,จำนวนแถวทั้งหมด,จำนวนแถวที่พบข้อผิดพลาด,คะแนนคุณภาพ (%),เกรด\n";
-            Object.entries(hospAgg).forEach(([code, h]) => {
-                const score = h.total > 0 ? ((h.total - h.errors) / h.total) * 100 : 100;
-                let grade = score >= 98 ? 'A' : (score >= 90 ? 'B' : (score >= 80 ? 'C' : 'F'));
-                csv += `"${code}","${h.name.replace(/"/g, '""')}",${h.total},${h.errors},${score.toFixed(2)},"${grade}"\n`;
-            });
-            downloadCSV(`quality_scorecard_${new Date().toISOString().slice(0,10)}.csv`, csv);
-            }
-
+        }
 
         function exportMapExcel() {
             const yearVal = document.getElementById('map-year-select').value;
@@ -5319,30 +5787,6 @@ WHERE t1.id < t2.id
 
             const filename = `geospatial_drug_distribution_Y${yearVal}_M${monthVal}_G${groupVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "District Distribution");
-        }
-
-        function exportMapCSV() {
-            const groupVal = document.getElementById('map-group-select').value;
-            let txs = getFilteredTransactions('map');
-            if (groupVal !== 'all') txs = txs.filter(t => getDrugGroup(t.didstd) === groupVal);
-
-            const totalBudget = txs.reduce((acc, curr) => acc + curr.price, 0) || 1;
-            const districtMapAgg = {};
-            baseDistricts.forEach(d => districtMapAgg[d.code] = { name: d.name, budget: 0, count: 0 });
-            txs.forEach(t => {
-                const code = t.amphurCode || "4901";
-                if (districtMapAgg[code]) {
-                    districtMapAgg[code].budget += t.price;
-                    districtMapAgg[code].count++;
-                }
-            });
-
-            let csv = "รหัสอำเภอ,ชื่ออำเภอ,มูลค่ายารวม (บาท),จำนวนครั้งการจ่ายยา,สัดส่วนงบประมาณ (%)\n";
-            Object.entries(districtMapAgg).forEach(([code, d]) => {
-                const share = (d.budget / totalBudget) * 100;
-                csv += `"${code}","${d.name}",${d.budget},${d.count},${share.toFixed(2)}\n`;
-            });
-            downloadCSV(`geospatial_distribution_${new Date().toISOString().slice(0,10)}.csv`, csv);
         }
 
         function renderAbcVedMatrix() {
@@ -5584,6 +6028,41 @@ WHERE t1.id < t2.id
             document.getElementById('quality-stat-errors').textContent = `${totalErrorRows.toLocaleString()} แถว`;
             document.getElementById('quality-stat-avg-score').textContent = `${provinceScore.toFixed(2)}%`;
 
+            // Error Distribution Pie Chart (Simple SVG)
+            const sumMissing = list.reduce((s, h) => s + h.missingDid, 0);
+            const sumInvalid = list.reduce((s, h) => s + h.invalidDid, 0);
+            const sumZero = list.reduce((s, h) => s + h.zeroPrice, 0);
+            const sumAllErrors = (sumMissing + sumInvalid + sumZero) || 1;
+
+            const pieSvg = document.getElementById('quality-error-pie');
+            const pieLegend = document.getElementById('quality-error-legend');
+            if (pieSvg && pieLegend) {
+                pieSvg.innerHTML = '';
+                const slices = [
+                    { val: sumMissing, color: '#ef4444', label: 'ขาด DID' },
+                    { val: sumInvalid, color: '#f59e0b', label: 'รหัสผิด' },
+                    { val: sumZero, color: '#3b82f6', label: 'ราคา 0' }
+                ].filter(s => s.val > 0);
+
+                let start = 0;
+                pieLegend.innerHTML = '';
+                slices.forEach(s => {
+                    const pct = s.val / sumAllErrors;
+                    const x1 = 50 + 40 * Math.cos(2 * Math.PI * (start - 0.25));
+                    const y1 = 50 + 40 * Math.sin(2 * Math.PI * (start - 0.25));
+                    start += pct;
+                    const x2 = 50 + 40 * Math.cos(2 * Math.PI * (start - 0.25));
+                    const y2 = 50 + 40 * Math.sin(2 * Math.PI * (start - 0.25));
+                    const large = pct > 0.5 ? 1 : 0;
+                    
+                    pieSvg.innerHTML += `<path d="M 50 50 L ${x1} ${y1} A 40 40 0 ${large} 1 ${x2} ${y2} Z" fill="${s.color}" opacity="0.8"/>`;
+                    pieLegend.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span><span style="display:inline-block; width:8px; height:8px; background:${s.color}; border-radius:50%; margin-right:5px;"></span>${s.label}</span>
+                        <span style="color:#fff; font-weight:bold;">${(pct*100).toFixed(0)}%</span>
+                    </div>`;
+                });
+            }
+
             body.innerHTML = '';
             if (list.length === 0) {
                 body.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">ไม่พบข้อมูลหน่วยบริการ</td></tr>`;
@@ -5618,6 +6097,36 @@ WHERE t1.id < t2.id
                 tr.addEventListener('click', () => {
                     qualitySelectedHosp = h.hospcode;
                     renderDataQualityScorecard();
+                    
+                    // Specific Actionable Hints
+                    const hints = document.getElementById('quality-recommendations-content');
+                    const hospName = document.getElementById('quality-selected-hosp-name');
+                    if (hints && hospName) {
+                        hospName.textContent = h.hospname;
+                        let hintText = `<ul style="padding-left:15px;">`;
+                        if (h.score >= 98) {
+                            hintText += `<li>✅ ข้อมูลมีคุณภาพดีเยี่ยม รักษามาตรฐานนี้ไว้</li>`;
+                        } else {
+                            if (h.missingDid > 0) hintText += `<li>❌ พบรายการยาไม่ใส่รหัส DID 24 หลัก (${h.missingDid.toLocaleString()} รายการ) <br> <span style="color:var(--c-yellow)">→ แนะนำ: ตรวจสอบการ Map รหัสยาใน HosXP/JHCIS</span></li>`;
+                            if (h.invalidDid > 0) hintText += `<li>⚠️ รหัส DID ไม่ครบ 24 หลัก (${h.invalidDid.toLocaleString()} รายการ) <br> <span style="color:var(--c-yellow)">→ แนะนำ: แก้ไขรหัสยามาตรฐานในคลังยาให้ถูกต้อง</span></li>`;
+                            if (h.zeroPrice > 0) hintText += `<li>💰 พบการเบิกจ่ายราคา 0 บาท (${h.zeroPrice.toLocaleString()} รายการ) <br> <span style="color:var(--c-yellow)">→ แนะนำ: ตรวจสอบการลงบันทึกราคาซื้อ/ราคาจ่าย</span></li>`;
+                        }
+                        hintText += `</ul>`;
+                        
+                        // ADD SQL AUTO-FIX SECTION
+                        hintText += `
+                            <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <span style="font-size:0.75rem; color:var(--c-primary); font-weight:bold;">🛠️ SQL Auto-Fix Script (HIS Correction)</span>
+                                    <button class="btn btn-secondary" onclick="copySqlToClipboard('${h.hospcode}')" style="padding: 2px 8px; font-size: 0.65rem;">📋 ก๊อปปี้สคริปต์</button>
+                                </div>
+                                <div id="sql-fix-display" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px; font-family:monospace; font-size:0.7rem; color:#a5f3fc; white-space:pre-wrap; max-height:100px; overflow:auto;">-- คลิกก๊อปปี้เพื่อนำสคริปต์ไปตรวจสอบในฐานข้อมูล --
+SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';</div>
+                            </div>
+                        `;
+                        
+                        hints.innerHTML = hintText;
+                    }
                 });
 
                 body.appendChild(tr);
@@ -5739,15 +6248,39 @@ WHERE t1.id < t2.id
                 }
             });
 
+            // Calculate ratios based on selected mode
+            const mapMode = document.getElementById('map-mode-select') ? document.getElementById('map-mode-select').value : 'budget';
+            
+            Object.values(districtMapAgg).forEach(d => {
+                const pop = MUKDAHAN_POPULATION[d.code] ? MUKDAHAN_POPULATION[d.code].pop : 1;
+                d.perCapita = d.budget / pop;
+            });
+
             const maxDistrictBudget = Math.max(...Object.values(districtMapAgg).map(d => d.budget)) || 1;
+            const maxDistrictPC = Math.max(...Object.values(districtMapAgg).map(d => d.perCapita)) || 1;
+            const maxDistrictDensity = Math.max(...Object.values(districtMapAgg).map(d => d.count / (MUKDAHAN_POPULATION[d.code] ? MUKDAHAN_POPULATION[d.code].pop : 1))) || 1;
 
             Object.keys(districtMapAgg).forEach(code => {
                 const poly = document.getElementById(`map-poly-${code}`);
                 if (poly) {
                     const dist = districtMapAgg[code];
-                    const budgetRatio = dist.budget / maxDistrictBudget;
-                    const opacity = 0.08 + (budgetRatio * 0.72);
-                    poly.style.fill = `rgba(0, 242, 254, ${opacity})`;
+                    const pop = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].pop : 1;
+                    
+                    let intensityRatio = 0;
+                    if (mapMode === 'percapita') {
+                        intensityRatio = dist.perCapita / maxDistrictPC;
+                    } else if (mapMode === 'hotspot') {
+                        intensityRatio = (dist.count / pop) / maxDistrictDensity;
+                    } else {
+                        intensityRatio = dist.budget / maxDistrictBudget;
+                    }
+                    
+                    const opacity = 0.08 + (intensityRatio * 0.72);
+                    let baseColor = '0, 242, 254'; // Default Cyan (Budget)
+                    if (mapMode === 'percapita') baseColor = '192, 132, 252'; // Purple
+                    if (mapMode === 'hotspot') baseColor = '239, 68, 68'; // Red for Hotspot
+                    
+                    poly.style.fill = `rgba(${baseColor}, ${opacity})`;
                     poly.setAttribute('stroke', mapSelectedDistrict === code ? 'var(--c-primary)' : 'rgba(255,255,255,0.15)');
                     poly.setAttribute('stroke-width', mapSelectedDistrict === code ? '2.5' : '1.5');
                     
@@ -5964,11 +6497,56 @@ WHERE t1.id < t2.id
                         </rect>
                     `;
                 });
+
+                // Add Provincial Average Line
+                const avgX = 10 + (provincialPerCapita / maxPC) * 380;
+                if (avgX < 390) {
+                    chartSvg.innerHTML += `
+                        <line x1="${avgX}" y1="20" x2="${avgX}" y2="${30 + list.length * 42}" stroke="var(--c-red)" stroke-width="2" stroke-dasharray="4 2" opacity="0.6"/>
+                        <text x="${avgX}" y="15" fill="var(--c-red)" font-size="9" font-weight="bold" text-anchor="middle">ค่าเฉลี่ยจังหวัด (${provincialPerCapita.toFixed(1)})</text>
+                    `;
+                }
             }
 
             // Sync comparison panel
             if (typeof renderAccessComparison === 'function') {
                 renderAccessComparison();
+            }
+
+            // Populate Category Access Grid
+            const categoryGrid = document.getElementById('access-category-grid');
+            if (categoryGrid) {
+                categoryGrid.innerHTML = '';
+                const groups = [
+                    { id: 'dm', name: 'เบาหวาน (Diabetes)', icon: '🍬', color: 'var(--c-primary)' },
+                    { id: 'lip', name: 'ไขมัน (Dyslipidemia)', icon: '🍔', color: 'var(--c-secondary)' },
+                    { id: 'ht', name: 'ความดัน/หัวใจ (HT/Cardio)', icon: '❤️', color: 'var(--c-red)' }
+                ];
+
+                groups.forEach(g => {
+                    const gTxs = txs.filter(t => getDrugGroup(t.didstd) === g.id);
+                    const gBudget = gTxs.reduce((s, t) => s + t.price, 0);
+                    const gPerCapita = gBudget / (provincialPop || 1);
+                    
+                    const card = document.createElement('div');
+                    card.style.background = 'rgba(255,255,255,0.03)';
+                    card.style.border = '1px solid var(--card-border)';
+                    card.style.borderRadius = '12px';
+                    card.style.padding = '16px';
+                    
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <span style="font-size:1.2rem;">${g.icon}</span>
+                            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">${g.name}</span>
+                        </div>
+                        <div style="font-size:1.5rem; font-weight:800; color:${g.color}; margin-bottom:4px;">${gPerCapita.toFixed(2)} <span style="font-size:0.8rem; font-weight:400; color:var(--text-muted);">฿/คน</span></div>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">มูลค่ารวม: ${Math.round(gBudget).toLocaleString()} บาท</div>
+                        <div style="margin-top:12px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                            <div style="height:100%; width:${Math.min(100, (gPerCapita/provincialPerCapita)*100)}%; background:${g.color};"></div>
+                        </div>
+                    `;
+                    categoryGrid.appendChild(card);
+                });
             }
         }
 
