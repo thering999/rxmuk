@@ -1705,6 +1705,7 @@
 
                         <button class="btn btn-secondary" onclick="resetVarianceTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportVarianceExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-primary" onclick="exportVarianceCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -1818,6 +1819,7 @@
 
                         <button class="btn btn-secondary" onclick="resetAbcVedTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportAbcVedExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-primary" onclick="exportAbcVedCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2095,6 +2097,7 @@
 
                         <button class="btn btn-secondary" onclick="resetQualityTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportQualityExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-primary" onclick="exportQualityCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2220,6 +2223,7 @@
 
                         <button class="btn btn-secondary" onclick="resetMapDashboard()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportMapExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-primary" onclick="exportMapCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2375,6 +2379,7 @@
                         </select>
                         <button class="btn btn-secondary" onclick="resetAccessIndexTable()">🔄 รีเซ็ต</button>
                         <button class="btn btn-primary" onclick="exportAccessIndexExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);">🟢 ส่งออก Excel</button>
+                        <button class="btn btn-primary" onclick="exportAccessIndexCSV()" style="background: var(--gradient-2);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
 
@@ -2652,14 +2657,31 @@
         ];
 
         const MUKDAHAN_POPULATION = {
-            "4901": { name: "เมืองมุกดาหาร", pop: 137485 },
-            "4902": { name: "นิคมคำสร้อย", pop: 44311 },
-            "4903": { name: "ดอนตาล", pop: 44349 },
-            "4904": { name: "ดงหลวง", pop: 38820 },
-            "4905": { name: "คำชะอี", pop: 47268 },
-            "4906": { name: "หว้านใหญ่", pop: 19553 },
-            "4907": { name: "หนองสูง", pop: 20716 }
+            "4901": { name: "เมืองมุกดาหาร", pop: 138120 },
+            "4902": { name: "นิคมคำสร้อย", pop: 44550 },
+            "4903": { name: "ดอนตาล", pop: 44620 },
+            "4904": { name: "ดงหลวง", pop: 39100 },
+            "4905": { name: "คำชะอี", pop: 47580 },
+            "4906": { name: "หว้านใหญ่", pop: 19820 },
+            "4907": { name: "หนองสูง", pop: 20950 }
         };
+
+        // Advanced Drug Grouping Regex (Chronic Diseases)
+        function getDrugGroup(didstd, dname = "") {
+            const name = (dname || "").toLowerCase();
+            const code = String(didstd);
+            
+            // Diabetes (DM)
+            if (name.includes('metformin') || name.includes('glipizide') || name.includes('insulin') || name.includes('pioglitazone') || name.includes('gliclazide') || code.startsWith('101434')) return 'dm';
+            
+            // Hypertension & Cardio (HT)
+            if (name.includes('amlodipine') || name.includes('enalapril') || name.includes('losartan') || name.includes('atenolol') || name.includes('propranolol') || name.includes('hydrochlorothiazide') || code.startsWith('124846')) return 'ht';
+            
+            // Dyslipidemia (Lipid)
+            if (name.includes('simvastatin') || name.includes('atorvastatin') || name.includes('rosuvastatin') || name.includes('gemfibrozil') || name.includes('fenofibrate') || code.startsWith('105573')) return 'lip';
+            
+            return 'other';
+        }
 
         // Global Transaction Log
         let rawTransactions = [];
@@ -4660,6 +4682,76 @@
             downloadCSV(filename, csv);
         }
 
+        function exportAccessIndexCSV() {
+            const txs = getFilteredTransactions('access-index');
+            const districtAgg = {};
+            baseDistricts.forEach(d => districtAgg[d.code] = { name: d.name, budget: 0, count: 0 });
+            txs.forEach(t => {
+                const code = t.amphurCode || '4901';
+                if (districtAgg[code]) {
+                    districtAgg[code].budget += t.price;
+                    districtAgg[code].count++;
+                }
+            });
+
+            let csv = "อำเภอ,ประชากร,งบประมาณรวม,งบประมาณต่อหัว,จำนวนรับยา,อัตราการรับยา (%)\n";
+            Object.entries(districtAgg).forEach(([code, d]) => {
+                const pop = MUKDAHAN_POPULATION[code] ? MUKDAHAN_POPULATION[code].pop : 0;
+                const pc = pop > 0 ? (d.budget/pop) : 0;
+                const rate = pop > 0 ? (d.count/pop)*100 : 0;
+                csv += `"${d.name}",${pop},${d.budget},${pc.toFixed(2)},${d.count},${rate.toFixed(2)}\n`;
+            });
+
+            downloadCSV(`access_index_${new Date().toISOString().slice(0,10)}.csv`, csv);
+        }
+
+        function exportAbcVedCSV() {
+            let txs = getFilteredTransactions('abc-ved');
+            const drugAgg = {};
+            txs.forEach(t => {
+                if (!t.didstd || t.didstd === 'N/A') return;
+                if (!drugAgg[t.didstd]) drugAgg[t.didstd] = { didstd: t.didstd, name: t.dname, price: 0 };
+                drugAgg[t.didstd].price += t.price;
+            });
+            const drugList = Object.values(drugAgg).sort((a,b) => b.price - a.price);
+            const totalBudget = drugList.reduce((acc, curr) => acc + curr.price, 0) || 1;
+            
+            let runningSum = 0;
+            let csv = "รหัสยามาตรฐาน 24 หลัก,ชื่อทางการค้า/ชื่อสามัญ,ราคาจัดซื้อสะสม (บาท),คลาส ABC,หมวด VED,ระดับการควบคุม\n";
+            drugList.forEach(d => {
+                runningSum += d.price;
+                const pct = runningSum / totalBudget;
+                const abc = pct <= 0.7 ? 'A' : (pct <= 0.9 ? 'B' : 'C');
+                const ved = getDrugVed(d.didstd);
+                const cat = ['AV', 'AE', 'AD', 'BV', 'CV'].includes(abc + ved) ? 'Category I' : (abc + ved === 'CD' ? 'Category III' : 'Category II');
+                csv += `"${d.didstd}","${d.name.replace(/"/g, '""')}",${d.price},"${abc}","${ved}","${cat}"\n`;
+            });
+            downloadCSV(`abc_ved_matrix_${new Date().toISOString().slice(0,10)}.csv`, csv);
+        }
+
+        function exportVarianceCSV() {
+            let txs = getFilteredTransactions('variance');
+            const drugAgg = {};
+            txs.forEach(t => {
+                if (!t.didstd || t.didstd.length !== 24) return;
+                if (!drugAgg[t.didstd]) drugAgg[t.didstd] = { name: t.dname, prices: [], totalAmount: 0, totalBudget: 0 };
+                drugAgg[t.didstd].prices.push(t.price / t.amount);
+                drugAgg[t.didstd].totalAmount += t.amount;
+                drugAgg[t.didstd].totalBudget += t.price;
+            });
+            
+            let csv = "รหัสยา,ชื่อสามัญ,ราคาซื้อต่ำสุด,ราคาซื้อสูงสุด,ราคาเฉลี่ย,ราคาต่าง,ดัชนีความแปรปรวน (%)\n";
+            Object.entries(drugAgg).forEach(([didstd, d]) => {
+                const minP = Math.min(...d.prices);
+                const maxP = Math.max(...d.prices);
+                const avgP = d.totalBudget / d.totalAmount;
+                const diff = maxP - minP;
+                const varPct = minP > 0 ? (diff / minP) * 100 : 0;
+                csv += `"${didstd}","${d.name.replace(/"/g, '""')}",${minP},${maxP},${avgP},${diff},${varPct.toFixed(2)}\n`;
+            });
+            downloadCSV(`price_variance_${new Date().toISOString().slice(0,10)}.csv`, csv);
+        }
+
         // ─── Live Summary Stats updaters ──────────────────────────
         function updateDrugStats(list) {
             const totalItems = list.length;
@@ -5167,9 +5259,30 @@ WHERE t1.id < t2.id
             const headers = ["รหัสหน่วยบริการ", "ชื่อหน่วยบริการ", "จำนวนธุรกรรมทั้งหมด (แถว)", "ขาดรหัสยามาตรฐาน (แถว)", "รหัสยาไม่ครบ 24 หลัก (แถว)", "ราคาซื้อเป็น 0 หรือติดลบ (แถว)", "จำนวนแถวที่ผิดพลาดสะสม", "คะแนนคุณภาพข้อมูล (%)", "เกรดประเมิน"];
             const rows = list.map(h => [h.hospcode, h.hospname, h.totalRows, h.missingDid, h.invalidDid, h.zeroPrice, h.errorRows, parseFloat(h.score.toFixed(2)), h.grade]);
 
-            const filename = `data_quality_scorecard_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const filename = `quality_scorecard_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "Quality Scorecard");
-        }
+            }
+
+            function exportQualityCSV() {
+            let txs = getFilteredTransactions('quality');
+            const hospAgg = {};
+            txs.forEach(t => {
+                if (!hospAgg[t.hospcode]) {
+                    hospAgg[t.hospcode] = { name: t.hospname, total: 0, errors: 0 };
+                }
+                hospAgg[t.hospcode].total++;
+                if (!t.didstd || t.didstd.length !== 24 || t.price <= 0) hospAgg[t.hospcode].errors++;
+            });
+
+            let csv = "รหัสหน่วยบริการ,ชื่อหน่วยบริการ,จำนวนแถวทั้งหมด,จำนวนแถวที่พบข้อผิดพลาด,คะแนนคุณภาพ (%),เกรด\n";
+            Object.entries(hospAgg).forEach(([code, h]) => {
+                const score = h.total > 0 ? ((h.total - h.errors) / h.total) * 100 : 100;
+                let grade = score >= 98 ? 'A' : (score >= 90 ? 'B' : (score >= 80 ? 'C' : 'F'));
+                csv += `"${code}","${h.name.replace(/"/g, '""')}",${h.total},${h.errors},${score.toFixed(2)},"${grade}"\n`;
+            });
+            downloadCSV(`quality_scorecard_${new Date().toISOString().slice(0,10)}.csv`, csv);
+            }
+
 
         function exportMapExcel() {
             const yearVal = document.getElementById('map-year-select').value;
@@ -5206,6 +5319,30 @@ WHERE t1.id < t2.id
 
             const filename = `geospatial_drug_distribution_Y${yearVal}_M${monthVal}_G${groupVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "District Distribution");
+        }
+
+        function exportMapCSV() {
+            const groupVal = document.getElementById('map-group-select').value;
+            let txs = getFilteredTransactions('map');
+            if (groupVal !== 'all') txs = txs.filter(t => getDrugGroup(t.didstd) === groupVal);
+
+            const totalBudget = txs.reduce((acc, curr) => acc + curr.price, 0) || 1;
+            const districtMapAgg = {};
+            baseDistricts.forEach(d => districtMapAgg[d.code] = { name: d.name, budget: 0, count: 0 });
+            txs.forEach(t => {
+                const code = t.amphurCode || "4901";
+                if (districtMapAgg[code]) {
+                    districtMapAgg[code].budget += t.price;
+                    districtMapAgg[code].count++;
+                }
+            });
+
+            let csv = "รหัสอำเภอ,ชื่ออำเภอ,มูลค่ายารวม (บาท),จำนวนครั้งการจ่ายยา,สัดส่วนงบประมาณ (%)\n";
+            Object.entries(districtMapAgg).forEach(([code, d]) => {
+                const share = (d.budget / totalBudget) * 100;
+                csv += `"${code}","${d.name}",${d.budget},${d.count},${share.toFixed(2)}\n`;
+            });
+            downloadCSV(`geospatial_distribution_${new Date().toISOString().slice(0,10)}.csv`, csv);
         }
 
         function renderAbcVedMatrix() {
