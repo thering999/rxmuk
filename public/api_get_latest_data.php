@@ -66,13 +66,13 @@ try {
         
         // If it's the raw large table (drug_opd) and has many rows, summarize in SQL
         if ($file_type === 'drug_opd' && $row_count > 50000) {
-            $sql = "SELECT hospcode, amphurCode as amphur, didstd, dname, 
+            $sql = "SELECT hospcode, didstd, dname, 
                            SUM(amount) as sumamount, COUNT(*) as count, 
                            SUM(cost) as sumdrugcost, SUM(price) as sumdrugprice,
                            MAX(date_serv) as date_serv
                     FROM drug_opd 
                     WHERE import_id = ? 
-                    GROUP BY hospcode, amphurCode, didstd, dname";
+                    GROUP BY hospcode, didstd, dname";
             $stmt = $importer->getConnection()->prepare($sql);
             $stmt->bind_param('i', $latest_import_id);
             $stmt->execute();
@@ -134,9 +134,13 @@ try {
     ]);
 
 } catch (Exception $e) {
-    http_response_code(500);
+    http_response_code(200); // Return 200 so SPA can handle the error message gracefully
     echo json_encode([
         'success' => false,
-        'message' => 'Error: ' . $e->getMessage()
+        'message' => 'Error: ' . $e->getMessage(),
+        'data' => []
     ]);
+} finally {
+    // Clear output buffer if any to prevent corrupted JSON
+    if (ob_get_length()) ob_end_clean();
 }
