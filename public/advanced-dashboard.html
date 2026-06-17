@@ -2853,15 +2853,7 @@
             if (e.message && (e.message.includes('Extension') || e.message.includes('browser-polyfill'))) return;
             
             const msg = e.message || "Unknown Error";
-            const isCacheIssue = msg.includes('JSON') || msg.includes('undefined') || msg.includes('null');
-            
-            if (isCacheIssue) {
-                localStorage.removeItem('rxmuk_raw_data');
-                alert("พบข้อผิดพลาดในข้อมูลที่บันทึกไว้ (แคชเก่า): " + msg + "\n\nระบบได้ล้างแคชให้แล้ว กรุณกดปุ่ม OK เพื่อรีเฟรชหน้าเว็บ");
-                window.location.reload();
-            } else {
                 alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
-            }
         });
     </script>
     <script>
