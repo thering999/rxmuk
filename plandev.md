@@ -165,8 +165,7 @@
 
 
 
-   > 📥
-▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+
  > 📥
    นำเข้าข้อมูลประวัติและสถิติจ่ายยา (CSV / Excel)                                                                                                                  
    ลากและวางไฟล์ หรือเลือกอัปโหลดไฟล์เพื่อนำเข้าตาราง tmp_drug_opd หรือ s_tmp_drug_opd (แนะนำไฟล์รูปแบบ .csv เพื่อความรวดเร็วในการประมวลผลข้อมูลปริมาณแสนเรคคอร์ดแบบ Real-time
@@ -192,3 +191,36 @@
    s_tmp_drug_opd.csv (ไฟล์สรุปภาพรวมรายเดือน - สถิติจ่ายยาสรุปรวมรายเดือนสะสม)
    * คุณสามารถลากและวางไฟล์จริงของคุณในเครื่องลงไปในกล่องอัปโหลดด้านบนเพื่อทดสอบการประมวลผลได้เลย (รองรับไฟล์ขนาดใหญ่ 500MB+ ด้วยระบบสตรีมมิ่ง)
    นำเข้าทีเดียวแล้วแยกเป็นเดือนๆเลยได้ไหม เพราะผมตัดข้อมูลทุกเดือน แต่เป็นข้อมูลย้อนหลังมา คิดตาม date_serv เวลาค้นรายงานด้วยไหม 
+
+### 4.7 ปัญหาข้อมูลหายเมื่อ Logout (Data Persistence Issue) 
+* **สถานะปัจจุบัน**: **✅ แก้ไขสำเร็จแล้ว 100%**
+* **ปัญหาเดิม**: เวลา login นำเข้าข้อมูล excel แล้ว logout ข้อมูลหายไป ไม่คงอยู่เลย
+* **สาเหตุ**: ใช้ `sessionStorage` (ลบเมื่อปิด session/logout) แทนที่จะเป็น `localStorage` (คงอยู่ถาวร)
+* **แนวทางแก้ไข**: 
+  1. เปลี่ยนจาก `sessionStorage` → `localStorage` ในทุกที่ที่ใช้ (5 locations)
+  2. ไฟล์: `index.html` และ `public/advanced-dashboard.html`
+  3. ตรวจสอบ:
+     - Load from storage ใช้ localStorage ✅
+     - Save to storage ใช้ localStorage ✅
+     - Clear data ใช้ localStorage.removeItem() ✅
+     - Logout button ใช้ localStorage.removeItem() ✅
+* **ผลลัพธ์**: ✅ ข้อมูลคงอยู่หลัง logout/login
+
+### 4.8 GitHub Pages Deploy Strategy (ประหยัด Token)
+* **สถานะปัจจุบัน**: **✅ พร้อมดำเนินการ**
+* **ตัวเลือก A: GitHub Actions (แนะนำ - ประหยัดสุด)**
+  - ใช้ `GITHUB_TOKEN` แบบสั้นๆ (60 นาที, auto-generated)
+  - ไม่ต้องสร้าง personal access token
+  - Auto-deploy ทุกครั้ง push ขึ้น main branch
+  - ไฟล์ `.github/workflows/deploy.yml` ตามรูปแบบ: [Link to FIXES_2026-06-17.md]
+* **ตัวเลือก B: Manual Deploy (ประหยัดสุดๆ)**
+  - Build บนเครื่องท้องถิ่น แล้ว push ขึ้น gh-pages branch
+  - ไม่ใช้ Token เลย (SSH key only)
+  - Command: `git subtree push --prefix public origin gh-pages`
+* **ตัวเลือก C: Deploy Secrets (ทำได้แต่ต้องสร้าง token)**
+  - สร้าง GitHub Personal Access Token
+  - เก็บใน GitHub Secrets
+  - Reusable แต่ต้องดูแล token
+* **ข้อเสนอ**: ใช้ตัวเลือก A (GitHub Actions) - ได้ประหยัดและง่ายที่สุด
+
+   เวลา login นำเข้าข้อมูล excel แล้ว logout ข้อมูลหายไป ไม่คงอยู่เลย ทำอย่างไรดี แก้ปัญหาให้ด้วย หลัง upload code git hubแล้ว deploy git pages ให้ผมทีเอาแบบประหยัด token ให้มากที่สุดได้ไหม
