@@ -133,8 +133,13 @@ class ChunkedImporter {
         // Process remaining rows
         if (!empty($batch_data)) {
             $res = $this->hdc_handler->insertData($import_id, $table_name, $batch_data);
-            $total_inserted += $res['inserted'] ?? 0;
-            $total_failed += $res['failed'] ?? 0;
+            if ($res) {
+                $total_inserted += $res['inserted'] ?? 0;
+                $total_failed += $res['failed'] ?? 0;
+            } else {
+                $total_failed += count($batch_data);
+                error_log("Failed to insert batch: insert operation returned null/false");
+            }
         }
 
         fclose($handle);

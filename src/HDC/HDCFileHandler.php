@@ -140,8 +140,13 @@ class HDCFileHandler {
         // Sanitize table name for safety
         $table_name = preg_replace('/[^a-zA-Z0-9_]/', '', $table_name);
         
-        // Check if table already exists
-        $table_exists = $this->conn->query("SHOW TABLES LIKE '$table_name'")->num_rows > 0;
+        // Check if table already exists using escaped query
+        $escaped_table = $this->conn->real_escape_string($table_name);
+        $check_result = $this->conn->query("SHOW TABLES LIKE '$escaped_table'");
+        if (!$check_result) {
+            return ['success' => false, 'message' => 'Database error: ' . $this->conn->error];
+        }
+        $table_exists = $check_result->num_rows > 0;
         
         if (!$table_exists) {
             // Table doesn't exist - create it
@@ -164,8 +169,11 @@ class HDCFileHandler {
 
         // Get existing columns in the table
         $existing_columns = [];
-        $cols_result = $this->conn->query("SHOW COLUMNS FROM `$table_name`");
-        if ($cols_result) {
+        $cols_result = $this->conn->query("SHOW COLUMNS FROM `$escaped_table`");
+        if (!$cols_result) {
+            error_log('Warning: Failed to get columns for table ' . $table_name . ': ' . $this->conn->error);
+            $existing_columns = [];
+        } else {
             while ($col = $cols_result->fetch_assoc()) {
                 $existing_columns[] = strtolower($col['Field']);
             }
