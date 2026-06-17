@@ -335,6 +335,31 @@
             .workspace-layout {
                 grid-template-columns: 1fr;
             }
+            .navbar {
+                height: auto;
+                min-height: 72px;
+                padding: 10px 0;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .nav-links {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 5px;
+                justify-content: flex-start;
+                width: 100%;
+            }
+            .nav-links::-webkit-scrollbar {
+                height: 4px;
+            }
+            .nav-links a {
+                white-space: nowrap;
+            }
+            .user-status-area {
+                align-self: flex-end;
+            }
         }
 
         /* Panel Wrapper */
@@ -2786,6 +2811,11 @@
 
     <!-- JS Logic -->
     <script>
+        window.addEventListener('error', function(e) {
+            alert("พบข้อผิดพลาดในระบบ (อาจเกิดจากแคชเก่า): " + e.message + "\nกรุณากด Ctrl + F5 เพื่อรีเฟรชหน้าเว็บ");
+        });
+    </script>
+    <script>
         // Tab switching logic
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -4164,19 +4194,40 @@ ORDER BY name;
                 let dateStr = fallbackDate;
                 if (dateIdx !== -1 && values[dateIdx]) {
                     const rawDate = String(values[dateIdx]).trim();
-                    const matchFull = rawDate.match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
-                    if (matchFull) {
-                        dateStr = `${matchFull[1]}-${matchFull[2]}-${matchFull[3]}`;
+                    if (rawDate.length === 8 && /^\d{8}$/.test(rawDate)) {
+                        let y = parseInt(rawDate.substring(0, 4));
+                        let m = rawDate.substring(4, 6);
+                        let d = rawDate.substring(6, 8);
+                        if (y > 2500) y -= 543;
+                        dateStr = `${y}-${m}-${d}`;
                     } else {
-                        const matchMonth = rawDate.match(/^(\d{4})[-/](\d{2})/);
-                        if (matchMonth) {
-                            dateStr = `${matchMonth[1]}-${matchMonth[2]}-01`;
+                        const parts = rawDate.split(/[-/]/);
+                        if (parts.length >= 3) {
+                            let y, m, d;
+                            if (parts[0].length === 4) {
+                                y = parseInt(parts[0]);
+                                m = String(parseInt(parts[1])).padStart(2, '0');
+                                d = String(parseInt(parts[2])).padStart(2, '0');
+                            } else {
+                                d = String(parseInt(parts[0])).padStart(2, '0');
+                                m = String(parseInt(parts[1])).padStart(2, '0');
+                                y = parseInt(parts[2]);
+                            }
+                            if (y > 2500) y -= 543;
+                            if (y > 1900 && y < 2100) {
+                                dateStr = `${y}-${m}-${d}`;
+                            }
+                        } else {
+                            const matchMonth = rawDate.match(/^(\d{4})[-/](\d{2})/);
+                            if (matchMonth) {
+                                dateStr = `${matchMonth[1]}-${matchMonth[2]}-01`;
+                            }
                         }
                     }
                 }
                 const monthStr = dateStr.slice(0, 7);
 
-                const aggKey = `${hospcode}|${didstd}|${monthStr}`;
+                const aggKey = `${hospcode}|${didstd}|${dateStr}`;
                 if (!agg[aggKey]) {
                     const hInfo = getHospitalInfo(hospcode);
                     agg[aggKey] = {
@@ -4187,7 +4238,7 @@ ORDER BY name;
                         hospname: hInfo.hosname,
                         amphurCode: hInfo.amp_code,
                         amphurName: hInfo.amp_name,
-                        date: `${monthStr}-01`, // use first day of month as canonical date
+                        date: dateStr, // Keep exact date for filtering
                         month: monthStr,
                         amount: 0,
                         price: 0,
