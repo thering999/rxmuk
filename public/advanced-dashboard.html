@@ -2856,8 +2856,8 @@
             const isCacheIssue = msg.includes('JSON') || msg.includes('undefined') || msg.includes('null');
             
             if (isCacheIssue) {
-                sessionStorage.removeItem('rxmuk_raw_data');
-                alert("พบข้อผิดพลาดในข้อมูลที่บันทึกไว้ (แคชเก่า): " + msg + "\n\nระบบได้ล้างแคชให้แล้ว กรุณากดปุ่ม OK เพื่อรีเฟรชหน้าเว็บ");
+                localStorage.removeItem('rxmuk_raw_data');
+                alert("พบข้อผิดพลาดในข้อมูลที่บันทึกไว้ (แคชเก่า): " + msg + "\n\nระบบได้ล้างแคชให้แล้ว กรุณกดปุ่ม OK เพื่อรีเฟรชหน้าเว็บ");
                 window.location.reload();
             } else {
                 alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
@@ -3016,14 +3016,14 @@
             alert('ล้างตัวกรองทั้งหมดเรียบร้อยแล้ว');
         }
 
-        // PERSISTENCE: Save/Load rawTransactions to sessionStorage (survives tab switches/reloads)
+        // PERSISTENCE: Save/Load rawTransactions to localStorage (survives tab switches/reloads)
         function saveToStorage() {
             try {
                 if (rawTransactions && rawTransactions.length > 0) {
                     const json = JSON.stringify(rawTransactions);
-                    // Standard sessionStorage limit is ~5MB. If data is too large, it will fail.
+                    // Standard localStorage limit is ~5MB. If data is too large, it will fail.
                     if (json.length < 5 * 1024 * 1024) {
-                        sessionStorage.setItem('rxmuk_raw_data', json);
+                        localStorage.setItem('rxmuk_raw_data', json);
                     }
                     
                     // Also try to save to server for robust persistence (even if > 5MB)
@@ -3058,7 +3058,7 @@
 
         function loadFromStorage() {
             try {
-                const stored = sessionStorage.getItem('rxmuk_raw_data');
+                const stored = localStorage.getItem('rxmuk_raw_data');
                 if (stored) {
                     const data = JSON.parse(stored);
                     if (data && data.length > 0) {
@@ -4002,7 +4002,7 @@ ORDER BY name;
             btnClearData.addEventListener('click', () => {
                 if (confirm('คุณต้องการล้างข้อมูลเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?')) {
                     rawTransactions = [];
-                    sessionStorage.removeItem('rxmuk_raw_data');
+                    localStorage.removeItem('rxmuk_raw_data');
                     
                     // Also clear server cache if possible
                     fetch(getPath('api_save_spa_data.php'), {
@@ -4898,11 +4898,13 @@ ORDER BY name;
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
+                    loadFromStorage();
                     loadLatestDataFromServer(); // Restore data from server/DB
                     renderImportHistory();
                 } else if (u === 'rxmuk' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
                     checkAuthState();
+                    loadFromStorage();
                     loadLatestDataFromServer(); // Restore data from server/DB
                     renderImportHistory();
                 } else {
@@ -4913,7 +4915,6 @@ ORDER BY name;
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
                 sessionStorage.removeItem('rxmuk_auth_user');
-                sessionStorage.removeItem('rxmuk_raw_data');
                 rawTransactions = [];
                 checkAuthState();
                 refreshAllUI();

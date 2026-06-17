@@ -7,33 +7,43 @@ on:
       - master
   workflow_dispatch:
 
+# Prevent multiple simultaneous deployments
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+# Minimal permissions - using OIDC token (most token-efficient)
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
   deploy:
+    name: Deploy to Pages
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
+      # Checkout code with minimal depth
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Optimize: minimal fetch for deploy
 
-      - name: Setup Pages
+      # Configure Pages with caching
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      # Upload artifact from root folder
+      - name: Upload deployment artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'public'
+          path: .
 
+      # Deploy with OIDC (no token exchange needed)
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

@@ -547,13 +547,17 @@ class ExcelImporter {
         $query .= " ORDER BY f.upload_date DESC LIMIT " . intval($limit);
         
         $result = $this->conn->query($query);
-        $files = [];
+        if (!$result) {
+            error_log('Database query failed: ' . $this->conn->error);
+            return [];
+        }
         
+        $files = [];
         while ($row = $result->fetch_assoc()) {
             // Get file type info
             $detection = $this->hdc_handler->detectFileType($row['original_name']);
-            $row['file_type'] = $detection['type'];
-            $row['file_type_description'] = $detection['config']['description'];
+            $row['file_type'] = $detection['type'] ?? 'unknown';
+            $row['file_type_description'] = $detection['config']['description'] ?? 'Unknown';
             $row['row_count'] = $this->hdc_handler->getImportDataCount($row['id']);
             
             $files[] = $row;

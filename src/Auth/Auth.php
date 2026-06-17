@@ -53,8 +53,18 @@ class Auth {
      * User Logout
      */
     public function logout() {
+        // Ensure session is started before destroying
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Clear all session data
+        $_SESSION = [];
+        
+        // Destroy the session
         session_destroy();
-        return ['success' => true, 'message' => 'จำเป็นต้องออกจากระบบสำเร็จ'];
+        
+        return ['success' => true, 'message' => 'ออกจากระบบสำเร็จ'];
     }
 
     /**

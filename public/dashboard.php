@@ -43,9 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get imported files (all files for all users)
+// Get imported files for current user only
 $importer = new ExcelImporter();
-$imports = $importer->getImportedFiles(); // Get all files, not just current user's
+$imports = $importer->getImportedFiles($user_id); // Filter by current user
 ?>
 <!DOCTYPE html>
 <html lang="th">
