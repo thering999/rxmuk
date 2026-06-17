@@ -1421,7 +1421,31 @@
                         </div>
                     </div>
 
-                    <!-- Import History panel removed: requires a PHP server, unavailable on static GitHub Pages hosting -->
+                    <!-- Import History / File logs panel (client-side log via IndexedDB) -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title">
+                                <span>📋</span>
+                                ประวัติการอัปโหลดไฟล์ที่บันทึกไว้ในระบบ
+                            </h3>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>วันที่นำเข้า</th>
+                                        <th>ชื่อไฟล์นำเข้า</th>
+                                        <th>จำนวนบันทึก</th>
+                                        <th>สิทธิ์ผู้นำเข้า</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="import-history-body">
+                                    <!-- Populated dynamically from IndexedDB -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -2894,33 +2918,29 @@
             }
         }
 
-        function renderImportHistory() {
+        async function renderImportHistory() {
             const body = document.getElementById('import-history-body');
             if (!body) return;
 
-            fetch(getPath('api_get_import_history.php'))
-                .then(res => res.json())
-                .then(res => {
-                    if (res.success && res.history) {
-                        body.innerHTML = res.history.map(h => `
-                            <tr>
-                                <td>${h.date}</td>
-                                <td><code>${h.filename}</code></td>
-                                <td>${h.rows}</td>
-                                <td style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                                    <span class="badge-status success">${h.user}</span>
-                                    <button class="btn btn-primary" onclick="loadSpecificImport(${res.files_raw ? res.files_raw[res.history.indexOf(h)].id : 0})" style="padding: 4px 8px; font-size: 0.65rem; background: var(--gradient-1);">📦 ดึงข้อมูลชุดนี้</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    } else {
-                        body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบประวัติการนำเข้า</td></tr>';
-                    }
-                })
-                .catch(err => {
-                    console.error('History fetch failed:', err);
-                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ฟีเจอร์นี้ต้องใช้ Server (PHP) — ไม่พร้อมใช้งานบนเดโม GitHub Pages นี้ (ข้อมูลที่นำเข้ายังคงอยู่ใน localStorage ของเบราว์เซอร์นี้ตามปกติ)</td></tr>';
-                });
+            try {
+                const history = await getImportHistory();
+                if (history && history.length > 0) {
+                    const sorted = history.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+                    body.innerHTML = sorted.map(h => `
+                        <tr>
+                            <td>${h.date}</td>
+                            <td><code>${h.filename}</code></td>
+                            <td>${h.rows}</td>
+                            <td><span class="badge-status success">${h.user}</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบประวัติการนำเข้า</td></tr>';
+                }
+            } catch (err) {
+                console.error('History load failed:', err);
+                body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">โหลดข้อมูลประวัติไม่สำเร็จ</td></tr>';
+            }
         }
 
         function loadSpecificImport(importId) {
@@ -2986,12 +3006,22 @@
 
         // PERSISTENCE: Save/Load rawTransactions to IndexedDB (localStorage's ~5MB cap is too small for large imports)
         const RXMUK_DB_NAME = 'rxmuk_db';
+        const RXMUK_DB_VERSION = 2;
         const RXMUK_DB_STORE = 'raw_data';
+        const RXMUK_HISTORY_STORE = 'import_history';
 
         function openRxmukDB() {
             return new Promise((resolve, reject) => {
-                const req = indexedDB.open(RXMUK_DB_NAME, 1);
-                req.onupgradeneeded = () => { req.result.createObjectStore(RXMUK_DB_STORE); };
+                const req = indexedDB.open(RXMUK_DB_NAME, RXMUK_DB_VERSION);
+                req.onupgradeneeded = () => {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(RXMUK_DB_STORE)) {
+                        db.createObjectStore(RXMUK_DB_STORE);
+                    }
+                    if (!db.objectStoreNames.contains(RXMUK_HISTORY_STORE)) {
+                        db.createObjectStore(RXMUK_HISTORY_STORE, { autoIncrement: true });
+                    }
+                };
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
@@ -3013,6 +3043,27 @@
                 const tx = db.transaction(RXMUK_DB_STORE, 'readonly');
                 const req = tx.objectStore(RXMUK_DB_STORE).get(key);
                 req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // Client-side import history log (replaces the old PHP-backed history, which can't run on GitHub Pages)
+        async function addImportHistoryEntry(entry) {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_HISTORY_STORE, 'readwrite');
+                tx.objectStore(RXMUK_HISTORY_STORE).add(entry);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function getImportHistory() {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_HISTORY_STORE, 'readonly');
+                const req = tx.objectStore(RXMUK_HISTORY_STORE).getAll();
+                req.onsuccess = () => resolve(req.result || []);
                 req.onerror = () => reject(req.error);
             });
         }
@@ -4253,6 +4304,12 @@ ORDER BY name;
 
             // Save to storage for persistence
             saveToStorage();
+            addImportHistoryEntry({
+                date: uploadTime,
+                filename: filename,
+                rows: rawTransactions.length,
+                user: sessionStorage.getItem('rxmuk_auth_user') || '-'
+            }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
             refreshAllUI();
@@ -4324,6 +4381,12 @@ ORDER BY name;
             
             // Save to storage for persistence
             saveToStorage();
+            addImportHistoryEntry({
+                date: uploadTime,
+                filename: filename,
+                rows: rawTransactions.length,
+                user: sessionStorage.getItem('rxmuk_auth_user') || '-'
+            }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
             refreshAllUI();
