@@ -2853,7 +2853,7 @@
             if (e.message && (e.message.includes('Extension') || e.message.includes('browser-polyfill'))) return;
             
             const msg = e.message || "Unknown Error";
-                alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
+            alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
         });
     </script>
     <script>
@@ -3008,17 +3008,46 @@
             alert('ล้างตัวกรองทั้งหมดเรียบร้อยแล้ว');
         }
 
-        // PERSISTENCE: Save/Load rawTransactions to localStorage (survives tab switches/reloads)
+        // PERSISTENCE: Save/Load rawTransactions to IndexedDB (localStorage's ~5MB cap is too small for large imports)
+        const RXMUK_DB_NAME = 'rxmuk_db';
+        const RXMUK_DB_STORE = 'raw_data';
+
+        function openRxmukDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(RXMUK_DB_NAME, 1);
+                req.onupgradeneeded = () => { req.result.createObjectStore(RXMUK_DB_STORE); };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbSet(key, value) {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_DB_STORE, 'readwrite');
+                tx.objectStore(RXMUK_DB_STORE).put(value, key);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbGet(key) {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_DB_STORE, 'readonly');
+                const req = tx.objectStore(RXMUK_DB_STORE).get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
         function saveToStorage() {
             try {
                 if (rawTransactions && rawTransactions.length > 0) {
-                    const json = JSON.stringify(rawTransactions);
-                    // Standard localStorage limit is ~5MB. If data is too large, it will fail.
-                    if (json.length < 5 * 1024 * 1024) {
-                        localStorage.setItem('rxmuk_raw_data', json);
-                    }
-                    
-                    // Also try to save to server for robust persistence (even if > 5MB)
+                    idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('IndexedDB save failed:', e));
+                    localStorage.removeItem('rxmuk_raw_data'); // legacy key, no longer used to store data
+
+                    // Also try to save to server for robust persistence
                     saveToServerCache();
                 }
             } catch (e) {
@@ -3048,18 +3077,29 @@
             .catch(err => console.warn('Server cache sync failed:', err));
         }
 
-        function loadFromStorage() {
+        async function loadFromStorage() {
             try {
-                const stored = localStorage.getItem('rxmuk_raw_data');
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    if (data && data.length > 0) {
-                        rawTransactions = data;
-                        updateNavDataStatus();
-                        populateAllFilterDropdowns();
-                        updateDashboardOverview();
-                        return true;
+                let data = await idbGet('rxmuk_raw_data');
+                if (!data) {
+                    // One-time migration from legacy localStorage data (pre-IndexedDB)
+                    const legacy = localStorage.getItem('rxmuk_raw_data');
+                    if (legacy) {
+                        try {
+                            const parsed = JSON.parse(legacy);
+                            if (parsed && parsed.length > 0) {
+                                data = parsed;
+                                await idbSet('rxmuk_raw_data', data);
+                                localStorage.removeItem('rxmuk_raw_data');
+                            }
+                        } catch (e) { /* ignore corrupt legacy data */ }
                     }
+                }
+                if (data && data.length > 0) {
+                    rawTransactions = data;
+                    updateNavDataStatus();
+                    populateAllFilterDropdowns();
+                    updateDashboardOverview();
+                    return true;
                 }
             } catch (e) {
                 console.warn('Storage load failed:', e);
@@ -4883,20 +4923,20 @@ ORDER BY name;
 
         // Bind main login submit
         if (btnLoginSubmit) {
-            btnLoginSubmit.addEventListener('click', () => {
+            btnLoginSubmit.addEventListener('click', async () => {
                 const u = inputUsername ? inputUsername.value.trim() : '';
                 const p = inputPassword ? inputPassword.value.trim() : '';
 
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
-                    loadFromStorage();
+                    await loadFromStorage();
                     loadLatestDataFromServer(); // Restore data from server/DB
                     renderImportHistory();
                 } else if (u === 'rxmuk' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
                     checkAuthState();
-                    loadFromStorage();
+                    await loadFromStorage();
                     loadLatestDataFromServer(); // Restore data from server/DB
                     renderImportHistory();
                 } else {
@@ -6949,12 +6989,12 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
 
         // Initialize selectors & data
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             generateSecuredLocks();
             checkAuthState();
             renderImportHistory();
 
-            if (!loadFromStorage()) {
+            if (!(await loadFromStorage())) {
                 rawTransactions = [];
             } else {
                 refreshAllUI();
