@@ -18,6 +18,10 @@ class ExcelImporter {
         $this->hdc_handler = new HDCFileHandler();
     }
 
+    public function getConnection() {
+        return $this->conn;
+    }
+
     /**
      * Import single Excel file
      */

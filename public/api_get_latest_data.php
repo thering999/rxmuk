@@ -61,7 +61,25 @@ try {
     }
 
     if ($latest_import_id) {
-        $db_data = $importer->exportToArray($latest_import_id);
+        $file_type = $found_file['file_type'] ?? '';
+        $row_count = intval($found_file['row_count'] ?? 0);
+        
+        // If it's the raw large table (drug_opd) and has many rows, summarize in SQL
+        if ($file_type === 'drug_opd' && $row_count > 50000) {
+            $sql = "SELECT hospcode, amphurCode as amphur, didstd, dname, 
+                           SUM(amount) as sumamount, COUNT(*) as count, 
+                           SUM(cost) as sumdrugcost, SUM(price) as sumdrugprice,
+                           MAX(date_serv) as date_serv
+                    FROM drug_opd 
+                    WHERE import_id = ? 
+                    GROUP BY hospcode, amphurCode, didstd, dname";
+            $stmt = $importer->getConnection()->prepare($sql);
+            $stmt->bind_param('i', $latest_import_id);
+            $stmt->execute();
+            $db_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        } else {
+            $db_data = $importer->exportToArray($latest_import_id);
+        }
         
         // Helper to find column regardless of case
         $findCol = function($row, $possibilities) {

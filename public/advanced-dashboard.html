@@ -1405,18 +1405,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="import-history-body">
-                                    <tr>
-                                        <td>14 มิ.ย. 2569 21:17</td>
-                                        <td><code>s_tmp_drug_opd.csv</code></td>
-                                        <td>42,972 แถว</td>
-                                        <td><span class="badge-status success">System (Auto)</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>14 มิ.ย. 2569 21:20</td>
-                                        <td><code>tmp_drug_opd.csv</code></td>
-                                        <td>2,003,386 แถว</td>
-                                        <td><span class="badge-status success">admin</span></td>
-                                    </tr>
+                                    <!-- Populated dynamically from API -->
                                 </tbody>
                             </table>
                         </div>
@@ -2823,7 +2812,20 @@
     <!-- JS Logic -->
     <script>
         window.addEventListener('error', function(e) {
-            alert("พบข้อผิดพลาดในระบบ (อาจเกิดจากแคชเก่า): " + e.message + "\nกรุณากด Ctrl + F5 เพื่อรีเฟรชหน้าเว็บ");
+            console.error('System Error Captured:', e);
+            // Ignore benign extension errors
+            if (e.message && (e.message.includes('Extension') || e.message.includes('browser-polyfill'))) return;
+            
+            const msg = e.message || "Unknown Error";
+            const isCacheIssue = msg.includes('JSON') || msg.includes('undefined') || msg.includes('null');
+            
+            if (isCacheIssue) {
+                sessionStorage.removeItem('rxmuk_raw_data');
+                alert("พบข้อผิดพลาดในข้อมูลที่บันทึกไว้ (แคชเก่า): " + msg + "\n\nระบบได้ล้างแคชให้แล้ว กรุณากดปุ่ม OK เพื่อรีเฟรชหน้าเว็บ");
+                window.location.reload();
+            } else {
+                alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
+            }
         });
     </script>
     <script>
@@ -2886,6 +2888,47 @@
                 el.textContent = `DATA: ${(rawTransactions ? rawTransactions.length : 0).toLocaleString()} rows`;
                 el.style.color = (rawTransactions && rawTransactions.length > 0) ? 'var(--c-green)' : 'var(--c-red)';
             }
+        }
+
+        function renderImportHistory() {
+            const body = document.getElementById('import-history-body');
+            if (!body) return;
+
+            fetch(getPath('api_get_import_history.php'))
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success && res.history) {
+                        body.innerHTML = res.history.map(h => `
+                            <tr>
+                                <td>${h.date}</td>
+                                <td><code>${h.filename}</code></td>
+                                <td>${h.rows}</td>
+                                <td><span class="badge-status success">${h.user}</span></td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบประวัติการนำเข้า</td></tr>';
+                    }
+                })
+                .catch(err => {
+                    console.error('History fetch failed:', err);
+                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">โหลดข้อมูลประวัติไม่สำเร็จ</td></tr>';
+                });
+        }
+
+        function refreshAllUI() {
+            updateNavDataStatus();
+            populateAllFilterDropdowns();
+            renderDrugBreakdown();
+            renderDistrictBreakdown();
+            renderHospBreakdown();
+            renderPriceVarianceReport();
+            renderAbcVedMatrix();
+            renderDataQualityScorecard();
+            renderGeospatialMap();
+            renderAccessIndex();
+            renderRduMonitoring();
+            updateDashboardOverview();
         }
 
         function resetAllFilters() {
@@ -3150,14 +3193,14 @@
                     return;
                 }
             // Extract unique values with safety guards
-            const years = [...new Set(rawTransactions.map(t => (t.month && typeof t.month === 'string') ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
-            const months = [...new Set(rawTransactions.map(t => t.month))].filter(Boolean).sort();
+            const years = [...new Set(rawTransactions.filter(t => t && t.month).map(t => (t.month && typeof t.month === 'string') ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
+            const months = [...new Set(rawTransactions.filter(t => t && t.month).map(t => t.month))].filter(Boolean).sort();
             
             // Districts with safety guards
             const districtSet = new Set();
             const districts = [];
             rawTransactions.forEach(t => {
-                if (t.amphurCode && !districtSet.has(t.amphurCode)) {
+                if (t && t.amphurCode && !districtSet.has(t.amphurCode)) {
                     districtSet.add(t.amphurCode);
                     districts.push({ code: t.amphurCode, name: t.amphurName || `อำเภอ ${t.amphurCode}` });
                 }
@@ -3168,7 +3211,7 @@
             const drugs = [];
             const seenDrugs = new Set();
             rawTransactions.forEach(t => {
-                if (t.didstd && !seenDrugs.has(t.didstd)) {
+                if (t && t.didstd && !seenDrugs.has(t.didstd)) {
                     seenDrugs.add(t.didstd);
                     drugs.push({ code: t.didstd, name: t.dname || `รหัส ${t.didstd}` });
                 }
@@ -3257,25 +3300,25 @@
             const endDateVal = document.getElementById(`${prefix}-end-date`) ? document.getElementById(`${prefix}-end-date`).value : '';
 
             if (yearVal !== 'all') {
-                txs = txs.filter(t => t.month && t.month.startsWith(yearVal));
+                txs = txs.filter(t => t && t.month && typeof t.month === 'string' && t.month.startsWith(yearVal));
             }
             if (monthVal !== 'all') {
-                txs = txs.filter(t => t.month === monthVal);
+                txs = txs.filter(t => t && t.month === monthVal);
             }
             if (startDateVal) {
-                txs = txs.filter(t => t.date && t.date >= startDateVal);
+                txs = txs.filter(t => t && t.date && t.date >= startDateVal);
             }
             if (endDateVal) {
-                txs = txs.filter(t => t.date && t.date <= endDateVal);
+                txs = txs.filter(t => t && t.date && t.date <= endDateVal);
             }
             if (districtVal !== 'all') {
-                txs = txs.filter(t => t.amphurCode === districtVal);
+                txs = txs.filter(t => t && t.amphurCode === districtVal);
             }
             if (hospVal !== 'all') {
-                txs = txs.filter(t => t.hospcode === hospVal);
+                txs = txs.filter(t => t && t.hospcode === hospVal);
             }
             if (itemVal !== 'all') {
-                txs = txs.filter(t => t.didstd === itemVal);
+                txs = txs.filter(t => t && t.didstd === itemVal);
             }
             return txs;
         }
@@ -4156,10 +4199,8 @@ ORDER BY name;
             saveToStorage();
 
             // Update nav status
-            updateNavDataStatus();
-
-            // Update dashboard statistics
-            updateDashboardOverview();
+            refreshAllUI();
+            renderImportHistory();
         }
 
         // Process pre-aggregated data (specifically for large CSV streaming)
@@ -4213,10 +4254,8 @@ ORDER BY name;
             saveToStorage();
 
             // Update nav status
-            updateNavDataStatus();
-
-            // Update dashboard statistics
-            updateDashboardOverview();
+            refreshAllUI();
+            renderImportHistory();
         }
 
         // Chunk-by-chunk streaming parser for large CSVs (handles OOM prevention)
@@ -4795,9 +4834,13 @@ ORDER BY name;
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
+                    loadLatestDataFromServer(); // Restore data from server/DB
+                    renderImportHistory();
                 } else if (u === 'rxmuk' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
                     checkAuthState();
+                    loadLatestDataFromServer(); // Restore data from server/DB
+                    renderImportHistory();
                 } else {
                     alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
                 }
@@ -4806,7 +4849,10 @@ ORDER BY name;
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
                 sessionStorage.removeItem('rxmuk_auth_user');
+                sessionStorage.removeItem('rxmuk_raw_data');
+                rawTransactions = [];
                 checkAuthState();
+                refreshAllUI();
             });
         }
 
@@ -4822,21 +4868,14 @@ ORDER BY name;
         // Initialize lists & auth locks
         generateSecuredLocks();
         checkAuthState();
+        renderImportHistory();
 
         // Initialize selectors & data
         if (!loadFromStorage()) {
             rawTransactions = [];
         } else {
             // If loaded from storage, trigger initial renders
-            renderDrugBreakdown();
-            renderDistrictBreakdown();
-            renderHospBreakdown();
-            renderPriceVarianceReport();
-            renderAbcVedMatrix();
-            renderDataQualityScorecard();
-            renderGeospatialMap();
-            renderAccessIndex();
-            renderRduMonitoring();
+            refreshAllUI();
         }
         
         updateNavDataStatus();
@@ -4863,48 +4902,65 @@ ORDER BY name;
             return relPath;
         }
 
-        // AUTO-LOAD REAL DATA FROM SERVER (Priority: Server Cache -> Database -> Local CSV)
-        fetch(getPath('api_get_latest_data.php'))
-            .then(res => res.json())
-            .then(res => {
-                if (res.success && res.data && res.data.length > 0) {
-                    processPreAggregatedData(res.data, res.filename + ' (from ' + (res.source || 'DB') + ')', new Date().toLocaleString('th-TH', { hour12: false }));
-                } else {
-                    // Fallback to CSV if API is empty
-                    return fetch(getPath('../uploads/s_tmp_drug_opd.csv') + '?v=' + new Date().getTime(), { cache: 'no-store' });
-                }
-            })
-            .then(res => {
-                if (!res) return; // Already handled by API
-                if (res.ok) return res.arrayBuffer();
-                throw new Error('No uploaded real CSV file found on server path.');
-            })
-            .then(arrayBuffer => {
-                if (!arrayBuffer) return;
-                let text = '';
-                try {
-                    const decoder = new TextDecoder('utf-8', { fatal: true });
-                    text = decoder.decode(arrayBuffer);
-                } catch (utf8Err) {
-                    const decoder874 = new TextDecoder('windows-874');
-                    text = decoder874.decode(arrayBuffer);
-                }
-                const rows = parseCSV(text);
-                if (rows && rows.length > 0) {
-                    processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
-                }
-            })
-            .catch(err => {
-                console.log('Real data auto-load skipped or completed via API:', err.message);
-            });
+        function loadLatestDataFromServer() {
+            const drugSource = document.getElementById('drug-data-source');
+            const hospSource = document.getElementById('hosp-data-source');
+            
+            if (drugSource) drugSource.textContent = '🔄 กำลังดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์...';
+            if (hospSource) hospSource.textContent = '🔄 กำลังดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์...';
 
-        const drugSource = document.getElementById('drug-data-source');
-        if (drugSource && rawTransactions.length === 0) {
-            drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
-            drugSource.className = 'badge-status danger';
+            // Priority: Server Cache -> Database -> Local CSV
+            fetch(getPath('api_get_latest_data.php'))
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success && res.data && res.data.length > 0) {
+                        processPreAggregatedData(res.data, res.filename + ' (from ' + (res.source || 'DB') + ')', new Date().toLocaleString('th-TH', { hour12: false }));
+                        refreshAllUI();
+                        renderImportHistory();
+                    } else {
+                        // Fallback to CSV if API is empty
+                        return fetch(getPath('../uploads/s_tmp_drug_opd.csv') + '?v=' + new Date().getTime(), { cache: 'no-store' });
+                    }
+                })
+                .then(res => {
+                    if (!res) return; // Already handled by API
+                    if (res.ok) return res.arrayBuffer();
+                    throw new Error('No uploaded real CSV file found on server path.');
+                })
+                .then(arrayBuffer => {
+                    if (!arrayBuffer) return;
+                    let text = '';
+                    try {
+                        const decoder = new TextDecoder('utf-8', { fatal: true });
+                        text = decoder.decode(arrayBuffer);
+                    } catch (utf8Err) {
+                        const decoder874 = new TextDecoder('windows-874');
+                        text = decoder874.decode(arrayBuffer);
+                    }
+                    const rows = parseCSV(text);
+                    if (rows && rows.length > 0) {
+                        processParsedExcelData(rows, 's_tmp_drug_opd.csv (Auto-loaded)', new Date().toLocaleString('th-TH', { hour12: false }));
+                        refreshAllUI();
+                        renderImportHistory();
+                    }
+                })
+                .catch(err => {
+                    console.log('Real data auto-load skipped or completed via API:', err.message);
+                    if (rawTransactions.length === 0) {
+                        if (drugSource) {
+                            drugSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+                            drugSource.className = 'badge-status danger';
+                        }
+                        if (hospSource) {
+                            hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
+                            hospSource.className = 'badge-status danger';
+                        }
+                    }
+                });
         }
-        const hospSource = document.getElementById('hosp-data-source');
-        if (hospSource && rawTransactions.length === 0) {
+
+        // AUTO-LOAD on start
+        loadLatestDataFromServer();
             hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
             hospSource.className = 'badge-status danger';
         }
