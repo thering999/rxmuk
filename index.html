@@ -3051,18 +3051,22 @@
             })
             .then(res => res.json())
             .then(res => {
-                if (res.success) console.log('Server cache updated:', res.count, 'rows');
+                if (res.success) {
+                    console.log('Server cache updated:', res.count, 'rows');
+                    hasUnsavedChanges = false;
+                }
             })
             .catch(err => console.warn('Server cache sync failed:', err));
         }
 
         function loadFromStorage() {
             try {
-                const stored = sessionStorage.getItem('rxmuk_raw_data');
+                const stored = localStorage.getItem('rxmuk_raw_data');
                 if (stored) {
                     const data = JSON.parse(stored);
                     if (data && data.length > 0) {
                         rawTransactions = data;
+                        hasUnsavedChanges = false;
                         updateNavDataStatus();
                         populateAllFilterDropdowns();
                         updateDashboardOverview();
@@ -3131,6 +3135,7 @@
 
         // Global Transaction Log
         let rawTransactions = [];
+        let hasUnsavedChanges = false;
         let mapSelectedDistrict = "";
         let varianceSelectedDrug = "";
         let qualitySelectedHosp = "";
@@ -4002,7 +4007,8 @@ ORDER BY name;
             btnClearData.addEventListener('click', () => {
                 if (confirm('คุณต้องการล้างข้อมูลเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?')) {
                     rawTransactions = [];
-                    sessionStorage.removeItem('rxmuk_raw_data');
+                    hasUnsavedChanges = false;
+                    localStorage.removeItem('rxmuk_raw_data');
                     
                     // Also clear server cache if possible
                     fetch(getPath('api_save_spa_data.php'), {
@@ -4204,6 +4210,7 @@ ORDER BY name;
 
             // Update global transactions
             rawTransactions = newTxs;
+            hasUnsavedChanges = true;
             console.log(`Updated rawTransactions: ${rawTransactions.length} records`);
 
             // Reset all filters to 'all' first
@@ -4275,6 +4282,7 @@ ORDER BY name;
             });
             
             rawTransactions = rows;
+            hasUnsavedChanges = true;
             console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records`);
 
             // Reset all filters to 'all' first
@@ -4913,8 +4921,8 @@ ORDER BY name;
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
                 sessionStorage.removeItem('rxmuk_auth_user');
-                sessionStorage.removeItem('rxmuk_raw_data');
                 rawTransactions = [];
+                hasUnsavedChanges = false;
                 checkAuthState();
                 refreshAllUI();
             });
@@ -4922,9 +4930,9 @@ ORDER BY name;
 
         // Prevent accidental data loss on refresh/navigation
         window.addEventListener('beforeunload', (e) => {
-            if (rawTransactions && rawTransactions.length > 0) {
+            if (hasUnsavedChanges) {
                 e.preventDefault();
-                e.returnValue = 'ข้อมูลที่คุณนำเข้าจะสูญหายหากคุณออกจากหน้านี้ ยืนยันที่จะออกหรือไม่?';
+                e.returnValue = 'Changes you made may not be saved.';
                 return e.returnValue;
             }
         });
@@ -6963,6 +6971,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
             if (!loadFromStorage()) {
                 rawTransactions = [];
+                hasUnsavedChanges = false;
             } else {
                 refreshAllUI();
             }
