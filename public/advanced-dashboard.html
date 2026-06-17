@@ -2903,7 +2903,10 @@
                                 <td>${h.date}</td>
                                 <td><code>${h.filename}</code></td>
                                 <td>${h.rows}</td>
-                                <td><span class="badge-status success">${h.user}</span></td>
+                                <td style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                    <span class="badge-status success">${h.user}</span>
+                                    <button class="btn btn-primary" onclick="loadSpecificImport(${res.files_raw ? res.files_raw[res.history.indexOf(h)].id : 0})" style="padding: 4px 8px; font-size: 0.65rem; background: var(--gradient-1);">📦 ดึงข้อมูลชุดนี้</button>
+                                </td>
                             </tr>
                         `).join('');
                     } else {
@@ -2914,6 +2917,25 @@
                     console.error('History fetch failed:', err);
                     body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">โหลดข้อมูลประวัติไม่สำเร็จ</td></tr>';
                 });
+        }
+
+        function loadSpecificImport(importId) {
+            if (!importId) return;
+            const drugSource = document.getElementById('drug-data-source');
+            if (drugSource) drugSource.textContent = '🔄 กำลังดึงข้อมูลจากชุดที่เลือก...';
+            
+            fetch(getPath('api_get_latest_data.php?import_id=' + importId))
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success && res.data && res.data.length > 0) {
+                        processPreAggregatedData(res.data, res.filename + ' (Manual Restore)', new Date().toLocaleString('th-TH', { hour12: false }));
+                        refreshAllUI();
+                        alert('ดึงข้อมูลสำเร็จ: ' + res.count.toLocaleString() + ' รายการ');
+                    } else {
+                        alert('ไม่สามารถดึงข้อมูลชุดนี้ได้: ' + (res.message || 'ไม่มีข้อมูลในชุดนี้'));
+                    }
+                })
+                .catch(err => alert('เกิดข้อผิดพลาดในการดึงข้อมูล: ' + err.message));
         }
 
         function refreshAllUI() {
