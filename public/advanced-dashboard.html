@@ -2951,7 +2951,7 @@
                 })
                 .catch(err => {
                     console.error('History fetch failed:', err);
-                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">โหลดข้อมูลประวัติไม่สำเร็จ</td></tr>';
+                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ฟีเจอร์นี้ต้องใช้ Server (PHP) — ไม่พร้อมใช้งานบนเดโม GitHub Pages นี้ (ข้อมูลที่นำเข้ายังคงอยู่ใน localStorage ของเบราว์เซอร์นี้ตามปกติ)</td></tr>';
                 });
         }
 
