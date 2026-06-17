@@ -10,8 +10,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- SheetJS CDN for client-side Excel parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Mukdahan Hospitals DB provided by user -->
-    <script src="hospitals_db.js"></script>
+    <script>
+        // Pre-detect path for dependencies
+        (function() {
+            const path = window.location.pathname;
+            const isRoot = path.endsWith('/') || path.endsWith('/index.html') || (!path.includes('/public/') && path.includes('.html'));
+            const prefix = isRoot ? 'public/' : '';
+            document.write('<script src="' + prefix + 'hospitals_db.js"><\/script>');
+        })();
+    </script>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -941,6 +948,10 @@
                 <li><a class="tab-btn" data-tab="map">แผนที่จ่ายยา</a></li>
                 <li><a class="tab-btn" data-tab="access-index">ดัชนีเข้าถึงยา</a></li>
                 <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
+                <li style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding: 4px 12px; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                    <span id="nav-data-count" style="font-size: 0.75rem; color: var(--c-primary); font-weight: 800;">DATA: 0 rows</span>
+                    <button class="btn" onclick="resetAllFilters()" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
+                </li>
             </ul>
             <div class="user-status-area">
                 <div class="status-pill" id="login-status-pill" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--c-red);">
@@ -2869,6 +2880,100 @@
             }
         };
 
+        function updateNavDataStatus() {
+            const el = document.getElementById('nav-data-count');
+            if (el) {
+                el.textContent = `DATA: ${(rawTransactions ? rawTransactions.length : 0).toLocaleString()} rows`;
+                el.style.color = (rawTransactions && rawTransactions.length > 0) ? 'var(--c-green)' : 'var(--c-red)';
+            }
+        }
+
+        function resetAllFilters() {
+            const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
+            suffixList.forEach(prefix => {
+                ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
+                    const el = document.getElementById(`${prefix}-${selectorType}-select`);
+                    if (el) el.value = 'all';
+                });
+                ['start-date', 'end-date'].forEach(selectorType => {
+                    const el = document.getElementById(`${prefix}-${selectorType}`);
+                    if (el) el.value = '';
+                });
+                const searchEl = document.getElementById(`${prefix}-search`) || document.getElementById('drug-breakdown-search');
+                if (searchEl) searchEl.value = '';
+            });
+            updateDashboardOverview();
+            renderDrugBreakdown();
+            renderDistrictBreakdown();
+            renderHospBreakdown();
+            renderPriceVarianceReport();
+            renderAbcVedMatrix();
+            renderDataQualityScorecard();
+            renderGeospatialMap();
+            renderAccessIndex();
+            renderRduMonitoring();
+            alert('ล้างตัวกรองทั้งหมดเรียบร้อยแล้ว');
+        }
+
+        // PERSISTENCE: Save/Load rawTransactions to sessionStorage (survives tab switches/reloads)
+        function saveToStorage() {
+            try {
+                if (rawTransactions && rawTransactions.length > 0) {
+                    const json = JSON.stringify(rawTransactions);
+                    // Standard sessionStorage limit is ~5MB. If data is too large, it will fail.
+                    if (json.length < 5 * 1024 * 1024) {
+                        sessionStorage.setItem('rxmuk_raw_data', json);
+                    }
+                    
+                    // Also try to save to server for robust persistence (even if > 5MB)
+                    saveToServerCache();
+                }
+            } catch (e) {
+                console.warn('Storage save failed:', e);
+            }
+        }
+
+        function saveToServerCache() {
+            if (!rawTransactions || rawTransactions.length === 0) return;
+            
+            // Only save if logged in
+            if (!sessionStorage.getItem('rxmuk_auth_user')) return;
+
+            console.log('Syncing data to server cache...');
+            fetch(getPath('api_save_spa_data.php'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filename: 'Web Import',
+                    transactions: rawTransactions
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) console.log('Server cache updated:', res.count, 'rows');
+            })
+            .catch(err => console.warn('Server cache sync failed:', err));
+        }
+
+        function loadFromStorage() {
+            try {
+                const stored = sessionStorage.getItem('rxmuk_raw_data');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (data && data.length > 0) {
+                        rawTransactions = data;
+                        updateNavDataStatus();
+                        populateAllFilterDropdowns();
+                        updateDashboardOverview();
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.warn('Storage load failed:', e);
+            }
+            return false;
+        }
+
         function switchTab(targetTab) {
             tabBtns.forEach(btn => {
                 if(btn.dataset.tab === targetTab) {
@@ -2883,6 +2988,7 @@
             });
             document.getElementById(`tab-${targetTab}`).classList.add('active');
 
+            if (targetTab === 'dashboard') updateDashboardOverview();
             if (targetTab === 'drugs') renderDrugBreakdown();
             if (targetTab === 'district') renderDistrictBreakdown();
             if (targetTab === 'hosp') renderHospBreakdown();
@@ -3295,7 +3401,10 @@ ORDER BY name;
             // Render UI rows
             body.innerHTML = '';
             if (list.length === 0) {
-                body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">ไม่พบข้อมูลตัวยาที่สอดคล้องกับเงื่อนไขการกรอง</td></tr>`;
+                const msg = (rawTransactions && rawTransactions.length > 0) 
+                    ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)' 
+                    : 'ยังไม่มีข้อมูลนำเข้าในระบบ';
+                body.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
                 return;
             }
 
@@ -3486,7 +3595,10 @@ ORDER BY name;
 
             body.innerHTML = '';
             if (list.length === 0) {
-                body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">ไม่พบข้อมูลสถานพยาบาลที่สอดคล้องกับเงื่อนไขการกรอง</td></tr>`;
+                const msg = (rawTransactions && rawTransactions.length > 0) 
+                    ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)' 
+                    : 'ยังไม่มีข้อมูลนำเข้าในระบบ';
+                body.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
                 return;
             }
 
@@ -3799,7 +3911,15 @@ ORDER BY name;
             btnClearData.addEventListener('click', () => {
                 if (confirm('คุณต้องการล้างข้อมูลเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?')) {
                     rawTransactions = [];
+                    sessionStorage.removeItem('rxmuk_raw_data');
                     
+                    // Also clear server cache if possible
+                    fetch(getPath('api_save_spa_data.php'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ transactions: [] })
+                    }).catch(e => console.log('Server cache clear skip'));
+
                     // Reset all filters to 'all'
                     const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
                     suffixList.forEach(prefix => {
@@ -3814,6 +3934,7 @@ ORDER BY name;
                     });
 
                     // Re-populate all dropdown selectors (which will now be empty/blank)
+                    updateNavDataStatus();
                     populateAllFilterDropdowns();
 
                     // Update data source text labels
@@ -4001,6 +4122,10 @@ ORDER BY name;
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
                     if (el) el.value = 'all';
                 });
+                ['start-date', 'end-date'].forEach(selectorType => {
+                    const el = document.getElementById(`${prefix}-${selectorType}`);
+                    if (el) el.value = '';
+                });
             });
 
             // Re-populate all selectors
@@ -4024,6 +4149,14 @@ ORDER BY name;
             renderAbcVedMatrix();
             renderDataQualityScorecard();
             renderGeospatialMap();
+            renderAccessIndex();
+            renderRduMonitoring();
+
+            // Save to storage for persistence
+            saveToStorage();
+
+            // Update nav status
+            updateNavDataStatus();
 
             // Update dashboard statistics
             updateDashboardOverview();
@@ -4045,6 +4178,10 @@ ORDER BY name;
                 ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                     const el = document.getElementById(`${prefix}-${selectorType}-select`);
                     if (el) el.value = 'all';
+                });
+                ['start-date', 'end-date'].forEach(selectorType => {
+                    const el = document.getElementById(`${prefix}-${selectorType}`);
+                    if (el) el.value = '';
                 });
             });
 
@@ -4069,7 +4206,15 @@ ORDER BY name;
             renderAbcVedMatrix();
             renderDataQualityScorecard();
             renderGeospatialMap();
+            renderAccessIndex();
+            renderRduMonitoring();
             
+            // Save to storage for persistence
+            saveToStorage();
+
+            // Update nav status
+            updateNavDataStatus();
+
             // Update dashboard statistics
             updateDashboardOverview();
         }
@@ -4665,12 +4810,36 @@ ORDER BY name;
             });
         }
 
+        // Prevent accidental data loss on refresh/navigation
+        window.addEventListener('beforeunload', (e) => {
+            if (rawTransactions && rawTransactions.length > 0) {
+                e.preventDefault();
+                e.returnValue = 'ข้อมูลที่คุณนำเข้าจะสูญหายหากคุณออกจากหน้านี้ ยืนยันที่จะออกหรือไม่?';
+                return e.returnValue;
+            }
+        });
+
         // Initialize lists & auth locks
         generateSecuredLocks();
         checkAuthState();
 
         // Initialize selectors & data
-        rawTransactions = [];
+        if (!loadFromStorage()) {
+            rawTransactions = [];
+        } else {
+            // If loaded from storage, trigger initial renders
+            renderDrugBreakdown();
+            renderDistrictBreakdown();
+            renderHospBreakdown();
+            renderPriceVarianceReport();
+            renderAbcVedMatrix();
+            renderDataQualityScorecard();
+            renderGeospatialMap();
+            renderAccessIndex();
+            renderRduMonitoring();
+        }
+        
+        updateNavDataStatus();
         populateAllFilterDropdowns();
         renderDrugBreakdown();
         renderDistrictBreakdown();
@@ -4682,14 +4851,36 @@ ORDER BY name;
         renderAccessIndex();
         updateDashboardOverview();
 
-        // Auto-load disabled as per user request to remove all mockup/pre-loaded data
-        /*
-        fetch('uploads/s_tmp_drug_opd.csv?v=' + new Date().getTime(), { cache: 'no-store' })
+        // Path helper for root vs public folder access
+        function getPath(relPath) {
+            const path = window.location.pathname;
+            const isRoot = path.endsWith('/') || path.endsWith('/index.html') || (!path.includes('/public/') && path.includes('.html'));
+            if (isRoot) {
+                if (relPath.startsWith('api_')) return 'public/' + relPath;
+                if (relPath.startsWith('../uploads/')) return relPath.replace('../', '');
+                if (relPath === 'hospitals_db.js') return 'public/' + relPath;
+            }
+            return relPath;
+        }
+
+        // AUTO-LOAD REAL DATA FROM SERVER (Priority: Server Cache -> Database -> Local CSV)
+        fetch(getPath('api_get_latest_data.php'))
+            .then(res => res.json())
             .then(res => {
+                if (res.success && res.data && res.data.length > 0) {
+                    processPreAggregatedData(res.data, res.filename + ' (from ' + (res.source || 'DB') + ')', new Date().toLocaleString('th-TH', { hour12: false }));
+                } else {
+                    // Fallback to CSV if API is empty
+                    return fetch(getPath('../uploads/s_tmp_drug_opd.csv') + '?v=' + new Date().getTime(), { cache: 'no-store' });
+                }
+            })
+            .then(res => {
+                if (!res) return; // Already handled by API
                 if (res.ok) return res.arrayBuffer();
                 throw new Error('No uploaded real CSV file found on server path.');
             })
             .then(arrayBuffer => {
+                if (!arrayBuffer) return;
                 let text = '';
                 try {
                     const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -4704,9 +4895,8 @@ ORDER BY name;
                 }
             })
             .catch(err => {
-                console.log('Real data auto-load skipped:', err.message);
+                console.log('Real data auto-load skipped or completed via API:', err.message);
             });
-        */
 
         const drugSource = document.getElementById('drug-data-source');
         if (drugSource && rawTransactions.length === 0) {
@@ -4763,10 +4953,11 @@ ORDER BY name;
             renderDataQualityScorecard();
             renderGeospatialMap();
             renderAccessIndex();
+            renderRduMonitoring();
         }
 
         // Bind change events to all 5 dropdown filters for drug, district, and hosp
-        const currentSuffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index'];
+        const currentSuffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
         currentSuffixList.forEach(prefix => {
             ['year', 'month', 'district', 'hosp', 'item'].forEach(selectorType => {
                 const el = document.getElementById(`${prefix}-${selectorType}-select`);
