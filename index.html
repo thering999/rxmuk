@@ -3047,8 +3047,8 @@
             });
         }
 
-        // Client-side import history log (replaces the old PHP-backed history, which can't run on GitHub Pages)
-        async function addImportHistoryEntry(entry) {
+        // Client-side import history log; IndexedDB is the local cache, Supabase (below) is the shared source of truth
+        async function idbAddHistory(entry) {
             const db = await openRxmukDB();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(RXMUK_HISTORY_STORE, 'readwrite');
@@ -3058,7 +3058,7 @@
             });
         }
 
-        async function getImportHistory() {
+        async function idbGetHistory() {
             const db = await openRxmukDB();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(RXMUK_HISTORY_STORE, 'readonly');
@@ -3068,13 +3068,84 @@
             });
         }
 
+        async function addImportHistoryEntry(entry) {
+            idbAddHistory(entry).catch(e => console.warn('Local history save failed:', e));
+            try {
+                await supaAddHistory(entry);
+            } catch (e) {
+                console.warn('Supabase history save failed:', e);
+            }
+        }
+
+        async function getImportHistory() {
+            try {
+                return await supaGetHistory();
+            } catch (e) {
+                console.warn('Supabase history load failed, falling back to local cache:', e);
+                return await idbGetHistory();
+            }
+        }
+
+        // SHARED STORAGE: Supabase (so data/history are visible across every browser/device, not just the local one)
+        const SUPABASE_URL = 'https://vbxijqbgwgippdrhsjnb.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_sHnVnsJe5rAUNPrc0LRMSQ_bMgsFVBS';
+
+        function supabaseHeaders(extra) {
+            return Object.assign({
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            }, extra || {});
+        }
+
+        async function supaSetState(key, value) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state`, {
+                method: 'POST',
+                headers: supabaseHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+                body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+            });
+            if (!res.ok) throw new Error(`Supabase save failed: ${res.status} ${await res.text()}`);
+        }
+
+        async function supaGetState(key) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state?key=eq.${encodeURIComponent(key)}&select=value`, {
+                headers: supabaseHeaders()
+            });
+            if (!res.ok) throw new Error(`Supabase load failed: ${res.status} ${await res.text()}`);
+            const rows = await res.json();
+            return rows.length > 0 ? rows[0].value : null;
+        }
+
+        async function supaAddHistory(entry) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history`, {
+                method: 'POST',
+                headers: supabaseHeaders({ 'Prefer': 'return=minimal' }),
+                body: JSON.stringify({
+                    import_date: entry.date,
+                    filename: entry.filename,
+                    rows: entry.rows,
+                    importer: entry.user
+                })
+            });
+            if (!res.ok) throw new Error(`Supabase history insert failed: ${res.status} ${await res.text()}`);
+        }
+
+        async function supaGetHistory() {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history?select=import_date,filename,rows,importer&order=created_at.desc`, {
+                headers: supabaseHeaders()
+            });
+            if (!res.ok) throw new Error(`Supabase history load failed: ${res.status} ${await res.text()}`);
+            const rows = await res.json();
+            return rows.map(r => ({ date: r.import_date, filename: r.filename, rows: r.rows, user: r.importer }));
+        }
+
         function saveToStorage() {
             try {
                 if (rawTransactions && rawTransactions.length > 0) {
                     idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('IndexedDB save failed:', e));
                     localStorage.removeItem('rxmuk_raw_data'); // legacy key, no longer used to store data
 
-                    // Also try to save to server for robust persistence
+                    // Also push to Supabase so other browsers/devices see the same data
                     saveToServerCache();
                 }
             } catch (e) {
@@ -3084,32 +3155,25 @@
 
         function saveToServerCache() {
             if (!rawTransactions || rawTransactions.length === 0) return;
-            
-            // Only save if logged in
-            if (!sessionStorage.getItem('rxmuk_auth_user')) return;
+            if (!sessionStorage.getItem('rxmuk_auth_user')) return; // Only save if logged in
 
-            console.log('Syncing data to server cache...');
-            fetch(getPath('api_save_spa_data.php'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filename: 'Web Import',
-                    transactions: rawTransactions
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.success) {
-                    console.log('Server cache updated:', res.count, 'rows');
-                    hasUnsavedChanges = false;
-                }
-            })
-            .catch(err => console.warn('Server cache sync failed:', err));
+            supaSetState('rxmuk_raw_data', rawTransactions)
+                .then(() => { console.log('Supabase cache updated:', rawTransactions.length, 'rows'); hasUnsavedChanges = false; })
+                .catch(err => console.warn('Supabase sync failed:', err));
         }
 
         async function loadFromStorage() {
             try {
-                let data = await idbGet('rxmuk_raw_data');
+                let data = null;
+                try {
+                    data = await supaGetState('rxmuk_raw_data');
+                    if (data && data.length > 0) await idbSet('rxmuk_raw_data', data); // refresh local cache
+                } catch (e) {
+                    console.warn('Supabase load failed, falling back to local cache:', e);
+                }
+
+                if (!data) data = await idbGet('rxmuk_raw_data');
+
                 if (!data) {
                     // One-time migration from legacy localStorage data (pre-IndexedDB)
                     const legacy = localStorage.getItem('rxmuk_raw_data');
