@@ -4142,9 +4142,9 @@ ORDER BY name;
                     didstd,
                     dname,
                     hospcode,
-                    hospname: hInfo.hosname,
-                    amphurCode: hInfo.amp_code,
-                    amphurName: hInfo.amp_name,
+                    hospname: hInfo ? hInfo.hosname : 'หน่วยบริการรหัส ' + hospcode,
+                    amphurCode: hInfo ? hInfo.amp_code : '4901',
+                    amphurName: hInfo ? hInfo.amp_name : 'อำเภอเมืองมุกดาหาร',
                     date: dateStr,
                     month: monthStr,
                     amount,
@@ -4207,9 +4207,25 @@ ORDER BY name;
         function processPreAggregatedData(rows, filename, uploadTimeStr) {
             console.log(`Processing pre-aggregated data: ${filename} with ${rows.length} rows`);
             const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
+            
             rows.forEach(r => {
                 r.uploadTime = uploadTime;
+                
+                // Ensure numeric fields
+                r.amount = parseFloat(r.amount || 0);
+                r.price = parseFloat(r.price || 0);
+                r.cost = parseFloat(r.cost || 0);
+
+                // Auto-resolve missing amphur info from hospcode
+                if ((!r.amphurCode || r.amphurCode === '') && r.hospcode) {
+                    const info = getHospitalInfo(r.hospcode);
+                    if (info) {
+                        r.amphurCode = info.amp_code;
+                        r.amphurName = info.amp_name;
+                    }
+                }
             });
+            
             rawTransactions = rows;
             console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records`);
 
@@ -4918,6 +4934,10 @@ ORDER BY name;
                         refreshAllUI();
                         renderImportHistory();
                     } else {
+                        if (res.message && !res.message.includes('No data')) {
+                             console.warn('Server reported error:', res.message);
+                             // alert('แจ้งเตือนจากระบบ: ' + res.message);
+                        }
                         // Fallback to CSV if API is empty
                         return fetch(getPath('../uploads/s_tmp_drug_opd.csv') + '?v=' + new Date().getTime(), { cache: 'no-store' });
                     }
@@ -4961,9 +4981,6 @@ ORDER BY name;
 
         // AUTO-LOAD on start
         loadLatestDataFromServer();
-            hospSource.textContent = 'แหล่งข้อมูล: ยังไม่มีข้อมูลนำเข้า (กรุณานำเข้าไฟล์)';
-            hospSource.className = 'badge-status danger';
-        }
 
         // Centralized Filter Synchronization & Cascading Logic
         function handleFilterChange(selectorType, val) {
