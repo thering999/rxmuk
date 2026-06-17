@@ -25,7 +25,8 @@ try {
 
     echo json_encode([
         'success' => true,
-        'history' => $history
+        'history' => $history,
+        'files_raw' => $files
     ], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
