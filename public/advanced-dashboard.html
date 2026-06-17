@@ -11,6 +11,42 @@
     <!-- SheetJS CDN for client-side Excel parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
+        // Global Constants & Mappings
+        const drugVedMap = {
+            "100245200000000000000000": "V", // Aerobidol
+            "124846000003972121781421": "V", // Clopidogrel
+            "100854000003521120381506": "V", // Diazepam
+            "100772000004021220181621": "V", // Phenytoin
+            "101832000004203120281168": "V", // Theophylline
+            "100752000004493120381169": "E", // Paracetamol
+            "101108000004201130781122": "E", // NAC
+            "100582000004203120181168": "E", // Fenofibrate
+            "10082300000321120381189": "E",  // Haloperidol
+            "100651000003640120381113": "E", // Betahistine
+            "101434000004493121781506": "E", // Metformin
+            "105573000003721120381202": "E", // Simvastatin
+            "123897133003850120381735": "E", // Sertraline
+            "100275000004203120381506": "E", // Metronidazole
+            "201070700019999930781122": "E", // ORS
+            "410000000459301440181113": "D", // Plaivana
+            "100702000003750120481078": "D", // Diclofenac
+            "213030200018276120381169": "D", // Norgesic
+            "410000000399390240281113": "D", // Capsaicin
+            "124867242002980170281336": "D", // Avamys
+            "101875000004021220381144": "D", // Vitamin B1
+            "420000001589502094782737": "D"  // Cough syrup
+        };
+
+        const MUKDAHAN_POPULATION = {
+            "4901": { name: "เมืองมุกดาหาร", pop: 137485 },
+            "4902": { name: "นิคมคำสร้อย", pop: 44311 },
+            "4903": { name: "ดอนตาล", pop: 44349 },
+            "4904": { name: "ดงหลวง", pop: 38820 },
+            "4905": { name: "คำชะอี", pop: 47268 },
+            "4906": { name: "หว้านใหญ่", pop: 19553 },
+            "4907": { name: "หนองสูง", pop: 20716 }
+        };
+
         // Pre-detect path for dependencies
         (function() {
             const path = window.location.pathname;
@@ -3093,16 +3129,6 @@
             { code: "4907", name: "หนองสูง" }
         ];
 
-        const MUKDAHAN_POPULATION = {
-            "4901": { name: "เมืองมุกดาหาร", pop: 137485 },
-            "4902": { name: "นิคมคำสร้อย", pop: 44311 },
-            "4903": { name: "ดอนตาล", pop: 44349 },
-            "4904": { name: "ดงหลวง", pop: 38820 },
-            "4905": { name: "คำชะอี", pop: 47268 },
-            "4906": { name: "หว้านใหญ่", pop: 19553 },
-            "4907": { name: "หนองสูง", pop: 20716 }
-        };
-
         // Global Transaction Log
         let rawTransactions = [];
         let mapSelectedDistrict = "";
@@ -4903,31 +4929,6 @@ ORDER BY name;
             }
         });
 
-        // Initialize lists & auth locks
-        generateSecuredLocks();
-        checkAuthState();
-        renderImportHistory();
-
-        // Initialize selectors & data
-        if (!loadFromStorage()) {
-            rawTransactions = [];
-        } else {
-            // If loaded from storage, trigger initial renders
-            refreshAllUI();
-        }
-        
-        updateNavDataStatus();
-        populateAllFilterDropdowns();
-        renderDrugBreakdown();
-        renderDistrictBreakdown();
-        renderHospBreakdown();
-        renderPriceVarianceReport();
-        renderAbcVedMatrix();
-        renderDataQualityScorecard();
-        renderGeospatialMap();
-        renderAccessIndex();
-        updateDashboardOverview();
-
         // Path helper for root vs public folder access
         function getPath(relPath) {
             const path = window.location.pathname;
@@ -5000,9 +5001,6 @@ ORDER BY name;
                     }
                 });
         }
-
-        // AUTO-LOAD on start
-        loadLatestDataFromServer();
 
         // Centralized Filter Synchronization & Cascading Logic
         function handleFilterChange(selectorType, val) {
@@ -5706,33 +5704,6 @@ WHERE t1.id < t2.id
             // Cleanup
             header.remove();
         }
-
-        const drugVedMap = {
-            "100245200000000000000000": "V", // Aerobidol
-            "124846000003972121781421": "V", // Clopidogrel
-            "100854000003521120381506": "V", // Diazepam
-            "100772000004021220181621": "V", // Phenytoin
-            "101832000004203120281168": "V", // Theophylline
-            
-            "100752000004493120381169": "E", // Paracetamol
-            "101108000004201130781122": "E", // NAC
-            "100582000004203120181168": "E", // Fenofibrate
-            "10082300000321120381189": "E",  // Haloperidol
-            "100651000003640120381113": "E", // Betahistine
-            "101434000004493121781506": "E", // Metformin
-            "105573000003721120381202": "E", // Simvastatin
-            "123897133003850120381735": "E", // Sertraline
-            "100275000004203120381506": "E", // Metronidazole
-            "201070700019999930781122": "E", // ORS
-            
-            "410000000459301440181113": "D", // Plaivana
-            "100702000003750120481078": "D", // Diclofenac
-            "213030200018276120381169": "D", // Norgesic
-            "410000000399390240281113": "D", // Capsaicin
-            "124867242002980170281336": "D", // Avamys
-            "101875000004021220381144": "D", // Vitamin B1
-            "420000001589502094782737": "D"  // Cough syrup
-        };
 
         function getDrugVed(didstd) {
             if (drugVedMap[didstd]) return drugVedMap[didstd];
@@ -6983,6 +6954,34 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
 
         // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
+
+        // Initialize selectors & data
+        document.addEventListener('DOMContentLoaded', () => {
+            generateSecuredLocks();
+            checkAuthState();
+            renderImportHistory();
+
+            if (!loadFromStorage()) {
+                rawTransactions = [];
+            } else {
+                refreshAllUI();
+            }
+            
+            updateNavDataStatus();
+            populateAllFilterDropdowns();
+            renderDrugBreakdown();
+            renderDistrictBreakdown();
+            renderHospBreakdown();
+            renderPriceVarianceReport();
+            renderAbcVedMatrix();
+            renderDataQualityScorecard();
+            renderGeospatialMap();
+            renderAccessIndex();
+            updateDashboardOverview();
+
+            // AUTO-LOAD on start
+            loadLatestDataFromServer();
+        });
     </script>
 </body>
 </html>
