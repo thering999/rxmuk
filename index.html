@@ -4199,12 +4199,16 @@ ORDER BY name;
                     rawTransactions = [];
                     hasUnsavedChanges = false;
                     localStorage.removeItem('rxmuk_raw_data');
-                    idbSet('rxmuk_raw_data', []).catch(()=>{});
+                    idbSet('rxmuk_raw_data', null).catch(()=>{});
 
-                    // Clear Supabase Storage so refresh won't reload old data
-                    supaStoragePut('raw_data.json', [])
-                        .then(() => showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success'))
-                        .catch(() => showToast('⚠️ ล้าง Cloud ไม่สำเร็จ — กด refresh อาจโหลดข้อมูลเก่ากลับมา', 'warn'));
+                    // Delete Storage file so reload doesn't bring old data back
+                    fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data/raw_data.json`, {
+                        method: 'DELETE',
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+                    }).then(r => {
+                        if (r.ok || r.status === 404) showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success');
+                        else showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn');
+                    }).catch(() => showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn'));
 
                     // Reset all filters to 'all'
                     const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
