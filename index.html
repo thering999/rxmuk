@@ -3159,6 +3159,7 @@
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
         }
 
+
         async function supaAddHistory(entry) {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history`, {
                 method: 'POST',
@@ -3242,6 +3243,14 @@
                             }
                         } catch (e) { /* ignore corrupt legacy data */ }
                     }
+                }
+                if (data && data.length > 0) {
+                    rawTransactions = data;
+                    hasUnsavedChanges = false;
+                    updateNavDataStatus();
+                    populateAllFilterDropdowns();
+                    updateDashboardOverview();
+                    return true;
                 }
                 if (data && data.length > 0) {
                     rawTransactions = data;
