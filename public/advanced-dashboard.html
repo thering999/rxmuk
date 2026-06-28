@@ -5765,7 +5765,8 @@ WHERE t1.id < t2.id
         const pidGroups = {};
         txs.forEach(t => {
             if (t.pids) {
-                t.pids.forEach(p => {
+                const pidArr = t.pids instanceof Set ? Array.from(t.pids) : Array.isArray(t.pids) ? t.pids : Object.values(t.pids);
+                pidArr.forEach(p => {
                     if (!pidGroups[p]) pidGroups[p] = new Set();
                     pidGroups[p].add(t.didstd);
                 });
