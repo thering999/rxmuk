@@ -4474,9 +4474,9 @@ ORDER BY name;
                 }
             });
             
-            rawTransactions = rows;
+            rawTransactions = rawTransactions.concat(rows);
             hasUnsavedChanges = true;
-            console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records`);
+            console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records (appended ${rows.length})`);
 
             // Reset all filters to 'all' first
             const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
