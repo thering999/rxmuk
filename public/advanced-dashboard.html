@@ -1421,7 +1421,7 @@
                         </div>
                     </div>
 
-                    <!-- Import History / File logs panel -->
+                    <!-- Import History / File logs panel (client-side log via IndexedDB) -->
                     <div class="panel">
                         <div class="panel-header">
                             <h3 class="panel-title">
@@ -1429,7 +1429,7 @@
                                 ประวัติการอัปโหลดไฟล์ที่บันทึกไว้ในระบบ
                             </h3>
                         </div>
-                        
+
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
@@ -1441,7 +1441,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="import-history-body">
-                                    <!-- Populated dynamically from API -->
+                                    <!-- Populated dynamically from IndexedDB -->
                                 </tbody>
                             </table>
                         </div>
@@ -2853,15 +2853,7 @@
             if (e.message && (e.message.includes('Extension') || e.message.includes('browser-polyfill'))) return;
             
             const msg = e.message || "Unknown Error";
-            const isCacheIssue = msg.includes('JSON') || msg.includes('undefined') || msg.includes('null');
-            
-            if (isCacheIssue) {
-                localStorage.removeItem('rxmuk_raw_data');
-                alert("พบข้อผิดพลาดในข้อมูลที่บันทึกไว้ (แคชเก่า): " + msg + "\n\nระบบได้ล้างแคชให้แล้ว กรุณกดปุ่ม OK เพื่อรีเฟรชหน้าเว็บ");
-                window.location.reload();
-            } else {
-                alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
-            }
+            alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
         });
     </script>
     <script>
@@ -2926,33 +2918,29 @@
             }
         }
 
-        function renderImportHistory() {
+        async function renderImportHistory() {
             const body = document.getElementById('import-history-body');
             if (!body) return;
 
-            fetch(getPath('api_get_import_history.php'))
-                .then(res => res.json())
-                .then(res => {
-                    if (res.success && res.history) {
-                        body.innerHTML = res.history.map(h => `
-                            <tr>
-                                <td>${h.date}</td>
-                                <td><code>${h.filename}</code></td>
-                                <td>${h.rows}</td>
-                                <td style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                                    <span class="badge-status success">${h.user}</span>
-                                    <button class="btn btn-primary" onclick="loadSpecificImport(${res.files_raw ? res.files_raw[res.history.indexOf(h)].id : 0})" style="padding: 4px 8px; font-size: 0.65rem; background: var(--gradient-1);">📦 ดึงข้อมูลชุดนี้</button>
-                                </td>
-                            </tr>
-                        `).join('');
-                    } else {
-                        body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบประวัติการนำเข้า</td></tr>';
-                    }
-                })
-                .catch(err => {
-                    console.error('History fetch failed:', err);
-                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">โหลดข้อมูลประวัติไม่สำเร็จ</td></tr>';
-                });
+            try {
+                const history = await getImportHistory();
+                if (history && history.length > 0) {
+                    const sorted = history.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+                    body.innerHTML = sorted.map(h => `
+                        <tr>
+                            <td>${h.date}</td>
+                            <td><code>${h.filename}</code></td>
+                            <td>${h.rows}</td>
+                            <td><span class="badge-status success">${h.user}</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบประวัติการนำเข้า</td></tr>';
+                }
+            } catch (err) {
+                console.error('History load failed:', err);
+                body.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">โหลดข้อมูลประวัติไม่สำเร็จ</td></tr>';
+            }
         }
 
         function loadSpecificImport(importId) {
@@ -3016,17 +3004,148 @@
             alert('ล้างตัวกรองทั้งหมดเรียบร้อยแล้ว');
         }
 
-        // PERSISTENCE: Save/Load rawTransactions to localStorage (survives tab switches/reloads)
+        // PERSISTENCE: Save/Load rawTransactions to IndexedDB (localStorage's ~5MB cap is too small for large imports)
+        const RXMUK_DB_NAME = 'rxmuk_db';
+        const RXMUK_DB_VERSION = 2;
+        const RXMUK_DB_STORE = 'raw_data';
+        const RXMUK_HISTORY_STORE = 'import_history';
+
+        function openRxmukDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(RXMUK_DB_NAME, RXMUK_DB_VERSION);
+                req.onupgradeneeded = () => {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(RXMUK_DB_STORE)) {
+                        db.createObjectStore(RXMUK_DB_STORE);
+                    }
+                    if (!db.objectStoreNames.contains(RXMUK_HISTORY_STORE)) {
+                        db.createObjectStore(RXMUK_HISTORY_STORE, { autoIncrement: true });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbSet(key, value) {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_DB_STORE, 'readwrite');
+                tx.objectStore(RXMUK_DB_STORE).put(value, key);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbGet(key) {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_DB_STORE, 'readonly');
+                const req = tx.objectStore(RXMUK_DB_STORE).get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // Client-side import history log (replaces the old PHP-backed history, which can't run on GitHub Pages)
+        async function idbAddHistory(entry) {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_HISTORY_STORE, 'readwrite');
+                tx.objectStore(RXMUK_HISTORY_STORE).add(entry);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbGetHistory() {
+            const db = await openRxmukDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(RXMUK_HISTORY_STORE, 'readonly');
+                const req = tx.objectStore(RXMUK_HISTORY_STORE).getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // SHARED STORAGE: Supabase (so data/history are visible across every browser/device, not just the local one)
+        const SUPABASE_URL = 'https://vbxijqbgwgippdrhsjnb.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_sHnVnsJe5rAUNPrc0LRMSQ_bMgsFVBS';
+
+        function supabaseHeaders(extra) {
+            return Object.assign({
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            }, extra || {});
+        }
+
+        async function supaSetState(key, value) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state`, {
+                method: 'POST',
+                headers: supabaseHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+                body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+            });
+            if (!res.ok) throw new Error(`Supabase save failed: ${res.status} ${await res.text()}`);
+        }
+
+        async function supaGetState(key) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state?key=eq.${encodeURIComponent(key)}&select=value`, {
+                headers: supabaseHeaders()
+            });
+            if (!res.ok) throw new Error(`Supabase load failed: ${res.status} ${await res.text()}`);
+            const rows = await res.json();
+            return rows.length > 0 ? rows[0].value : null;
+        }
+
+        async function supaAddHistory(entry) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history`, {
+                method: 'POST',
+                headers: supabaseHeaders({ 'Prefer': 'return=minimal' }),
+                body: JSON.stringify({
+                    import_date: entry.date,
+                    filename: entry.filename,
+                    rows: entry.rows,
+                    importer: entry.user
+                })
+            });
+            if (!res.ok) throw new Error(`Supabase history insert failed: ${res.status} ${await res.text()}`);
+        }
+
+        async function supaGetHistory() {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history?select=import_date,filename,rows,importer&order=created_at.desc`, {
+                headers: supabaseHeaders()
+            });
+            if (!res.ok) throw new Error(`Supabase history load failed: ${res.status} ${await res.text()}`);
+            const rows = await res.json();
+            return rows.map(r => ({ date: r.import_date, filename: r.filename, rows: r.rows, user: r.importer }));
+        }
+
+        async function addImportHistoryEntry(entry) {
+            idbAddHistory(entry).catch(e => console.warn('Local history save failed:', e));
+            try {
+                await supaAddHistory(entry);
+            } catch (e) {
+                console.warn('Supabase history save failed:', e);
+            }
+        }
+
+        async function getImportHistory() {
+            try {
+                return await supaGetHistory();
+            } catch (e) {
+                console.warn('Supabase history load failed, falling back to local cache:', e);
+                return await idbGetHistory();
+            }
+        }
+
         function saveToStorage() {
             try {
                 if (rawTransactions && rawTransactions.length > 0) {
-                    const json = JSON.stringify(rawTransactions);
-                    // Standard localStorage limit is ~5MB. If data is too large, it will fail.
-                    if (json.length < 5 * 1024 * 1024) {
-                        localStorage.setItem('rxmuk_raw_data', json);
-                    }
-                    
-                    // Also try to save to server for robust persistence (even if > 5MB)
+                    idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('IndexedDB save failed:', e));
+                    localStorage.removeItem('rxmuk_raw_data'); // legacy key, no longer used to store data
+
+                    // Also push to Supabase so other browsers/devices see the same data
                     saveToServerCache();
                 }
             } catch (e) {
@@ -3036,38 +3155,45 @@
 
         function saveToServerCache() {
             if (!rawTransactions || rawTransactions.length === 0) return;
-            
-            // Only save if logged in
-            if (!sessionStorage.getItem('rxmuk_auth_user')) return;
+            if (!sessionStorage.getItem('rxmuk_auth_user')) return; // Only save if logged in
 
-            console.log('Syncing data to server cache...');
-            fetch(getPath('api_save_spa_data.php'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filename: 'Web Import',
-                    transactions: rawTransactions
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.success) console.log('Server cache updated:', res.count, 'rows');
-            })
-            .catch(err => console.warn('Server cache sync failed:', err));
+            supaSetState('rxmuk_raw_data', rawTransactions)
+                .then(() => console.log('Supabase cache updated:', rawTransactions.length, 'rows'))
+                .catch(err => console.warn('Supabase sync failed:', err));
         }
 
-        function loadFromStorage() {
+        async function loadFromStorage() {
             try {
-                const stored = localStorage.getItem('rxmuk_raw_data');
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    if (data && data.length > 0) {
-                        rawTransactions = data;
-                        updateNavDataStatus();
-                        populateAllFilterDropdowns();
-                        updateDashboardOverview();
-                        return true;
+                let data = null;
+                try {
+                    data = await supaGetState('rxmuk_raw_data');
+                    if (data && data.length > 0) await idbSet('rxmuk_raw_data', data); // refresh local cache
+                } catch (e) {
+                    console.warn('Supabase load failed, falling back to local cache:', e);
+                }
+
+                if (!data) data = await idbGet('rxmuk_raw_data');
+
+                if (!data) {
+                    // One-time migration from legacy localStorage data (pre-IndexedDB)
+                    const legacy = localStorage.getItem('rxmuk_raw_data');
+                    if (legacy) {
+                        try {
+                            const parsed = JSON.parse(legacy);
+                            if (parsed && parsed.length > 0) {
+                                data = parsed;
+                                await idbSet('rxmuk_raw_data', data);
+                                localStorage.removeItem('rxmuk_raw_data');
+                            }
+                        } catch (e) { /* ignore corrupt legacy data */ }
                     }
+                }
+                if (data && data.length > 0) {
+                    rawTransactions = data;
+                    updateNavDataStatus();
+                    populateAllFilterDropdowns();
+                    updateDashboardOverview();
+                    return true;
                 }
             } catch (e) {
                 console.warn('Storage load failed:', e);
@@ -4245,6 +4371,12 @@ ORDER BY name;
 
             // Save to storage for persistence
             saveToStorage();
+            addImportHistoryEntry({
+                date: uploadTime,
+                filename: filename,
+                rows: rawTransactions.length,
+                user: sessionStorage.getItem('rxmuk_auth_user') || '-'
+            }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
             refreshAllUI();
@@ -4316,6 +4448,12 @@ ORDER BY name;
             
             // Save to storage for persistence
             saveToStorage();
+            addImportHistoryEntry({
+                date: uploadTime,
+                filename: filename,
+                rows: rawTransactions.length,
+                user: sessionStorage.getItem('rxmuk_auth_user') || '-'
+            }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
             refreshAllUI();
@@ -4891,20 +5029,20 @@ ORDER BY name;
 
         // Bind main login submit
         if (btnLoginSubmit) {
-            btnLoginSubmit.addEventListener('click', () => {
+            btnLoginSubmit.addEventListener('click', async () => {
                 const u = inputUsername ? inputUsername.value.trim() : '';
                 const p = inputPassword ? inputPassword.value.trim() : '';
 
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
-                    loadFromStorage();
+                    await loadFromStorage();
                     loadLatestDataFromServer(); // Restore data from server/DB
                     renderImportHistory();
                 } else if (u === 'rxmuk' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
                     checkAuthState();
-                    loadFromStorage();
+                    await loadFromStorage();
                     loadLatestDataFromServer(); // Restore data from server/DB
                     renderImportHistory();
                 } else {
@@ -6957,12 +7095,12 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
 
         // Initialize selectors & data
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             generateSecuredLocks();
             checkAuthState();
             renderImportHistory();
 
-            if (!loadFromStorage()) {
+            if (!(await loadFromStorage())) {
                 rawTransactions = [];
             } else {
                 refreshAllUI();
