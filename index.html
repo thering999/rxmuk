@@ -986,7 +986,7 @@
                 <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
                 <li style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding: 4px 12px; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
                     <span id="nav-data-count" style="font-size: 0.75rem; color: var(--c-primary); font-weight: 800;">DATA: 0 rows</span>
-                    <button class="btn" onclick="resetAllFilters()" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
+                    <button class="btn" onclick="if(!sessionStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
                 </li>
             </ul>
             <div class="user-status-area">
