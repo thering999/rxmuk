@@ -4131,10 +4131,13 @@ ORDER BY name;
                 }
 
                 if (isCSV) {
+                    const navCount = document.getElementById('nav-data-count');
+                    if (navCount) navCount.textContent = `⏳ กำลังประมวลผล ${file.name}...`;
                     parseLargeCSVInChunks(
                         file,
                         (pct) => {
                             progressBar.style.width = pct + '%';
+                            if (navCount) navCount.textContent = `⏳ ${Math.round(pct)}% — ${file.name}`;
                         },
                         (rows) => {
                             progressBar.style.width = '100%';
@@ -4196,13 +4199,12 @@ ORDER BY name;
                     rawTransactions = [];
                     hasUnsavedChanges = false;
                     localStorage.removeItem('rxmuk_raw_data');
-                    
-                    // Also clear server cache if possible
-                    fetch(getPath('api_save_spa_data.php'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ transactions: [] })
-                    }).catch(e => console.log('Server cache clear skip'));
+                    idbSet('rxmuk_raw_data', []).catch(()=>{});
+
+                    // Clear Supabase Storage so refresh won't reload old data
+                    supaStoragePut('raw_data.json', [])
+                        .then(() => showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success'))
+                        .catch(() => showToast('⚠️ ล้าง Cloud ไม่สำเร็จ — กด refresh อาจโหลดข้อมูลเก่ากลับมา', 'warn'));
 
                     // Reset all filters to 'all'
                     const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
