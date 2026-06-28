@@ -3197,38 +3197,55 @@
             }
         }
 
+        const CLOUD_SYNC_LIMIT = 50000; // rows — above this, IndexedDB only (Storage upload too large)
+
         function saveToServerCache() {
             if (!rawTransactions || rawTransactions.length === 0) return;
             if (!sessionStorage.getItem('rxmuk_auth_user')) return;
+
+            if (rawTransactions.length > CLOUD_SYNC_LIMIT) {
+                hasUnsavedChanges = false;
+                showToast(`💾 บันทึก ${rawTransactions.length.toLocaleString()} รายการใน Browser (ข้อมูลใหญ่เกิน Cloud — ใช้งานได้เฉพาะ browser นี้)`, 'warn');
+                return;
+            }
 
             showToast(`☁️ กำลังบันทึก ${rawTransactions.length.toLocaleString()} รายการขึ้น Cloud...`, 'info');
             supaStoragePut('raw_data.json', rawTransactions)
                 .then(() => {
                     hasUnsavedChanges = false;
-                    showToast(`✅ บันทึกสำเร็จ ${rawTransactions.length.toLocaleString()} รายการ`, 'success');
+                    showToast(`✅ บันทึก Cloud สำเร็จ ${rawTransactions.length.toLocaleString()} รายการ`, 'success');
                 })
                 .catch(err => {
                     console.error('Supabase Storage sync failed:', err);
-                    showToast(`⚠️ Cloud sync ล้มเหลว: ${err.message} (ข้อมูลอยู่ใน browser นี้เท่านั้น)`, 'error');
+                    showToast(`⚠️ Cloud sync ล้มเหลว (ข้อมูลอยู่ใน browser นี้เท่านั้น)`, 'error');
                 });
         }
 
         async function loadFromStorage() {
             try {
                 let data = null;
-                try {
-                    showToast('☁️ กำลังโหลดข้อมูลจาก Cloud...', 'info');
-                    data = await supaStorageGet('raw_data.json');
-                    if (data && data.length > 0) {
-                        await idbSet('rxmuk_raw_data', data);
-                        showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} รายการจาก Cloud`, 'success');
+
+                // IndexedDB first (local cache — handles any size, no network needed)
+                const localData = await idbGet('rxmuk_raw_data');
+                if (localData && localData.length > 0) {
+                    data = localData;
+                    showToast(`💾 โหลด ${data.length.toLocaleString()} รายการจาก Browser`, 'success');
+                } else {
+                    // Fallback: try Supabase Storage (cross-device, small datasets only)
+                    try {
+                        showToast('☁️ กำลังโหลดข้อมูลจาก Cloud...', 'info');
+                        const cloudData = await supaStorageGet('raw_data.json');
+                        if (cloudData && cloudData.length > 0) {
+                            data = cloudData;
+                            await idbSet('rxmuk_raw_data', data);
+                            showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} รายการจาก Cloud`, 'success');
+                        }
+                    } catch (e) {
+                        console.warn('Supabase Storage load failed:', e);
                     }
-                } catch (e) {
-                    console.warn('Supabase Storage load failed, falling back to local cache:', e);
-                    showToast('⚠️ Cloud load ล้มเหลว ใช้ข้อมูลใน browser แทน', 'warn');
                 }
 
-                if (!data) data = await idbGet('rxmuk_raw_data');
+                if (!data) data = null;
 
                 if (!data) {
                     // One-time migration from legacy localStorage data (pre-IndexedDB)
