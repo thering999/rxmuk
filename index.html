@@ -3116,20 +3116,25 @@
             return rows.length > 0 ? rows[0].value : null;
         }
 
-        // Storage-based persistence for large raw data (no size limit unlike app_state table)
+        // Storage-based persistence — gzip compressed to handle large datasets (500K+ rows)
         async function supaStoragePut(filename, data) {
             const json = JSON.stringify(data);
+            const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+            const compressed = await new Response(stream).arrayBuffer();
             const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data/${filename}`, {
                 method: 'POST',
                 headers: {
                     'apikey': SUPABASE_ANON_KEY,
                     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/gzip',
                     'x-upsert': 'true'
                 },
-                body: json
+                body: compressed
             });
             if (!res.ok) throw new Error(`Storage upload failed: ${res.status} ${await res.text()}`);
+            const origMB = (json.length / 1024 / 1024).toFixed(1);
+            const compMB = (compressed.byteLength / 1024 / 1024).toFixed(1);
+            console.log(`Storage upload: ${origMB}MB → ${compMB}MB (gzip)`);
         }
 
         async function supaStorageGet(filename) {
@@ -3139,8 +3144,14 @@
                     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
                 }
             });
-            if (res.status >= 400 && res.status < 500) return null; // bucket/file not found → fallback
+            if (res.status >= 400 && res.status < 500) return null;
             if (!res.ok) throw new Error(`Storage download failed: ${res.status}`);
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('gzip')) {
+                const stream = (await res.blob()).stream().pipeThrough(new DecompressionStream('gzip'));
+                const text = await new Response(stream).text();
+                return JSON.parse(text);
+            }
             return await res.json();
         }
 
@@ -3197,19 +3208,11 @@
             }
         }
 
-        const CLOUD_SYNC_LIMIT = 50000; // rows — above this, IndexedDB only (Storage upload too large)
-
         function saveToServerCache() {
             if (!rawTransactions || rawTransactions.length === 0) return;
             if (!sessionStorage.getItem('rxmuk_auth_user')) return;
 
-            if (rawTransactions.length > CLOUD_SYNC_LIMIT) {
-                hasUnsavedChanges = false;
-                showToast(`💾 บันทึก ${rawTransactions.length.toLocaleString()} รายการใน Browser (ข้อมูลใหญ่เกิน Cloud — ใช้งานได้เฉพาะ browser นี้)`, 'warn');
-                return;
-            }
-
-            showToast(`☁️ กำลังบันทึก ${rawTransactions.length.toLocaleString()} รายการขึ้น Cloud...`, 'info');
+            showToast(`☁️ กำลังบันทึก ${rawTransactions.length.toLocaleString()} รายการขึ้น Cloud (กำลัง compress)...`, 'info');
             supaStoragePut('raw_data.json', rawTransactions)
                 .then(() => {
                     hasUnsavedChanges = false;
@@ -3217,7 +3220,7 @@
                 })
                 .catch(err => {
                     console.error('Supabase Storage sync failed:', err);
-                    showToast(`⚠️ Cloud sync ล้มเหลว (ข้อมูลอยู่ใน browser นี้เท่านั้น)`, 'error');
+                    showToast(`⚠️ Cloud sync ล้มเหลว — ข้อมูลอยู่ใน browser นี้เท่านั้น`, 'error');
                 });
         }
 
