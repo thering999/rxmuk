@@ -3139,7 +3139,7 @@
                     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
                 }
             });
-            if (res.status === 404) return null;
+            if (res.status >= 400 && res.status < 500) return null; // bucket/file not found → fallback
             if (!res.ok) throw new Error(`Storage download failed: ${res.status}`);
             return await res.json();
         }
