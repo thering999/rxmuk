@@ -3146,13 +3146,17 @@
             });
             if (res.status >= 400 && res.status < 500) return null;
             if (!res.ok) throw new Error(`Storage download failed: ${res.status}`);
-            const contentType = res.headers.get('content-type') || '';
-            if (contentType.includes('gzip')) {
-                const stream = (await res.blob()).stream().pipeThrough(new DecompressionStream('gzip'));
+            const blob = await res.blob();
+            // Always try gzip decompress first (our uploads are always gzip)
+            try {
+                const stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
                 const text = await new Response(stream).text();
                 return JSON.parse(text);
+            } catch {
+                // Fallback: plain JSON (legacy uploads before gzip)
+                const text = await blob.text();
+                return JSON.parse(text);
             }
-            return await res.json();
         }
 
         function showToast(msg, type) {
