@@ -4228,11 +4228,12 @@ ORDER BY name;
                     idbSet('rxmuk_raw_data', null).catch(()=>{});
 
                     // Delete Storage file so reload doesn't bring old data back
-                    fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data/raw_data.json`, {
+                    fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data`, {
                         method: 'DELETE',
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prefixes: ['raw_data.json'] })
                     }).then(r => {
-                        if (r.ok || r.status === 404) showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success');
+                        if (r.ok) showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success');
                         else showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn');
                     }).catch(() => showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn'));
 
