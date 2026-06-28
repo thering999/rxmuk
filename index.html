@@ -3343,6 +3343,7 @@
         // Global Transaction Log
         let rawTransactions = [];
         let hasUnsavedChanges = false;
+        let sessionImportStarted = false; // true after first import this session — enables append mode
         let mapSelectedDistrict = "";
         let varianceSelectedDrug = "";
         let qualitySelectedHosp = "";
@@ -4218,6 +4219,7 @@ ORDER BY name;
                 if (confirm('คุณต้องการล้างข้อมูลเวชภัณฑ์ทั้งหมดในระบบเพื่อเตรียมนำเข้าไฟล์ใหม่ใช่หรือไม่?')) {
                     rawTransactions = [];
                     hasUnsavedChanges = false;
+                    sessionImportStarted = false;
                     localStorage.removeItem('rxmuk_raw_data');
                     idbSet('rxmuk_raw_data', null).catch(()=>{});
 
@@ -4500,6 +4502,11 @@ ORDER BY name;
                 }
             });
             
+            if (!sessionImportStarted) {
+                // First import this session — clear old data so we don't accumulate stale rows
+                rawTransactions = [];
+                sessionImportStarted = true;
+            }
             rawTransactions = rawTransactions.concat(rows);
             hasUnsavedChanges = true;
             console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records (appended ${rows.length})`);
