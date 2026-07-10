@@ -3084,12 +3084,26 @@
         }
 
         // SHARED STORAGE: GitHub Gist (cross-device, no pause, gist-scope token only)
-        const GITHUB_TOKEN = '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';
+        const GIST_TOKEN_LSKEY = 'rxmuk_gh_token';
+
+        function getGithubToken() {
+            let token = localStorage.getItem(GIST_TOKEN_LSKEY);
+            if (!token) {
+                token = prompt('กรุณาใส่ GitHub Token (scope: gist) เพื่อเปิดใช้ Cloud sync:\n\nสร้างได้ที่: github.com → Settings → Developer settings → Personal access tokens → gist scope');
+                if (token && token.trim()) {
+                    localStorage.setItem(GIST_TOKEN_LSKEY, token.trim());
+                    token = token.trim();
+                } else {
+                    throw new Error('ไม่มี GitHub Token — Cloud sync ถูกปิด');
+                }
+            }
+            return token;
+        }
         const GIST_ID_LSKEY = 'rxmuk_gist_id';
 
         function gistHeaders() {
             return {
-                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Authorization': `token ${getGithubToken()}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/vnd.github.v3+json'
             };
