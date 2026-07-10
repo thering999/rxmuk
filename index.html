@@ -3125,13 +3125,17 @@
             return data.id;
         }
 
-        async function gistPutFile(filename, content) {
+        async function gistPutFile(filename, content, retries = 3) {
             const id = await gistGetOrCreate();
             const res = await fetch(`https://api.github.com/gists/${id}`, {
                 method: 'PATCH',
                 headers: gistHeaders(),
                 body: JSON.stringify({ files: { [filename]: { content } } })
             });
+            if (res.status === 409 && retries > 0) {
+                await new Promise(r => setTimeout(r, 1500));
+                return gistPutFile(filename, content, retries - 1);
+            }
             if (!res.ok) throw new Error(`Gist write failed: ${res.status} ${await res.text()}`);
         }
 
