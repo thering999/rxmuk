@@ -5162,14 +5162,16 @@ ORDER BY name;
                 if (u === 'admin' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
-                    await loadFromStorage();
-                    loadLatestDataFromServer(); // Restore data from server/DB
+                    const loaded = await loadFromStorage();
+                    if (loaded) refreshAllUI();
+                    loadLatestDataFromServer();
                     renderImportHistory();
                 } else if (u === 'rxmuk' && p === '123456') {
                     sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
                     checkAuthState();
-                    await loadFromStorage();
-                    loadLatestDataFromServer(); // Restore data from server/DB
+                    const loaded = await loadFromStorage();
+                    if (loaded) refreshAllUI();
+                    loadLatestDataFromServer();
                     renderImportHistory();
                 } else {
                     alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
