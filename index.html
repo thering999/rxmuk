@@ -3100,6 +3100,16 @@
         async function gistGetOrCreate() {
             let id = localStorage.getItem(GIST_ID_LSKEY);
             if (id) return id;
+            // Search existing gists for rxmuk-sync-data before creating new one
+            const listRes = await fetch('https://api.github.com/gists?per_page=100', { headers: gistHeaders() });
+            if (listRes.ok) {
+                const gists = await listRes.json();
+                const existing = gists.find(g => g.description === 'rxmuk-sync-data');
+                if (existing) {
+                    localStorage.setItem(GIST_ID_LSKEY, existing.id);
+                    return existing.id;
+                }
+            }
             const res = await fetch('https://api.github.com/gists', {
                 method: 'POST',
                 headers: gistHeaders(),
