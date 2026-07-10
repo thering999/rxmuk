@@ -3070,93 +3070,128 @@
 
         async function addImportHistoryEntry(entry) {
             idbAddHistory(entry).catch(e => console.warn('Local history save failed:', e));
-            try {
-                await supaAddHistory(entry);
-            } catch (e) {
-                console.warn('Supabase history save failed:', e);
-            }
+            cloudAddHistory(entry).catch(e => console.warn('Cloud history save failed:', e));
         }
 
         async function getImportHistory() {
             try {
-                return await supaGetHistory();
+                const cloudHistory = await cloudGetHistory();
+                if (cloudHistory && cloudHistory.length > 0) return cloudHistory;
             } catch (e) {
-                console.warn('Supabase history load failed, falling back to local cache:', e);
-                return await idbGetHistory();
+                console.warn('Cloud history load failed, falling back to local cache:', e);
             }
+            return await idbGetHistory();
         }
 
-        // SHARED STORAGE: Supabase (so data/history are visible across every browser/device, not just the local one)
-        const SUPABASE_URL = 'https://vbxijqbgwgippdrhsjnb.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_sHnVnsJe5rAUNPrc0LRMSQ_bMgsFVBS';
+        // SHARED STORAGE: GitHub Gist (cross-device, no pause, gist-scope token only)
+        const GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN_HERE'; // แทนด้วย ghp_xxxx (scope: gist เท่านั้น)
+        const GIST_ID_LSKEY = 'rxmuk_gist_id';
 
-        function supabaseHeaders(extra) {
-            return Object.assign({
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                'Content-Type': 'application/json'
-            }, extra || {});
+        function gistHeaders() {
+            return {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            };
         }
 
-        async function supaSetState(key, value) {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state`, {
+        async function gistGetOrCreate() {
+            let id = localStorage.getItem(GIST_ID_LSKEY);
+            if (id) return id;
+            const res = await fetch('https://api.github.com/gists', {
                 method: 'POST',
-                headers: supabaseHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
-                body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+                headers: gistHeaders(),
+                body: JSON.stringify({
+                    description: 'rxmuk-sync-data',
+                    public: false,
+                    files: { 'rxmuk_init.json': { content: '{}' } }
+                })
             });
-            if (!res.ok) throw new Error(`Supabase save failed: ${res.status} ${await res.text()}`);
+            if (!res.ok) throw new Error(`Gist create failed: ${res.status} ${await res.text()}`);
+            const data = await res.json();
+            localStorage.setItem(GIST_ID_LSKEY, data.id);
+            return data.id;
         }
 
-        async function supaGetState(key) {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/app_state?key=eq.${encodeURIComponent(key)}&select=value`, {
-                headers: supabaseHeaders()
+        async function gistPutFile(filename, content) {
+            const id = await gistGetOrCreate();
+            const res = await fetch(`https://api.github.com/gists/${id}`, {
+                method: 'PATCH',
+                headers: gistHeaders(),
+                body: JSON.stringify({ files: { [filename]: { content } } })
             });
-            if (!res.ok) throw new Error(`Supabase load failed: ${res.status} ${await res.text()}`);
-            const rows = await res.json();
-            return rows.length > 0 ? rows[0].value : null;
+            if (!res.ok) throw new Error(`Gist write failed: ${res.status} ${await res.text()}`);
         }
 
-        // Storage-based persistence — gzip compressed to handle large datasets (500K+ rows)
-        async function supaStoragePut(filename, data) {
+        async function gistGetFile(filename) {
+            const id = localStorage.getItem(GIST_ID_LSKEY);
+            if (!id) return null;
+            const res = await fetch(`https://api.github.com/gists/${id}`, { headers: gistHeaders() });
+            if (!res.ok) throw new Error(`Gist read failed: ${res.status}`);
+            const data = await res.json();
+            if (!data.files || !data.files[filename]) return null;
+            if (data.files[filename].truncated) {
+                const raw = await fetch(data.files[filename].raw_url, { headers: gistHeaders() });
+                if (!raw.ok) throw new Error(`Gist raw fetch failed: ${raw.status}`);
+                return await raw.text();
+            }
+            return data.files[filename].content;
+        }
+
+        async function gistDeleteFile(filename) {
+            const id = localStorage.getItem(GIST_ID_LSKEY);
+            if (!id) return;
+            await fetch(`https://api.github.com/gists/${id}`, {
+                method: 'PATCH',
+                headers: gistHeaders(),
+                body: JSON.stringify({ files: { [filename]: null } })
+            }).catch(() => {});
+        }
+
+        // Large data: gzip then base64 (binary-safe for gist text files)
+        async function cloudStoragePut(filename, data) {
             const json = JSON.stringify(data);
             const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
             const compressed = await new Response(stream).arrayBuffer();
-            const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data/${filename}`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                    'Content-Type': 'application/gzip',
-                    'x-upsert': 'true'
-                },
-                body: compressed
-            });
-            if (!res.ok) throw new Error(`Storage upload failed: ${res.status} ${await res.text()}`);
+            const bytes = new Uint8Array(compressed);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            const base64 = btoa(binary);
             const origMB = (json.length / 1024 / 1024).toFixed(1);
             const compMB = (compressed.byteLength / 1024 / 1024).toFixed(1);
-            console.log(`Storage upload: ${origMB}MB → ${compMB}MB (gzip)`);
+            console.log(`Cloud upload: ${origMB}MB → ${compMB}MB (gzip+base64)`);
+            await gistPutFile(filename, base64);
         }
 
-        async function supaStorageGet(filename) {
-            const res = await fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data/${filename}`, {
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                }
-            });
-            if (res.status >= 400 && res.status < 500) return null;
-            if (!res.ok) throw new Error(`Storage download failed: ${res.status}`);
-            const blob = await res.blob();
-            // Always try gzip decompress first (our uploads are always gzip)
+        async function cloudStorageGet(filename) {
+            const content = await gistGetFile(filename);
+            if (!content) return null;
             try {
-                const stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
-                const text = await new Response(stream).text();
-                return JSON.parse(text);
+                const binary = atob(content);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+                return JSON.parse(await new Response(stream).text());
             } catch {
-                // Fallback: plain JSON (legacy uploads before gzip)
-                const text = await blob.text();
-                return JSON.parse(text);
+                return JSON.parse(content);
             }
+        }
+
+        async function cloudAddHistory(entry) {
+            let history = [];
+            try {
+                const existing = await gistGetFile('rxmuk_history.json');
+                if (existing) history = JSON.parse(existing);
+            } catch {}
+            history.unshift({ date: entry.date, filename: entry.filename, rows: entry.rows, user: entry.user });
+            if (history.length > 50) history = history.slice(0, 50);
+            await gistPutFile('rxmuk_history.json', JSON.stringify(history));
+        }
+
+        async function cloudGetHistory() {
+            const content = await gistGetFile('rxmuk_history.json');
+            if (!content) return [];
+            return JSON.parse(content);
         }
 
         function showToast(msg, type) {
@@ -3174,29 +3209,6 @@
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
         }
 
-
-        async function supaAddHistory(entry) {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history`, {
-                method: 'POST',
-                headers: supabaseHeaders({ 'Prefer': 'return=minimal' }),
-                body: JSON.stringify({
-                    import_date: entry.date,
-                    filename: entry.filename,
-                    rows: entry.rows,
-                    importer: entry.user
-                })
-            });
-            if (!res.ok) throw new Error(`Supabase history insert failed: ${res.status} ${await res.text()}`);
-        }
-
-        async function supaGetHistory() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/import_history?select=import_date,filename,rows,importer&order=created_at.desc`, {
-                headers: supabaseHeaders()
-            });
-            if (!res.ok) throw new Error(`Supabase history load failed: ${res.status} ${await res.text()}`);
-            const rows = await res.json();
-            return rows.map(r => ({ date: r.import_date, filename: r.filename, rows: r.rows, user: r.importer }));
-        }
 
         function saveToStorage() {
             try {
@@ -3217,14 +3229,14 @@
             if (!sessionStorage.getItem('rxmuk_auth_user')) return;
 
             showToast(`☁️ กำลังบันทึก ${rawTransactions.length.toLocaleString()} รายการขึ้น Cloud (กำลัง compress)...`, 'info');
-            supaStoragePut('raw_data.json', rawTransactions)
+            cloudStoragePut('raw_data.json', rawTransactions)
                 .then(() => {
                     hasUnsavedChanges = false;
                     showToast(`✅ บันทึก Cloud สำเร็จ ${rawTransactions.length.toLocaleString()} รายการ`, 'success');
                 })
                 .catch(err => {
-                    console.error('Supabase Storage sync failed:', err);
-                    showToast(`⚠️ Cloud sync ล้มเหลว — ข้อมูลอยู่ใน browser นี้เท่านั้น`, 'error');
+                    console.error('Cloud Storage sync failed:', err);
+                    showToast(`⚠️ Cloud sync ล้มเหลว: ${err.message} — ข้อมูลอยู่ใน browser นี้เท่านั้น`, 'error');
                 });
         }
 
@@ -3238,17 +3250,17 @@
                     data = localData;
                     showToast(`💾 โหลด ${data.length.toLocaleString()} รายการจาก Browser`, 'success');
                 } else {
-                    // Fallback: try Supabase Storage (cross-device, small datasets only)
+                    // Fallback: try GitHub Gist Cloud storage (cross-device)
                     try {
                         showToast('☁️ กำลังโหลดข้อมูลจาก Cloud...', 'info');
-                        const cloudData = await supaStorageGet('raw_data.json');
+                        const cloudData = await cloudStorageGet('raw_data.json');
                         if (cloudData && cloudData.length > 0) {
                             data = cloudData;
                             await idbSet('rxmuk_raw_data', data);
                             showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} รายการจาก Cloud`, 'success');
                         }
                     } catch (e) {
-                        console.warn('Supabase Storage load failed:', e);
+                        console.warn('Cloud Storage load failed:', e);
                     }
                 }
 
@@ -4227,15 +4239,10 @@ ORDER BY name;
                     localStorage.removeItem('rxmuk_raw_data');
                     idbSet('rxmuk_raw_data', null).catch(()=>{});
 
-                    // Delete Storage file so reload doesn't bring old data back
-                    fetch(`${SUPABASE_URL}/storage/v1/object/rxmuk-data`, {
-                        method: 'DELETE',
-                        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prefixes: ['raw_data.json'] })
-                    }).then(r => {
-                        if (r.ok) showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success');
-                        else showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn');
-                    }).catch(() => showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn'));
+                    // Delete Cloud file so reload doesn't bring old data back
+                    gistDeleteFile('raw_data.json')
+                        .then(() => showToast('🗑️ ล้างข้อมูล Cloud สำเร็จ', 'success'))
+                        .catch(() => showToast('⚠️ ล้าง Cloud ไม่สำเร็จ', 'warn'));
 
                     // Reset all filters to 'all'
                     const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
