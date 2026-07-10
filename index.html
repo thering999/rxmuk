@@ -3157,40 +3157,83 @@
         async function gistDeleteFile(filename) {
             const id = localStorage.getItem(GIST_ID_LSKEY);
             if (!id) return;
+            // Delete meta + all possible chunks
+            const metaContent = await gistGetFile(`${filename}.meta`).catch(() => null);
+            const files = { [filename]: null, [`${filename}.meta`]: null };
+            const chunkCount = metaContent ? JSON.parse(metaContent).chunks : 10;
+            for (let i = 0; i < chunkCount; i++) files[`${filename}.${i}`] = null;
             await fetch(`https://api.github.com/gists/${id}`, {
-                method: 'PATCH',
-                headers: gistHeaders(),
-                body: JSON.stringify({ files: { [filename]: null } })
+                method: 'PATCH', headers: gistHeaders(),
+                body: JSON.stringify({ files })
             }).catch(() => {});
         }
 
-        // Large data: gzip then base64 (binary-safe for gist text files)
-        async function cloudStoragePut(filename, data) {
+        const CLOUD_CHUNK_SIZE = 2000; // rows per chunk
+
+        async function gzipBase64(data) {
             const json = JSON.stringify(data);
             const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
             const compressed = await new Response(stream).arrayBuffer();
             const bytes = new Uint8Array(compressed);
             let binary = '';
             for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-            const base64 = btoa(binary);
-            const origMB = (json.length / 1024 / 1024).toFixed(1);
-            const compMB = (compressed.byteLength / 1024 / 1024).toFixed(1);
-            console.log(`Cloud upload: ${origMB}MB → ${compMB}MB (gzip+base64)`);
-            await gistPutFile(filename, base64);
+            return { b64: btoa(binary), origMB: (json.length/1024/1024).toFixed(1), compMB: (compressed.byteLength/1024/1024).toFixed(1) };
+        }
+
+        async function ungzipBase64(b64) {
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+            return JSON.parse(await new Response(stream).text());
+        }
+
+        async function gistPutFiles(fileMap, retries = 3) {
+            const id = await gistGetOrCreate();
+            const files = {};
+            for (const [name, content] of Object.entries(fileMap)) files[name] = { content };
+            const res = await fetch(`https://api.github.com/gists/${id}`, {
+                method: 'PATCH', headers: gistHeaders(),
+                body: JSON.stringify({ files })
+            });
+            if (res.status === 409 && retries > 0) {
+                await new Promise(r => setTimeout(r, 1500));
+                return gistPutFiles(fileMap, retries - 1);
+            }
+            if (!res.ok) throw new Error(`Gist write failed: ${res.status} ${await res.text()}`);
+        }
+
+        async function cloudStoragePut(filename, data) {
+            const chunks = [];
+            for (let i = 0; i < data.length; i += CLOUD_CHUNK_SIZE) chunks.push(data.slice(i, i + CLOUD_CHUNK_SIZE));
+            const fileMap = {};
+            let totalOrig = 0, totalComp = 0;
+            for (let i = 0; i < chunks.length; i++) {
+                const { b64, origMB, compMB } = await gzipBase64(chunks[i]);
+                fileMap[`${filename}.${i}`] = b64;
+                totalOrig += parseFloat(origMB); totalComp += parseFloat(compMB);
+            }
+            fileMap[`${filename}.meta`] = JSON.stringify({ chunks: chunks.length, total: data.length, updated: new Date().toISOString() });
+            console.log(`Cloud upload: ${totalOrig.toFixed(1)}MB → ${totalComp.toFixed(1)}MB (${chunks.length} chunks)`);
+            await gistPutFiles(fileMap);
         }
 
         async function cloudStorageGet(filename) {
+            const metaContent = await gistGetFile(`${filename}.meta`);
+            if (metaContent) {
+                const meta = JSON.parse(metaContent);
+                const all = [];
+                for (let i = 0; i < meta.chunks; i++) {
+                    const b64 = await gistGetFile(`${filename}.${i}`);
+                    if (!b64) continue;
+                    try { all.push(...await ungzipBase64(b64)); } catch { all.push(...JSON.parse(b64)); }
+                }
+                return all;
+            }
+            // Legacy single-file fallback
             const content = await gistGetFile(filename);
             if (!content) return null;
-            try {
-                const binary = atob(content);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-                return JSON.parse(await new Response(stream).text());
-            } catch {
-                return JSON.parse(content);
-            }
+            try { return await ungzipBase64(content); } catch { return JSON.parse(content); }
         }
 
         async function cloudAddHistory(entry) {
