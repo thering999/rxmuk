@@ -1173,62 +1173,60 @@
 
         <!-- Workspace Layout -->
         <section class="container workspace-layout">
-            <!-- Left Panel: Table Status Monitor -->
+            <!-- Left Panel: Live Drug Data Overview -->
             <div class="panel">
                 <div class="panel-header">
                     <h3 class="panel-title">
-                        <span>🏥</span>
-                        สถานะการตรวจสอบโครงสร้างตารางข้อมูล
+                        <span>💊</span>
+                        ภาพรวมข้อมูลยาผู้ป่วยนอก (Real-time)
                     </h3>
-                    <span class="badge-status success">อัปเดตเรียลไทม์</span>
+                    <span class="badge-status success" id="drug-overview-status">ยังไม่มีข้อมูล</span>
                 </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ชื่อตาราง (Table Name)</th>
-                                <th>คำอธิบายข้อมูล</th>
-                                <th>สถานะดักจับข้อผิดพลาด</th>
-                                <th>เวอร์ชัน Schema</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>s_tmp_drug_opd</strong></td>
-                                <td>ข้อมูลการจ่ายยาผู้ป่วยนอกชั่วคราว</td>
-                                <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
-                                <td>v2.4.1</td>
-                            </tr>
-                            <tr>
-                                <td><strong>s_kpi_cvd_risk</strong></td>
-                                <td>คัดกรองความเสี่ยงโรคหัวใจ CVD</td>
-                                <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
-                                <td>v1.2.0</td>
-                            </tr>
-                            <tr>
-                                <td><strong>s_pm25_disease</strong></td>
-                                <td>ผู้ป่วยรับผลกระทบฝุ่นละออง PM2.5</td>
-                                <td><span class="badge-status warning">รอปรับปรุงเป้าหมาย</span></td>
-                                <td>v1.0.1</td>
-                            </tr>
-                            <tr>
-                                <td><strong>s_death28pa</strong></td>
-                                <td>สถิติการตายทารกแรกเกิด ≤ 28 วัน</td>
-                                <td><span class="badge-status success">ผ่านเกณฑ์ (OK)</span></td>
-                                <td>v2.0.0</td>
-                            </tr>
-                            <tr>
-                                <td><strong>t_drug_interaction</strong></td>
-                                <td>ข้อมูลปฏิกิริยาระหว่างยา (Drug Interaction)</td>
-                                <td><span class="badge-status success">โหลดแล้ว 100%</span></td>
-                                <td>v3.1.0</td>
-                            </tr>
+
+                <!-- KPI Row -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+                    <div style="flex:1 1 120px;background:rgba(0,242,254,0.06);border:1px solid rgba(0,242,254,0.15);border-radius:10px;padding:12px;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);">📋 รายการทั้งหมด</div>
+                        <div id="ov-total-rows" style="font-size:1.5rem;font-weight:800;color:var(--c-primary);">—</div>
+                    </div>
+                    <div style="flex:1 1 120px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:12px;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);">🏥 หน่วยบริการ</div>
+                        <div id="ov-total-hosp" style="font-size:1.5rem;font-weight:800;color:var(--c-green);">—</div>
+                    </div>
+                    <div style="flex:1 1 120px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:12px;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);">💰 มูลค่ารวม (บาท)</div>
+                        <div id="ov-total-price" style="font-size:1.3rem;font-weight:800;color:var(--c-yellow);">—</div>
+                    </div>
+                    <div style="flex:1 1 120px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);border-radius:10px;padding:12px;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);">💊 รายการยา</div>
+                        <div id="ov-total-drugs" style="font-size:1.5rem;font-weight:800;color:#c084fc;">—</div>
+                    </div>
+                </div>
+
+                <!-- VED Distribution -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px;">📊 สัดส่วน VED (มูลค่า)</div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <div id="ov-ved-bar-v" style="height:18px;background:var(--c-red);border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
+                        <div id="ov-ved-bar-e" style="height:18px;background:var(--c-yellow);border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
+                        <div id="ov-ved-bar-d" style="height:18px;background:var(--c-green);border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
+                    </div>
+                    <div style="display:flex;gap:14px;margin-top:4px;font-size:0.72rem;">
+                        <span><span style="color:var(--c-red);">■</span> V: <span id="ov-ved-v">—</span></span>
+                        <span><span style="color:var(--c-yellow);">■</span> E: <span id="ov-ved-e">—</span></span>
+                        <span><span style="color:var(--c-green);">■</span> D: <span id="ov-ved-d">—</span></span>
+                    </div>
+                </div>
+
+                <!-- Top 5 Drugs -->
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px;">🏆 5 รายการยามูลค่าสูงสุด</div>
+                <div class="table-container" style="max-height:180px;overflow-y:auto;">
+                    <table class="data-table" style="font-size:0.8rem;">
+                        <thead><tr><th>#</th><th>ชื่อยา</th><th>ABC</th><th>มูลค่า (บาท)</th></tr></thead>
+                        <tbody id="ov-top5-body">
+                            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);">ยังไม่มีข้อมูล — กรุณา Login และ Upload ไฟล์</td></tr>
                         </tbody>
                     </table>
-                </div>
-                <div style="margin-top: 20px; background: rgba(0, 242, 254, 0.03); border: 1px solid rgba(0, 242, 254, 0.1); border-radius: 8px; padding: 15px; font-size: 0.85rem;">
-                    <strong>💡 ข้อกำหนดการตรวจสอบ Schema</strong>:
-                    ระบบจะวิเคราะห์ความผิดพลาดในการส่งข้อมูลและการบันทึกตารางจากระบบนำเข้า (Import Engine) เพื่อแก้ไขปัญหารหัสพยาบาลรหัสมาตรฐานตกหล่นและแจ้งเตือนวิกฤตคุณภาพข้อมูลทันที
                 </div>
             </div>
 
@@ -2975,6 +2973,74 @@
             renderAccessIndex();
             renderRduMonitoring();
             updateDashboardOverview();
+            renderDrugOverviewPanel();
+        }
+
+        function renderDrugOverviewPanel() {
+            if (!rawTransactions || rawTransactions.length === 0) return;
+
+            const hospSet = new Set();
+            const drugAgg = {};
+            let totalPrice = 0;
+
+            rawTransactions.forEach(t => {
+                if (!t) return;
+                if (t.hospcode) hospSet.add(t.hospcode);
+                totalPrice += (t.price || 0);
+                if (t.didstd) {
+                    if (!drugAgg[t.didstd]) drugAgg[t.didstd] = { name: t.dname || t.didstd, price: 0, amount: 0 };
+                    drugAgg[t.didstd].price += (t.price || 0);
+                    drugAgg[t.didstd].amount += (t.amount || 0);
+                }
+            });
+
+            const drugList = Object.entries(drugAgg).map(([did, d]) => ({
+                didstd: did, name: d.name, price: d.price, amount: d.amount,
+                abc: d.price > 100000 ? 'A' : (d.price > 25000 ? 'B' : 'C')
+            })).sort((a, b) => b.price - a.price);
+
+            // KPI
+            const el = (id) => document.getElementById(id);
+            if (el('ov-total-rows')) el('ov-total-rows').textContent = rawTransactions.length.toLocaleString();
+            if (el('ov-total-hosp')) el('ov-total-hosp').textContent = hospSet.size.toLocaleString();
+            if (el('ov-total-price')) el('ov-total-price').textContent = totalPrice >= 1e6
+                ? (totalPrice/1e6).toFixed(2) + ' ล้าน' : totalPrice.toLocaleString();
+            if (el('ov-total-drugs')) el('ov-total-drugs').textContent = drugList.length.toLocaleString();
+            if (el('drug-overview-status')) {
+                el('drug-overview-status').textContent = 'ข้อมูลล่าสุด';
+                el('drug-overview-status').className = 'badge-status success';
+            }
+
+            // VED distribution by price
+            let vPrice = 0, ePrice = 0, dPrice = 0;
+            drugList.forEach(d => {
+                const ved = getDrugVed(d.didstd);
+                if (ved === 'V') vPrice += d.price;
+                else if (ved === 'E') ePrice += d.price;
+                else dPrice += d.price;
+            });
+            const vedTotal = vPrice + ePrice + dPrice || 1;
+            const pct = (v) => Math.max(2, Math.round(v / vedTotal * 100));
+            if (el('ov-ved-bar-v')) el('ov-ved-bar-v').style.width = pct(vPrice) + '%';
+            if (el('ov-ved-bar-e')) el('ov-ved-bar-e').style.width = pct(ePrice) + '%';
+            if (el('ov-ved-bar-d')) el('ov-ved-bar-d').style.width = pct(dPrice) + '%';
+            if (el('ov-ved-v')) el('ov-ved-v').textContent = pct(vPrice) + '%';
+            if (el('ov-ved-e')) el('ov-ved-e').textContent = pct(ePrice) + '%';
+            if (el('ov-ved-d')) el('ov-ved-d').textContent = pct(dPrice) + '%';
+
+            // Top 5
+            const tbody = el('ov-top5-body');
+            if (tbody) {
+                tbody.innerHTML = drugList.slice(0, 5).map((d, i) => {
+                    const abcColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)');
+                    return `<tr>
+                        <td>${i+1}</td>
+                        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.name}">${d.name}</td>
+                        <td><span class="badge-class" style="background:${abcColor}">${d.abc}</span></td>
+                        <td>${d.price.toLocaleString()}</td>
+                    </tr>`;
+                }).join('');
+            }
         }
 
         function resetAllFilters() {
