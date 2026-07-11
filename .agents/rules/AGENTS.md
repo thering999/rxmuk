@@ -92,13 +92,6 @@ rtk verify            # Verify hook integrity and TOML filter tests
 rtk rewrite <cmd>     # แสดง RTK equivalent ของคำสั่ง
 ```
 
-## Repository Layout
-
-This repo stores AI agent configuration only — no application source code.
-
-- `.agents/rules/` — agent rule files (e.g. RTK usage rules)
-- `.claude/` — Claude Code project settings
-
 ## Planner Workflow
 
 เมื่อได้รับ context ว่า `PLANNER.md` มีการเปลี่ยนแปลง หรือ user สั่ง `/project:planner` ให้ทำตามลำดับนี้เสมอ:
@@ -129,48 +122,6 @@ This repo stores AI agent configuration only — no application source code.
 - ถ้า task ใด fail ให้บันทึกใน report แล้วทำ task ถัดไปต่อ อย่าหยุด
 
 
-## RTK (Rust Token Killer)
-Always prefix shell commands with `rtk`. Pattern: `<cmd> → rtk <cmd>` (e.g. `rtk ls`, `rtk git status`, `rtk grep`).
-**PROHIBITED (never run raw):** `grep`, `cat`, `ls`, `find`, `tree`, `git`, `gh`, `npm`, `npx`, `pnpm`, `bun`, `docker`, `curl`, `wget`, `tsc`, `eslint`, `prettier`, `prisma`, `next`
-Never fallback to native commands. If rtk fails, notify user immediately — do not run the raw command.
-
 ## File Operations
 - **Reading:** Use `rtk smart <file>` to understand a file — avoid `Read` (full dump) unless full content is needed.
 - **Editing:** Use `Edit` (line-based) for partial edits — avoid `Write` (full rewrite). Use `Write` only for new files.
-
-## Repository Layout
-- `.agents/rules/` — agent rule files
-- `.claude/` — Claude Code project settings
-
-## Planner Workflow
-When PLANNER.md changes or user runs `/project:planner`:
-1. Read `.claude/planner/PLANNER.md` in full
-2. Execute each task in order
-3. Write report to `.claude/planner/report/REPORT-[date].md`
-4. Notify user of report location
-
-Report fields: Summary, Tasks (status ✅❌⚠️ + notes), Errors, Next Steps.
-Rules: Never skip tasks. If a task fails, log it and continue — never stop.
-
-
-# RTK PRIORITY
-
-- Use rtk <command> whenever available (preferred default)
-- If not available:
-  - use MCP tools first
-  - then fallback to bash/system commands
-- Use built-in skills ONLY for complex edits requiring exact positions
-
-## Proxies
-ls, tree, read, git, gh, aws, psql, pnpm, env, find, diff, log, dotnet, docker, kubectl, grep, wget, wc, vitest, prisma, tsc, next, lint, prettier, format, playwright, cargo, npm, npx, curl, pytest, mypy, rake, rubocop, rspec, pip, go, golangci-lint
-
-## Mappings
-- view_file → rtk read
-- list_dir → rtk ls
-- grep_search → rtk grep
-
-
-# CRITICAL DISCIPLINE
-- **NO OVER-GENERALIZATION**: Use rtk <command> ONLY if the command is in the Proxies/Mappings list.
-- **SYSTEM FALLBACK**: For commands NOT in the list (e.g., `mkdir`, `cp`, `python`, `bash`, `mv`, `rm`), run them as **PURE system commands** WITHOUT rtk or `rtk run`.
-- **NO CAT/LS/GREP**: Never use pure `cat`, `ls`, or grep in any command block; always use `rtk read`, `rtk ls`, or rtk grep instead.
