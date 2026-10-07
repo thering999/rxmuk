@@ -7936,11 +7936,11 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 }
             }
 
-            // AUTO-PULL from Supabase if local is empty
+            // AUTO-PULL from Supabase if local is empty (silent — no error toast if cloud empty)
             if (rawTransactions.length === 0 && sbGetConfig()) {
-                showToast('☁️ โหลดข้อมูลจาก Supabase...', 'info');
+                showToast('☁️ กำลังโหลดข้อมูลจาก Supabase...', 'info');
                 try {
-                    await supabasePullData();
+                    await supabasePullData(true);
                 } catch(e) { console.warn('Auto Supabase pull failed:', e); }
             }
 
@@ -8099,12 +8099,13 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const cfg = sbGetConfig();
             if (!cfg) { showToast('กรุณาตั้งค่า Supabase ก่อน', 'error'); return; }
             const info = document.getElementById('supabase-sync-info');
-            info.textContent = `⏳ กำลัง compress ${rawTransactions.length.toLocaleString()} แถว...`;
+            const setInfo = t => { if (info) info.textContent = t; };
+            setInfo(`⏳ กำลัง compress ${rawTransactions.length.toLocaleString()} แถว...`);
             try {
                 const json = JSON.stringify(rawTransactions);
                 const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
                 const compressed = await new Response(stream).arrayBuffer();
-                info.textContent = `⏳ กำลังอัปโหลด ${(compressed.byteLength/1024/1024).toFixed(1)}MB...`;
+                setInfo(`⏳ กำลังอัปโหลด ${(compressed.byteLength/1024/1024).toFixed(1)}MB...`);
                 const res = await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/${SB_FILE}`, {
                     method: 'POST',
                     headers: {
@@ -8125,28 +8126,28 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     headers: { 'Authorization': `Bearer ${cfg.key}`, 'apikey': cfg.key, 'Content-Type': 'application/json', 'x-upsert': 'true' },
                     body: JSON.stringify(meta)
                 });
-                info.textContent = `✅ อัปโหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว (${meta.sizeMB}MB) — ${new Date().toLocaleTimeString('th-TH')}`;
+                setInfo(`✅ อัปโหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว (${meta.sizeMB}MB) — ${new Date().toLocaleTimeString('th-TH')}`);
                 showToast(`✅ Cloud sync สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
             } catch(e) {
-                info.textContent = '❌ ' + e.message;
+                setInfo('❌ ' + e.message);
                 showToast('❌ Upload ล้มเหลว: ' + e.message, 'error');
                 console.error('Supabase push failed:', e);
             }
         }
 
-        async function supabasePullData() {
+        async function supabasePullData(silent = false) {
             const cfg = sbGetConfig();
-            if (!cfg) { showToast('กรุณาตั้งค่า Supabase ก่อน', 'error'); return; }
+            if (!cfg) { if (!silent) showToast('กรุณาตั้งค่า Supabase ก่อน', 'error'); return; }
             const info = document.getElementById('supabase-sync-info');
-            info.textContent = '⏳ กำลังโหลดจาก Cloud...';
+            const setInfo = t => { if (info) info.textContent = t; };
+            setInfo('⏳ กำลังโหลดจาก Cloud...');
             try {
-                // Check meta first
                 let metaRows = 0;
                 try {
                     const metaRes = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key) });
                     if (metaRes.ok) { const m = await metaRes.json(); metaRows = m.rows || 0; }
                 } catch {}
-                if (metaRows > 0) info.textContent = `⏳ กำลังดาวน์โหลด ${metaRows.toLocaleString()} แถว...`;
+                if (metaRows > 0) setInfo(`⏳ กำลังดาวน์โหลด ${metaRows.toLocaleString()} แถว...`);
                 const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(cfg.key) });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
                 const compressed = await res.arrayBuffer();
@@ -8158,17 +8159,15 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 hasUnsavedChanges = false;
                 await idbSet('rxmuk_raw_data', rawTransactions);
                 sessionImportStarted = true;
-                refreshAllUI();
-                updateNavDataStatus();
-                populateAllFilterDropdowns();
+                refreshAllUI(); updateNavDataStatus(); populateAllFilterDropdowns();
                 const banner = document.getElementById('data-lost-banner');
                 if (banner) banner.remove();
-                info.textContent = `✅ โหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว`;
+                setInfo(`✅ โหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว`);
                 showToast(`✅ โหลดจาก Cloud สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
             } catch(e) {
-                info.textContent = '❌ ' + e.message;
-                showToast('❌ Pull ล้มเหลว: ' + e.message, 'error');
-                console.error('Supabase pull failed:', e);
+                setInfo('❌ ' + e.message);
+                if (!silent) showToast('❌ Pull ล้มเหลว: ' + e.message, 'error');
+                console.warn('Supabase pull failed:', e.message);
             }
         }
 
