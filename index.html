@@ -3500,7 +3500,7 @@
                             showToast('☁️ กำลังโหลดจาก Supabase...', 'info');
                             const res = await fetch(`${sbCfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(sbCfg.key) });
                             if (res.ok) {
-                                const compressed = await res.arrayBuffer();
+                                const compressed = await readWithProgress(res);
                                 const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
                                 const json = await new Response(stream).text();
                                 const parsed = JSON.parse(json);
@@ -4889,7 +4889,7 @@ ORDER BY name;
                 let isUtf8 = true;
                 try {
                     const testDecoder = new TextDecoder('utf-8', { fatal: true });
-                    testDecoder.decode(arr);
+                    testDecoder.decode(arr, { stream: true });
                 } catch (utfErr) {
                     isUtf8 = false;
                 }
@@ -4909,7 +4909,7 @@ ORDER BY name;
                     const reader = new FileReader();
                     reader.onload = function(evt) {
                         const buffer = evt.target.result;
-                        let text = chunkDecoder.decode(new Uint8Array(buffer));
+                        let text = chunkDecoder.decode(new Uint8Array(buffer), { stream: offset + chunkSize < fileSize });
                         text = remainder + text;
                         
                         const lines = text.split(/\r?\n/);
@@ -8026,6 +8026,49 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 });
         }
 
+        async function readWithProgress(res) {
+            const total = parseInt(res.headers.get('content-length') || '0');
+            let box = document.getElementById('cloud-load-overlay');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'cloud-load-overlay';
+                box.setAttribute('role', 'status');
+                box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#0d1b2e;color:#fff;padding:12px 16px;font-size:0.95rem;box-shadow:0 2px 12px rgba(0,0,0,.5);';
+                box.innerHTML = '<div id="cloud-load-text">☁️ กำลังโหลดข้อมูลจาก Cloud ครั้งแรก กรุณารอสักครู่ ห้ามปิดหน้านี้</div><div style="height:8px;background:rgba(255,255,255,.15);border-radius:4px;margin-top:8px;overflow:hidden;"><div id="cloud-load-bar" style="height:100%;width:0;background:linear-gradient(90deg,#3ecf8e,#00d4ff);transition:width .3s;"></div></div>';
+                document.body.appendChild(box);
+            }
+            const text = document.getElementById('cloud-load-text');
+            const bar = document.getElementById('cloud-load-bar');
+            const reader = res.body.getReader();
+            const chunks = [];
+            let got = 0;
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    got += value.length;
+                    const mb = (got / 1048576).toFixed(1);
+                    if (total) {
+                        const pct = Math.min(100, Math.round(got / total * 100));
+                        bar.style.width = pct + '%';
+                        text.textContent = `☁️ กำลังโหลดข้อมูลจาก Cloud ${pct}% (${mb} / ${(total / 1048576).toFixed(1)} MB) ห้ามปิดหน้านี้`;
+                    } else {
+                        text.textContent = `☁️ กำลังโหลดข้อมูลจาก Cloud ${mb} MB ห้ามปิดหน้านี้`;
+                    }
+                }
+                bar.style.width = '100%';
+                text.textContent = '⚙️ ดาวน์โหลดเสร็จ กำลังเตรียมข้อมูล อีกไม่กี่วินาที...';
+                await new Promise(r => setTimeout(r, 50));
+                const out = new Uint8Array(got);
+                let pos = 0;
+                for (const c of chunks) { out.set(c, pos); pos += c.length; }
+                return out.buffer;
+            } finally {
+                setTimeout(() => box.remove(), 4000);
+            }
+        }
+
         async function supabaseCreateBucket(url, key) {
             try {
                 await fetch(`${url}/storage/v1/bucket`, {
@@ -8095,7 +8138,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 if (metaRows > 0) setInfo(`⏳ กำลังดาวน์โหลด ${metaRows.toLocaleString()} แถว...`);
                 const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(cfg.key) });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
-                const compressed = await res.arrayBuffer();
+                const compressed = await readWithProgress(res);
                 const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
                 const json = await new Response(stream).text();
                 const data = JSON.parse(json);
