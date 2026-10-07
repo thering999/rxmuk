@@ -7880,8 +7880,25 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
         // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
 
+        // Auto-load config from public/rxmuk-config.json (sets Supabase defaults + auto-login)
+        async function loadAppConfig() {
+            try {
+                const path = window.location.pathname.includes('/rxmuk/') ? '/rxmuk/public/rxmuk-config.json' : 'public/rxmuk-config.json';
+                const r = await fetch(path);
+                if (!r.ok) return;
+                const cfg = await r.json();
+                if (cfg.supabase_url && cfg.supabase_key && !localStorage.getItem('rxmuk_sb_config')) {
+                    localStorage.setItem('rxmuk_sb_config', JSON.stringify({ url: cfg.supabase_url, key: cfg.supabase_key }));
+                }
+                if (cfg.default_user && !localStorage.getItem('rxmuk_auth_user')) {
+                    localStorage.setItem('rxmuk_auth_user', cfg.default_user);
+                }
+            } catch(e) { console.warn('Config load failed:', e); }
+        }
+
         // Initialize selectors & data
         document.addEventListener('DOMContentLoaded', async () => {
+            await loadAppConfig();
             generateSecuredLocks();
             checkAuthState();
             renderImportHistory();
