@@ -1477,6 +1477,54 @@
                         </div>
                     </div>
 
+                    <!-- ☁️ SUPABASE CLOUD SYNC CONFIG -->
+                    <div class="panel" id="supabase-config-panel" style="border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.04);">
+                        <div class="panel-header" style="margin-bottom:12px;">
+                            <h3 class="panel-title" style="color: #3ecf8e;">
+                                <span>☁️</span> ตั้งค่า Cloud Sync (Supabase)
+                            </h3>
+                            <span id="supabase-status-badge" class="badge-status" style="font-size:0.75rem;">ยังไม่เชื่อมต่อ</span>
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
+                            ข้อมูลจะเก็บบน Supabase ของคุณเอง (ฟรี 1GB) — ใช้ได้ทุก browser / ทุกเครื่อง
+                            <a href="https://supabase.com" target="_blank" style="color:#3ecf8e; margin-left:4px;">สร้างบัญชีฟรี ↗</a>
+                        </p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                            <div style="flex:2 1 240px; display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:0.72rem; color:var(--text-muted);">Project URL</label>
+                                <input type="text" id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co"
+                                    class="search-control" style="font-size:0.82rem; font-family:monospace;">
+                            </div>
+                            <div style="flex:2 1 240px; display:flex; flex-direction:column; gap:4px;">
+                                <label style="font-size:0.72rem; color:var(--text-muted);">anon/public key</label>
+                                <input type="password" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                    class="search-control" style="font-size:0.82rem; font-family:monospace;">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <button onclick="supabaseSaveConfig()" style="padding:8px 16px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-weight:700; color:#0d1b2e; cursor:pointer; font-size:0.82rem;">
+                                💾 บันทึกและทดสอบ
+                            </button>
+                            <button onclick="supabasePushData()" style="padding:8px 16px; background:rgba(62,207,142,0.15); border:1px solid rgba(62,207,142,0.3); border-radius:8px; font-weight:600; color:#3ecf8e; cursor:pointer; font-size:0.82rem;">
+                                ☁️ อัปโหลดข้อมูลขึ้น Cloud
+                            </button>
+                            <button onclick="supabasePullData()" style="padding:8px 16px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.25); border-radius:8px; font-weight:600; color:var(--c-primary); cursor:pointer; font-size:0.82rem;">
+                                📥 โหลดข้อมูลจาก Cloud
+                            </button>
+                            <span id="supabase-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
+                        </div>
+                        <details style="margin-top:12px;">
+                            <summary style="font-size:0.78rem; color:var(--text-muted); cursor:pointer;">📖 วิธีตั้งค่า Supabase (คลิกเพื่อดู)</summary>
+                            <div style="margin-top:8px; font-size:0.78rem; color:var(--text-muted); line-height:1.7; padding:10px; background:rgba(0,0,0,0.15); border-radius:8px;">
+                                1. ไปที่ <strong style="color:#3ecf8e;">supabase.com</strong> → สร้าง Project ใหม่ (ฟรี)<br>
+                                2. Project Settings → API → คัดลอก <strong>Project URL</strong> และ <strong>anon public key</strong><br>
+                                3. ไปที่ Storage → Create bucket ชื่อ <strong>rxmuk</strong> (Public หรือ Private ก็ได้)<br>
+                                4. ใส่ค่าในช่องด้านบน กด "บันทึกและทดสอบ"<br>
+                                5. กด "อัปโหลดข้อมูลขึ้น Cloud" หลังนำเข้าไฟล์ทุกครั้ง
+                            </div>
+                        </details>
+                    </div>
+
                     <!-- Import History / File logs panel (client-side log via IndexedDB) -->
                     <div class="panel" id="import-history-box">
                         <div class="panel-header">
@@ -3396,10 +3444,15 @@
             try {
                 if (rawTransactions && rawTransactions.length > 0) {
                     idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('IndexedDB save failed:', e));
-                    localStorage.removeItem('rxmuk_raw_data'); // legacy key, no longer used to store data
-
-                    // Also push to Supabase so other browsers/devices see the same data
-                    saveToServerCache();
+                    localStorage.removeItem('rxmuk_raw_data');
+                    // Auto-push to Supabase if configured
+                    const sbCfg = sbGetConfig();
+                    if (sbCfg) {
+                        supabasePushData().catch(e => console.warn('Supabase auto-push failed:', e));
+                    } else {
+                        // Fallback to Gist only if Supabase not configured
+                        saveToServerCache();
+                    }
                 }
             } catch (e) {
                 console.warn('Storage save failed:', e);
@@ -3432,17 +3485,39 @@
                     data = localData;
                     showToast(`💾 โหลด ${data.length.toLocaleString()} รายการจาก Browser`, 'success');
                 } else {
-                    // Fallback: try GitHub Gist Cloud storage (cross-device)
-                    try {
-                        showToast('☁️ กำลังโหลดข้อมูลจาก Cloud...', 'info');
-                        const cloudData = await cloudStorageGet('raw_data.json');
-                        if (cloudData && cloudData.length > 0) {
-                            data = cloudData;
-                            await idbSet('rxmuk_raw_data', data);
-                            showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} รายการจาก Cloud`, 'success');
+                    // Fallback 1: Supabase (if configured)
+                    const sbCfg = sbGetConfig();
+                    if (sbCfg) {
+                        try {
+                            showToast('☁️ กำลังโหลดจาก Supabase...', 'info');
+                            const res = await fetch(`${sbCfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(sbCfg.key) });
+                            if (res.ok) {
+                                const compressed = await res.arrayBuffer();
+                                const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+                                const json = await new Response(stream).text();
+                                const parsed = JSON.parse(json);
+                                if (parsed && parsed.length > 0) {
+                                    data = parsed;
+                                    await idbSet('rxmuk_raw_data', data);
+                                    showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} แถว จาก Supabase`, 'success');
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Supabase load failed:', e);
                         }
-                    } catch (e) {
-                        console.warn('Cloud Storage load failed:', e);
+                    }
+                    // Fallback 2: GitHub Gist (legacy)
+                    if (!data) {
+                        try {
+                            const cloudData = await cloudStorageGet('raw_data.json');
+                            if (cloudData && cloudData.length > 0) {
+                                data = cloudData;
+                                await idbSet('rxmuk_raw_data', data);
+                                showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} แถว จาก Gist`, 'success');
+                            }
+                        } catch (e) {
+                            console.warn('Gist load failed:', e);
+                        }
                     }
                 }
 
@@ -7768,6 +7843,148 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             }
         });
 
+        // ─── SUPABASE STORAGE CLOUD SYNC ────────────────────────────────────
+        const SB_BUCKET = 'rxmuk';
+        const SB_FILE   = 'raw_data.json.gz';
+        const SB_LSKEY  = 'rxmuk_sb_config';
+
+        function sbGetConfig() {
+            try { return JSON.parse(localStorage.getItem(SB_LSKEY) || 'null'); } catch { return null; }
+        }
+
+        function sbHeaders(key) {
+            return { 'Authorization': `Bearer ${key}`, 'apikey': key, 'Content-Type': 'application/json' };
+        }
+
+        function supabaseSaveConfig() {
+            const url = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
+            const key = document.getElementById('sb-key').value.trim();
+            if (!url || !key) { showToast('กรอก URL และ Key ให้ครบ', 'error'); return; }
+            // Test connection
+            const badge = document.getElementById('supabase-status-badge');
+            const info  = document.getElementById('supabase-sync-info');
+            badge.textContent = '⏳ กำลังทดสอบ...'; badge.className = 'badge-status';
+            fetch(`${url}/storage/v1/bucket/${SB_BUCKET}`, { headers: sbHeaders(key) })
+                .then(r => {
+                    if (r.ok || r.status === 404) {
+                        localStorage.setItem(SB_LSKEY, JSON.stringify({ url, key }));
+                        badge.textContent = '✅ เชื่อมต่อสำเร็จ'; badge.className = 'badge-status success';
+                        info.textContent = 'บันทึก config แล้ว';
+                        showToast('✅ Supabase เชื่อมต่อสำเร็จ', 'success');
+                        // auto-create bucket if missing
+                        if (r.status === 404) supabaseCreateBucket(url, key);
+                    } else {
+                        badge.textContent = '❌ ผิดพลาด'; badge.className = 'badge-status danger';
+                        showToast(`❌ เชื่อมต่อล้มเหลว: ${r.status}`, 'error');
+                    }
+                })
+                .catch(e => {
+                    badge.textContent = '❌ ผิดพลาด'; badge.className = 'badge-status danger';
+                    showToast('❌ ' + e.message, 'error');
+                });
+        }
+
+        async function supabaseCreateBucket(url, key) {
+            try {
+                await fetch(`${url}/storage/v1/bucket`, {
+                    method: 'POST',
+                    headers: sbHeaders(key),
+                    body: JSON.stringify({ id: SB_BUCKET, name: SB_BUCKET, public: false })
+                });
+            } catch(e) { console.warn('Bucket create failed (may already exist):', e); }
+        }
+
+        async function supabasePushData() {
+            if (!rawTransactions || rawTransactions.length === 0) { showToast('ไม่มีข้อมูลให้อัปโหลด', 'error'); return; }
+            const cfg = sbGetConfig();
+            if (!cfg) { showToast('กรุณาตั้งค่า Supabase ก่อน', 'error'); return; }
+            const info = document.getElementById('supabase-sync-info');
+            info.textContent = `⏳ กำลัง compress ${rawTransactions.length.toLocaleString()} แถว...`;
+            try {
+                const json = JSON.stringify(rawTransactions);
+                const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+                const compressed = await new Response(stream).arrayBuffer();
+                info.textContent = `⏳ กำลังอัปโหลด ${(compressed.byteLength/1024/1024).toFixed(1)}MB...`;
+                const res = await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/${SB_FILE}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${cfg.key}`,
+                        'apikey': cfg.key,
+                        'Content-Type': 'application/gzip',
+                        'x-upsert': 'true'
+                    },
+                    body: compressed
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`${res.status}: ${errText}`);
+                }
+                const meta = { rows: rawTransactions.length, updated: new Date().toISOString(), sizeMB: (compressed.byteLength/1024/1024).toFixed(1) };
+                await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/meta.json`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${cfg.key}`, 'apikey': cfg.key, 'Content-Type': 'application/json', 'x-upsert': 'true' },
+                    body: JSON.stringify(meta)
+                });
+                info.textContent = `✅ อัปโหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว (${meta.sizeMB}MB) — ${new Date().toLocaleTimeString('th-TH')}`;
+                showToast(`✅ Cloud sync สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
+            } catch(e) {
+                info.textContent = '❌ ' + e.message;
+                showToast('❌ Upload ล้มเหลว: ' + e.message, 'error');
+                console.error('Supabase push failed:', e);
+            }
+        }
+
+        async function supabasePullData() {
+            const cfg = sbGetConfig();
+            if (!cfg) { showToast('กรุณาตั้งค่า Supabase ก่อน', 'error'); return; }
+            const info = document.getElementById('supabase-sync-info');
+            info.textContent = '⏳ กำลังโหลดจาก Cloud...';
+            try {
+                // Check meta first
+                let metaRows = 0;
+                try {
+                    const metaRes = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key) });
+                    if (metaRes.ok) { const m = await metaRes.json(); metaRows = m.rows || 0; }
+                } catch {}
+                if (metaRows > 0) info.textContent = `⏳ กำลังดาวน์โหลด ${metaRows.toLocaleString()} แถว...`;
+                const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(cfg.key) });
+                if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
+                const compressed = await res.arrayBuffer();
+                const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+                const json = await new Response(stream).text();
+                const data = JSON.parse(json);
+                if (!Array.isArray(data) || data.length === 0) throw new Error('ข้อมูลว่างเปล่า');
+                rawTransactions = data;
+                hasUnsavedChanges = false;
+                await idbSet('rxmuk_raw_data', rawTransactions);
+                sessionImportStarted = true;
+                refreshAllUI();
+                updateNavDataStatus();
+                populateAllFilterDropdowns();
+                const banner = document.getElementById('data-lost-banner');
+                if (banner) banner.remove();
+                info.textContent = `✅ โหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว`;
+                showToast(`✅ โหลดจาก Cloud สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
+            } catch(e) {
+                info.textContent = '❌ ' + e.message;
+                showToast('❌ Pull ล้มเหลว: ' + e.message, 'error');
+                console.error('Supabase pull failed:', e);
+            }
+        }
+
+        // Auto-restore config inputs + load on page start
+        document.addEventListener('DOMContentLoaded', () => {
+            const cfg = sbGetConfig();
+            if (cfg) {
+                const urlEl = document.getElementById('sb-url');
+                const keyEl = document.getElementById('sb-key');
+                if (urlEl) urlEl.value = cfg.url;
+                if (keyEl) keyEl.value = cfg.key;
+                const badge = document.getElementById('supabase-status-badge');
+                if (badge) { badge.textContent = '✅ เชื่อมต่อแล้ว'; badge.className = 'badge-status success'; }
+            }
+        });
+
         // ─── LIGHT/DARK THEME TOGGLE ────────────────────────────────────────
         function toggleTheme() {
             const isLight = document.body.classList.toggle('light-mode');
@@ -7856,11 +8073,15 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     <button onclick="document.getElementById('data-lost-banner').remove()" style="margin-left:auto; background:none; border:none; color:#94b8d4; cursor:pointer; font-size:1.2rem; padding:0 4px;">✕</button>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:linear-gradient(135deg,#00d4ff,#7c3aed); border-radius:8px; font-size:0.82rem; font-weight:600; color:#fff;">
+                    <button onclick="supabasePullData().then(()=>{ const b=document.getElementById('data-lost-banner'); if(b) b.remove(); })"
+                        style="padding:8px 14px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-size:0.82rem; font-weight:700; color:#0d1b2e; cursor:pointer;">
+                        ☁️ โหลดจาก Supabase Cloud
+                    </button>
+                    <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); border-radius:8px; font-size:0.82rem; font-weight:600; color:#00d4ff;">
                         <span>📂</span> โหลดจากไฟล์สำรอง (.json)
                         <input type="file" accept=".json" style="display:none" onchange="importDataBackup(this.files[0])">
                     </label>
-                    <button onclick="document.getElementById('tab-import').scrollIntoView({behavior:'smooth'}); document.getElementById('data-lost-banner').remove();"
+                    <button onclick="document.getElementById('data-lost-banner').remove(); setTimeout(()=>{ const t=document.querySelector('[data-tab=\\'import\\']'); if(t) t.click(); }, 100);"
                         style="padding:8px 14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:0.82rem; color:#e8f4fd; cursor:pointer;">
                         📤 นำเข้าไฟล์ใหม่
                     </button>
