@@ -3507,6 +3507,7 @@
                                 if (parsed && parsed.length > 0) {
                                     data = parsed;
                                     await idbSet('rxmuk_raw_data', data);
+                                    localStorage.setItem('rxmuk_sb_last_push', Date.now());
                                     showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} แถว จาก Supabase`, 'success');
                                 }
                             }
@@ -8102,6 +8103,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 rawTransactions = data;
                 hasUnsavedChanges = false;
                 await idbSet('rxmuk_raw_data', rawTransactions);
+                localStorage.setItem('rxmuk_sb_last_push', Date.now());
                 sessionImportStarted = true;
                 refreshAllUI(); updateNavDataStatus(); populateAllFilterDropdowns();
                 const banner = document.getElementById('data-lost-banner');
