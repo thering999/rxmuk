@@ -5459,11 +5459,10 @@ ORDER BY name;
 
                 if (loggedInUser === 'admin') {
                     if(authFullName) authFullName.textContent = 'System Administrator (admin)';
-                    if(uploaderPanel) uploaderPanel.style.display = 'block';
                 } else if (loggedInUser === 'rxmuk') {
-                    if(authFullName) authFullName.textContent = 'RxMuk Viewer (rxmuk)';
-                    if(uploaderPanel) uploaderPanel.style.display = 'none'; // Hide upload panel for viewer
+                    if(authFullName) authFullName.textContent = 'RxMuk (rxmuk)';
                 }
+                if(uploaderPanel) uploaderPanel.style.display = 'block';
 
                 // Display reports
                 securedContents.forEach(c => c.style.display = 'block');
