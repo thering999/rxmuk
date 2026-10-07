@@ -8102,6 +8102,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const setInfo = t => { if (info) info.textContent = t; };
             setInfo(`⏳ กำลัง compress ${rawTransactions.length.toLocaleString()} แถว...`);
             try {
+                // Ensure bucket exists before upload
+                const bucketCheck = await fetch(`${cfg.url}/storage/v1/bucket/${SB_BUCKET}`, { headers: sbHeaders(cfg.key) });
+                if (bucketCheck.status === 404) await supabaseCreateBucket(cfg.url, cfg.key);
                 const json = JSON.stringify(rawTransactions);
                 const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
                 const compressed = await new Response(stream).arrayBuffer();
