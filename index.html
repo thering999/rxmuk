@@ -8042,23 +8042,45 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             if (!res.ok) throw new Error(`${name} ${res.status}: ${await res.text()}`);
         }
 
-        // One gzip file per fiscal year keeps each file under the 50MB free-tier limit
+        // One gzip file per month (~3-4MB) stays far below the 50MB free-tier file limit
         async function sbUploadAll(cfg, rows, setInfo) {
-            const byYear = {};
-            for (const r of rows) (byYear[fiscalYearOf(r.month)] ||= []).push(r);
+            const byMonth = {};
+            for (const r of rows) (byMonth[/^\d{4}-\d{2}$/.test(r.month) ? r.month : 'unknown'] ||= []).push(r);
+            const months = Object.keys(byMonth).sort();
             const files = [];
-            for (const fy of Object.keys(byYear).sort()) {
-                const name = `raw_fy${fy}.json.gz`;
-                setInfo(`⏳ กำลังอัปโหลดปีงบ ${Number(fy) + 543 || fy} (${byYear[fy].length.toLocaleString()} แถว)...`);
-                const buf = await gzipJson(byYear[fy]);
+            for (let i = 0; i < months.length; i++) {
+                const month = months[i];
+                const name = `raw_${month}.json.gz`;
+                setInfo(`⏳ กำลังอัปโหลดเดือน ${month} (${i + 1}/${months.length})...`);
+                const buf = await gzipJson(byMonth[month]);
                 const sizeMB = buf.byteLength / 1048576;
-                if (sizeMB > 49) throw new Error(`ปีงบ ${Number(fy) + 543 || fy} มีขนาด ${sizeMB.toFixed(1)}MB เกินขีดจำกัด 50MB ของ Supabase ฟรี`);
+                if (sizeMB > 49) throw new Error(`เดือน ${month} มีขนาด ${sizeMB.toFixed(1)}MB เกินขีดจำกัด 50MB ของ Supabase ฟรี`);
                 await sbUploadFile(cfg, name, buf, 'application/gzip');
-                files.push({ name, fy, rows: byYear[fy].length, sizeMB: sizeMB.toFixed(1) });
+                files.push({ name, month, fy: fiscalYearOf(month), rows: byMonth[month].length, sizeMB: sizeMB.toFixed(2) });
             }
             const meta = { rows: rows.length, updated: new Date().toISOString(), files, sizeMB: files.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1) };
             await sbUploadFile(cfg, 'meta.json', JSON.stringify(meta), 'application/json');
+            await sbDeleteUnused(cfg, new Set([...files.map(f => f.name), 'meta.json']));
             return meta;
+        }
+
+        // Remove files no longer listed in meta.json so storage stays well under the 1GB free tier
+        async function sbDeleteUnused(cfg, keep) {
+            try {
+                const res = await fetch(`${cfg.url}/storage/v1/object/list/${SB_BUCKET}`, {
+                    method: 'POST',
+                    headers: { ...sbHeaders(cfg.key), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prefix: '', limit: 1000 })
+                });
+                if (!res.ok) return;
+                const stale = (await res.json()).map(o => o.name).filter(n => n && !keep.has(n));
+                if (!stale.length) return;
+                await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}`, {
+                    method: 'DELETE',
+                    headers: { ...sbHeaders(cfg.key), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prefixes: stale })
+                });
+            } catch (e) { console.warn('Cloud cleanup skipped:', e); }
         }
 
         // Keep months imported on other machines: cloud rows survive unless this machine has the same month+source
@@ -8096,7 +8118,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 const f = files[i];
                 const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
-                const label = files.length > 1 ? `ไฟล์ ${i + 1}/${files.length}${f.fy ? ` ปีงบ ${Number(f.fy) + 543 || f.fy}` : ''} ` : '';
+                const label = files.length > 1 ? `ไฟล์ ${i + 1}/${files.length}${f.month ? ` เดือน ${f.month}` : ''} ` : '';
                 const part = await gunzipJson(await readWithProgress(res, label));
                 if (Array.isArray(part)) all = all.concat(part);
             }
