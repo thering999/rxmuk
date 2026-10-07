@@ -1031,7 +1031,7 @@
                 <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
                 <li style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding: 4px 12px; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
                     <span id="nav-data-count" style="font-size: 0.75rem; color: var(--c-primary); font-weight: 800;">DATA: 0 rows</span>
-                    <button class="btn" onclick="if(!sessionStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
+                    <button class="btn" onclick="if(!localStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
                 </li>
             </ul>
             <div class="user-status-area" style="display:flex; align-items:center; gap:10px;">
@@ -1443,12 +1443,29 @@
                             </div>
                         </div>
 
+                        <!-- Current data status bar -->
+                        <div id="import-data-status" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+                            <div style="flex:1;min-width:140px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 16px;">
+                                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">ข้อมูลในระบบ</div>
+                                <div id="import-row-count" style="font-size:1.4rem;font-weight:800;color:var(--c-primary);">0 แถว</div>
+                            </div>
+                            <div style="flex:1;min-width:140px;background:rgba(34,211,160,0.07);border:1px solid rgba(34,211,160,0.2);border-radius:10px;padding:12px 16px;">
+                                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">นำเข้าล่าสุด</div>
+                                <div id="import-last-file" style="font-size:0.85rem;font-weight:600;color:var(--c-green);">ยังไม่มี</div>
+                            </div>
+                            <div style="flex:1;min-width:140px;background:rgba(217,70,239,0.07);border:1px solid rgba(217,70,239,0.2);border-radius:10px;padding:12px 16px;">
+                                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">Cloud Sync</div>
+                                <div id="import-cloud-status" style="font-size:0.85rem;font-weight:600;color:var(--c-secondary);">ยังไม่เชื่อมต่อ</div>
+                            </div>
+                        </div>
+
                         <!-- File upload Zone -->
-                        <div class="upload-zone">
-                            <div class="upload-icon">📄</div>
+                        <div class="upload-zone" id="upload-drop-zone">
+                            <div class="upload-icon">📥</div>
                             <div class="upload-text">
-                                <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์ CSV / Excel มาวางที่นี่</h3>
-                                <p>รองรับไฟล์ .csv (แนะนำ), .xlsx หรือ .xls</p>
+                                <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h3>
+                                <p>รองรับ <strong>.csv</strong> (แนะนำ สำหรับไฟล์ใหญ่ 500MB+), <strong>.xlsx</strong>, <strong>.xls</strong></p>
+                                <p style="margin-top:6px;font-size:0.78rem;color:var(--c-yellow);">ไฟล์ที่รองรับ: <code>tmp_drug_opd.csv</code> / <code>s_tmp_drug_opd.csv</code> / Excel</p>
                             </div>
                             <input type="file" id="excel-file-input" class="file-input" accept=".csv, .xlsx, .xls">
                         </div>
@@ -1461,11 +1478,15 @@
                         </div>
 
                         <!-- Progress Bar & Success message -->
-                        <div id="import-progress-area" style="display: none; margin-bottom: 20px;">
-                            <h4 style="margin-bottom: 8px; font-size: 0.9rem;">กำลังประมวลผลไฟล์...</h4>
-                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
-                                <div id="import-progress-bar" style="width: 0%; height: 100%; background: var(--gradient-1); transition: width 0.1s;"></div>
+                        <div id="import-progress-area" style="display: none; margin-bottom: 20px; background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.15); border-radius: 12px; padding: 16px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                <h4 style="font-size: 0.9rem; margin:0;">⏳ กำลังประมวลผลไฟล์...</h4>
+                                <span id="import-progress-pct" style="font-size:0.85rem;font-weight:700;color:var(--c-primary);">0%</span>
                             </div>
+                            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                                <div id="import-progress-bar" style="width: 0%; height: 100%; background: var(--gradient-1); transition: width 0.15s; border-radius: 4px;"></div>
+                            </div>
+                            <div id="import-progress-label" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">อ่านไฟล์...</div>
                         </div>
 
                         <div id="import-result-msg" class="badge-status success" style="display: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px;">
@@ -3503,7 +3524,7 @@
 
         function saveToServerCache() {
             if (!rawTransactions || rawTransactions.length === 0) return;
-            if (!sessionStorage.getItem('rxmuk_auth_user')) return;
+            if (!localStorage.getItem('rxmuk_auth_user')) return;
 
             showToast(`☁️ กำลังบันทึก ${rawTransactions.length.toLocaleString()} รายการขึ้น Cloud (กำลัง compress)...`, 'info');
             cloudStoragePut('raw_data.json', rawTransactions)
@@ -4413,133 +4434,149 @@ ORDER BY name;
         const resultMsg = document.getElementById('import-result-msg');
         const importHistoryBody = document.getElementById('import-history-body');
 
+        function updateImportStatusBar() {
+            const rc = document.getElementById('import-row-count');
+            const lf = document.getElementById('import-last-file');
+            if (rc) rc.textContent = (rawTransactions ? rawTransactions.length : 0).toLocaleString() + ' แถว';
+            const hist = localStorage.getItem('rxmuk_last_import_filename');
+            if (lf && hist) lf.textContent = hist;
+            const cs = document.getElementById('import-cloud-status');
+            if (cs) {
+                if (sbGetConfig && sbGetConfig()) { cs.textContent = '✅ Supabase'; cs.style.color = 'var(--c-green)'; }
+                else if (getGithubToken && getGithubToken()) { cs.textContent = '✅ GitHub Gist'; cs.style.color = 'var(--c-green)'; }
+                else { cs.textContent = 'ยังไม่เชื่อมต่อ'; cs.style.color = 'var(--c-secondary)'; }
+            }
+        }
+
+        // Drag-and-drop support
+        const dropZone = document.getElementById('upload-drop-zone');
+        if (dropZone) {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = 'var(--c-primary)';
+                dropZone.style.background = 'rgba(0,212,255,0.08)';
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = '';
+                dropZone.style.background = '';
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '';
+                dropZone.style.background = '';
+                const file = e.dataTransfer.files[0];
+                if (file) processUploadFile(file);
+            });
+        }
+
+        function processUploadFile(file) {
+            progressArea.style.display = 'block';
+            progressBar.style.width = '0%';
+            resultMsg.style.display = 'none';
+            const pctEl = document.getElementById('import-progress-pct');
+            const labelEl = document.getElementById('import-progress-label');
+            if (pctEl) pctEl.textContent = '0%';
+            if (labelEl) labelEl.textContent = `อ่านไฟล์: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+
+            const isCSV = file.name.toLowerCase().endsWith('.csv');
+
+            function parseAndProcess(rows, sheetName) {
+                progressBar.style.width = '100%';
+                if (pctEl) pctEl.textContent = '100%';
+                if (labelEl) labelEl.textContent = `ประมวลผล ${rows.length.toLocaleString()} แถว...`;
+
+                setTimeout(() => {
+                    progressArea.style.display = 'none';
+                    if (!rows || rows.length === 0) {
+                        resultMsg.className = "badge-status danger";
+                        resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
+                        resultMsg.style.display = 'block';
+                        return;
+                    }
+                    const rowCount = rows.length;
+                    const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
+                    const newTr = document.createElement('tr');
+                    newTr.innerHTML = `<td>${dateStr}</td><td><code>${file.name}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
+                    if (importHistoryBody) importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
+                    processParsedExcelData(rows, file.name, dateStr);
+                    try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
+                    resultMsg.className = "badge-status success";
+                    resultMsg.innerHTML = `✅ นำเข้าสำเร็จ! ${rowCount.toLocaleString()} แถว จาก "${sheetName}"`;
+                    resultMsg.style.display = 'block';
+                    updateImportStatusBar();
+                }, 300);
+            }
+
+            function showError(err) {
+                progressArea.style.display = 'none';
+                resultMsg.className = "badge-status danger";
+                resultMsg.innerHTML = `❌ ข้อผิดพลาด: ${err.message}`;
+                resultMsg.style.display = 'block';
+            }
+
+            if (isCSV) {
+                const navCount = document.getElementById('nav-data-count');
+                if (navCount) navCount.textContent = `⏳ ${file.name}...`;
+                parseLargeCSVInChunks(
+                    file,
+                    (pct) => {
+                        progressBar.style.width = pct + '%';
+                        if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+                        if (labelEl) labelEl.textContent = `อ่าน ${file.name}: ${Math.round(pct)}%`;
+                        if (navCount) navCount.textContent = `⏳ ${Math.round(pct)}% — ${file.name}`;
+                    },
+                    (rows) => {
+                        progressBar.style.width = '100%';
+                        if (pctEl) pctEl.textContent = '100%';
+                        setTimeout(() => {
+                            progressArea.style.display = 'none';
+                            if (!rows || rows.length === 0) {
+                                resultMsg.className = "badge-status danger";
+                                resultMsg.innerHTML = `❌ ไม่พบข้อมูลที่ถูกต้อง (ตรวจสอบคอลัมน์ hospcode)`;
+                                resultMsg.style.display = 'block';
+                                return;
+                            }
+                            const rowCount = rows.length;
+                            const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
+                            const newTr = document.createElement('tr');
+                            newTr.innerHTML = `<td>${dateStr}</td><td><code>${file.name}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
+                            if (importHistoryBody) importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
+                            processPreAggregatedData(rows, file.name, dateStr);
+                            try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
+                            resultMsg.className = "badge-status success";
+                            resultMsg.innerHTML = `✅ นำเข้าสำเร็จ (streaming)! ${rowCount.toLocaleString()} รายการสะสม`;
+                            resultMsg.style.display = 'block';
+                            updateImportStatusBar();
+                        }, 300);
+                    },
+                    (err) => showError(err)
+                );
+            } else {
+                const reader = new FileReader();
+                if (labelEl) labelEl.textContent = `อ่าน Excel: ${file.name}...`;
+                reader.onload = function(evt) {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const rows = XLSX.utils.sheet_to_json(worksheet, {raw: false, defval: ''});
+                        parseAndProcess(rows, firstSheetName);
+                    } catch (err) { showError(err); }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
         if(excelFileInput) {
             excelFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-
-                // Trigger upload progress visual simulation
-                progressArea.style.display = 'block';
-                progressBar.style.width = '0%';
-                resultMsg.style.display = 'none';
-
-                let width = 0;
-                const progressInterval = setInterval(() => {
-                    if (width >= 90) {
-                        clearInterval(progressInterval);
-                    } else {
-                        width += 15;
-                        progressBar.style.width = width + '%';
-                    }
-                }, 100);
-
-                // Read and parse file (CSV or Excel)
-                const isCSV = file.name.toLowerCase().endsWith('.csv');
-
-                function parseAndProcess(rows, sheetName) {
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-
-                    setTimeout(() => {
-                        progressArea.style.display = 'none';
-                        
-                        if (!rows || rows.length === 0) {
-                            resultMsg.className = "badge-status danger";
-                            resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
-                            resultMsg.style.display = 'block';
-                            return;
-                        }
-
-                        // Successfully parsed! Add to History Table
-                        const rowCount = rows.length;
-                        const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
-                        const newTr = document.createElement('tr');
-                        newTr.innerHTML = `
-                            <td>${dateStr}</td>
-                            <td><code>${file.name}</code></td>
-                            <td>${rowCount.toLocaleString()} แถว</td>
-                            <td><span class="badge-status success">admin</span></td>
-                        `;
-                        importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
-
-                        // Trigger dynamic calculation to update the breakdowns!
-                        processParsedExcelData(rows, file.name, dateStr);
-
-                        resultMsg.className = "badge-status success";
-                        resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! อ่านข้อมูลเรียบร้อยจำนวน ${rowCount.toLocaleString()} แถวข้อมูลจากแหล่งข้อมูล "${sheetName}" และบันทึกเวลาอัปโหลดสำเร็จ`;
-                        resultMsg.style.display = 'block';
-                    }, 500);
-                }
-
-                function showError(err) {
-                    clearInterval(progressInterval);
-                    progressArea.style.display = 'none';
-                    resultMsg.className = "badge-status danger";
-                    resultMsg.innerHTML = `❌ ข้อผิดพลาดในการแยกวิเคราะห์ไฟล์: ${err.message}`;
-                    resultMsg.style.display = 'block';
-                }
-
-                if (isCSV) {
-                    const navCount = document.getElementById('nav-data-count');
-                    if (navCount) navCount.textContent = `⏳ กำลังประมวลผล ${file.name}...`;
-                    parseLargeCSVInChunks(
-                        file,
-                        (pct) => {
-                            progressBar.style.width = pct + '%';
-                            if (navCount) navCount.textContent = `⏳ ${Math.round(pct)}% — ${file.name}`;
-                        },
-                        (rows) => {
-                            progressBar.style.width = '100%';
-                            setTimeout(() => {
-                                progressArea.style.display = 'none';
-                                
-                                if (!rows || rows.length === 0) {
-                                    resultMsg.className = "badge-status danger";
-                                    resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าข้อมูลได้: ไฟล์ไม่มีข้อมูลหรือไม่มีรหัสสถานบริการของรัฐ`;
-                                    resultMsg.style.display = 'block';
-                                    return;
-                                }
-
-                                const rowCount = rows.length;
-                                const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
-                                const newTr = document.createElement('tr');
-                                newTr.innerHTML = `
-                                    <td>${dateStr}</td>
-                                    <td><code>${file.name}</code></td>
-                                    <td>${rowCount.toLocaleString()} แถว (สตรีมมิ่ง)</td>
-                                    <td><span class="badge-status success">admin</span></td>
-                                `;
-                                importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
-
-                                processPreAggregatedData(rows, file.name, dateStr);
-
-                                resultMsg.className = "badge-status success";
-                                resultMsg.innerHTML = `✓ นำเข้าสำเร็จ! ประมวลผลแบบสตรีมมิ่งและสรุปกลุ่มสะสมจำนวน ${rowCount.toLocaleString()} รายการเรียบร้อยแล้ว`;
-                                resultMsg.style.display = 'block';
-                            }, 500);
-                        },
-                        (err) => {
-                            showError(err);
-                        }
-                    );
-                } else {
-                    const reader = new FileReader();
-                    reader.onload = function(evt) {
-                        try {
-                            const data = new Uint8Array(evt.target.result);
-                            const workbook = XLSX.read(data, {type: 'array'});
-                            const firstSheetName = workbook.SheetNames[0];
-                            const worksheet = workbook.Sheets[firstSheetName];
-                            const rows = XLSX.utils.sheet_to_json(worksheet, {raw: false, defval: ''});
-                            parseAndProcess(rows, firstSheetName);
-                        } catch (err) {
-                            showError(err);
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                }
+                processUploadFile(file);
+                e.target.value = ''; // allow re-selecting same file
             });
         }
+
 
         const btnClearData = document.getElementById('btn-clear-data');
         if (btnClearData) {
@@ -4795,7 +4832,7 @@ ORDER BY name;
                 date: uploadTime,
                 filename: filename,
                 rows: rawTransactions.length,
-                user: sessionStorage.getItem('rxmuk_auth_user') || '-'
+                user: localStorage.getItem('rxmuk_auth_user') || '-'
             }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
@@ -4878,7 +4915,7 @@ ORDER BY name;
                 date: uploadTime,
                 filename: filename,
                 rows: rawTransactions.length,
-                user: sessionStorage.getItem('rxmuk_auth_user') || '-'
+                user: localStorage.getItem('rxmuk_auth_user') || '-'
             }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
@@ -5386,7 +5423,7 @@ ORDER BY name;
                     const p = pInputs[idx].value.trim();
 
                     if (u === 'admin' && p === '123456') {
-                        sessionStorage.setItem('rxmuk_auth_user', 'admin');
+                        localStorage.setItem('rxmuk_auth_user', 'admin');
                         checkAuthState();
                     } else {
                         alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
@@ -5397,7 +5434,7 @@ ORDER BY name;
 
         // Show lock screens or dynamic breakdown data depending on session auth
         function checkAuthState() {
-            const loggedInUser = sessionStorage.getItem('rxmuk_auth_user');
+            const loggedInUser = localStorage.getItem('rxmuk_auth_user');
 
             const userDisplayName = document.getElementById('user-display-name');
             const loginStatusPill = document.getElementById('login-status-pill');
@@ -5460,14 +5497,14 @@ ORDER BY name;
                 const p = inputPassword ? inputPassword.value.trim() : '';
 
                 if (u === 'admin' && p === '123456') {
-                    sessionStorage.setItem('rxmuk_auth_user', 'admin');
+                    localStorage.setItem('rxmuk_auth_user', 'admin');
                     checkAuthState();
                     const loaded = await loadFromStorage();
                     if (loaded) refreshAllUI();
                     loadLatestDataFromServer();
                     renderImportHistory();
                 } else if (u === 'rxmuk' && p === '123456') {
-                    sessionStorage.setItem('rxmuk_auth_user', 'rxmuk');
+                    localStorage.setItem('rxmuk_auth_user', 'rxmuk');
                     checkAuthState();
                     const loaded = await loadFromStorage();
                     if (loaded) refreshAllUI();
@@ -5480,7 +5517,7 @@ ORDER BY name;
         }
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
-                sessionStorage.removeItem('rxmuk_auth_user');
+                localStorage.removeItem('rxmuk_auth_user');
                 rawTransactions = [];
                 hasUnsavedChanges = false;
                 checkAuthState();
@@ -7868,6 +7905,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             renderGeospatialMap();
             renderAccessIndex();
             updateDashboardOverview();
+            if (typeof updateImportStatusBar === 'function') updateImportStatusBar();
 
             // AUTO-LOAD only when local storage has no data (avoid overwriting IndexedDB data)
             if (rawTransactions.length === 0) {
