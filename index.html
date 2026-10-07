@@ -3254,16 +3254,9 @@
 
         async function addImportHistoryEntry(entry) {
             idbAddHistory(entry).catch(e => console.warn('Local history save failed:', e));
-            cloudAddHistory(entry).catch(e => console.warn('Cloud history save failed:', e));
         }
 
         async function getImportHistory() {
-            try {
-                const cloudHistory = await cloudGetHistory();
-                if (cloudHistory && cloudHistory.length > 0) return cloudHistory;
-            } catch (e) {
-                console.warn('Cloud history load failed, falling back to local cache:', e);
-            }
             return await idbGetHistory();
         }
 
@@ -3271,7 +3264,8 @@
         const GH_TOKEN_LSKEY = 'rxmuk_gh_token';
         const GIST_ID_LSKEY  = 'rxmuk_gist_id';
 
-        function getGithubToken() { try { return localStorage.getItem(GH_TOKEN_LSKEY) || ''; } catch { return ''; } }
+        // Gist sync retired in favour of Supabase; empty token disables every Gist code path
+        function getGithubToken() { return ''; }
 
         function gistHeaders() {
             return {
@@ -8273,23 +8267,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
         // ─── JSON BACKUP / RESTORE ──────────────────────────────────────────
         function autoSaveBackup(srcFilename, rowCount, statusEl) {
-            if (!rawTransactions || rawTransactions.length === 0) return;
-            try {
-                const payload = JSON.stringify(rawTransactions);
-                const blob = new Blob([payload], { type: 'application/json' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                const d = new Date().toISOString().slice(0, 10);
-                a.download = `rxmuk_backup_${rawTransactions.length}rows_${d}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(a.href);
-                if (statusEl) statusEl.innerHTML = `✅ นำเข้าสำเร็จ ${rowCount.toLocaleString()} แถว — <strong>💾 บันทึก backup อัตโนมัติแล้ว</strong> (เก็บไฟล์ .json ไว้ด้วยนะ!)`;
-                showToast(`💾 Auto-backup บันทึกแล้ว ${rawTransactions.length.toLocaleString()} แถว`, 'success');
-            } catch(e) {
-                console.warn('Auto backup failed:', e);
-            }
+            // Cloud (Supabase) is the backup now; the manual .json button still exists for offline copies
+            if (statusEl) statusEl.innerHTML = `✅ นำเข้าสำเร็จ ${rowCount.toLocaleString()} แถว — <strong>☁️ กำลังบันทึกขึ้น Cloud อัตโนมัติ (รอประมาณ 1 นาทีก่อนปิดหน้า)</strong>`;
         }
 
         function exportDataBackup() {
