@@ -7832,7 +7832,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         async function loadAppConfig() {
             try {
                 const path = window.location.pathname.includes('/rxmuk/') ? '/rxmuk/public/rxmuk-config.json' : 'public/rxmuk-config.json';
-                const r = await fetch(path);
+                const r = await fetch(path, { cache: 'no-store' });
                 if (!r.ok) return;
                 const cfg = await r.json();
                 if (cfg.supabase_url && cfg.supabase_key && !localStorage.getItem('rxmuk_sb_config')) {
