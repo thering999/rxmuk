@@ -3498,12 +3498,8 @@
                     if (sbCfg) {
                         try {
                             showToast('☁️ กำลังโหลดจาก Supabase...', 'info');
-                            const res = await fetch(`${sbCfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(sbCfg.key) });
-                            if (res.ok) {
-                                const compressed = await readWithProgress(res);
-                                const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
-                                const json = await new Response(stream).text();
-                                const parsed = JSON.parse(json);
+                            const parsed = await sbDownloadAll(sbCfg);
+                            {
                                 if (parsed && parsed.length > 0) {
                                     data = parsed;
                                     await idbSet('rxmuk_raw_data', data);
@@ -4793,9 +4789,11 @@ ORDER BY name;
             console.log(`Processing pre-aggregated data: ${filename} with ${rows.length} rows`);
             const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
             
+            const srcKey = sourceKeyOf(filename);
             rows.forEach(r => {
                 r.uploadTime = uploadTime;
-                
+                r.src = srcKey;
+
                 // Ensure numeric fields
                 r.amount = parseFloat(r.amount || 0);
                 r.price = parseFloat(r.price || 0);
@@ -4811,14 +4809,16 @@ ORDER BY name;
                 }
             });
             
-            if (!sessionImportStarted) {
-                // First import this session — clear old data so we don't accumulate stale rows
-                rawTransactions = [];
-                sessionImportStarted = true;
-            }
+            // Replace only same source + same months; keep every other month/year
+            const newMonths = new Set(rows.map(r => r.month || ''));
+            const before = rawTransactions.length;
+            rawTransactions = rawTransactions.filter(r => !(newMonths.has(r.month || '') && (!r.src || r.src === srcKey)));
+            const replaced = before - rawTransactions.length;
             rawTransactions = rawTransactions.concat(rows);
+            sessionImportStarted = true;
             hasUnsavedChanges = true;
-            console.log(`Updated rawTransactions (Pre-agg): ${rawTransactions.length} records (appended ${rows.length})`);
+            const monthList = [...newMonths].filter(Boolean).sort().join(', ');
+            showToast(`📅 นำเข้าเดือน ${monthList || '-'}: เพิ่ม ${rows.length.toLocaleString()} แถว${replaced ? `, แทนที่ข้อมูลเดิมของเดือนเดียวกัน ${replaced.toLocaleString()} แถว` : ''} (เดือนอื่นเก็บไว้ครบ)`, 'success');
 
             // Reset all filters to 'all' first
             const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
@@ -7871,19 +7871,6 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             updateDashboardOverview();
             if (typeof updateImportStatusBar === 'function') updateImportStatusBar();
 
-            // AUTO-PUSH to Supabase if data loaded from IndexedDB but Supabase may not have it yet
-            if (rawTransactions.length > 0 && sbGetConfig()) {
-                const lsKey = 'rxmuk_sb_last_push';
-                const lastPush = localStorage.getItem(lsKey);
-                const hoursSincePush = lastPush ? (Date.now() - parseInt(lastPush)) / 3600000 : 999;
-                if (hoursSincePush > 12) {
-                    showToast(`☁️ Auto-sync ${rawTransactions.length.toLocaleString()} แถว → Supabase...`, 'info');
-                    supabasePushData()
-                        .then(() => { localStorage.setItem(lsKey, Date.now()); })
-                        .catch(e => console.warn('Auto Supabase push failed:', e));
-                }
-            }
-
             // AUTO-PULL from Supabase if local is empty (silent — no error toast if cloud empty)
             if (rawTransactions.length === 0 && sbGetConfig()) {
                 showToast('☁️ กำลังโหลดข้อมูลจาก Supabase...', 'info');
@@ -8026,9 +8013,100 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 });
         }
 
-        async function readWithProgress(res) {
+        function sourceKeyOf(filename) {
+            return String(filename || '').toLowerCase().replace(/\s*\(.*\)\s*$/, '').replace(/\.(csv|xlsx|xls)$/, '').trim();
+        }
+
+        function fiscalYearOf(month) {
+            const [y, m] = String(month || '').split('-').map(Number);
+            if (!y || !m) return 'unknown';
+            return String(m >= 10 ? y + 1 : y);
+        }
+
+        async function gzipJson(obj) {
+            const stream = new Blob([JSON.stringify(obj)]).stream().pipeThrough(new CompressionStream('gzip'));
+            return new Response(stream).arrayBuffer();
+        }
+
+        async function gunzipJson(buf) {
+            const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+            return JSON.parse(await new Response(stream).text());
+        }
+
+        async function sbUploadFile(cfg, name, body, type) {
+            const res = await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/${name}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${cfg.key}`, 'apikey': cfg.key, 'Content-Type': type, 'x-upsert': 'true' },
+                body
+            });
+            if (!res.ok) throw new Error(`${name} ${res.status}: ${await res.text()}`);
+        }
+
+        // One gzip file per fiscal year keeps each file under the 50MB free-tier limit
+        async function sbUploadAll(cfg, rows, setInfo) {
+            const byYear = {};
+            for (const r of rows) (byYear[fiscalYearOf(r.month)] ||= []).push(r);
+            const files = [];
+            for (const fy of Object.keys(byYear).sort()) {
+                const name = `raw_fy${fy}.json.gz`;
+                setInfo(`⏳ กำลังอัปโหลดปีงบ ${Number(fy) + 543 || fy} (${byYear[fy].length.toLocaleString()} แถว)...`);
+                const buf = await gzipJson(byYear[fy]);
+                const sizeMB = buf.byteLength / 1048576;
+                if (sizeMB > 49) throw new Error(`ปีงบ ${Number(fy) + 543 || fy} มีขนาด ${sizeMB.toFixed(1)}MB เกินขีดจำกัด 50MB ของ Supabase ฟรี`);
+                await sbUploadFile(cfg, name, buf, 'application/gzip');
+                files.push({ name, fy, rows: byYear[fy].length, sizeMB: sizeMB.toFixed(1) });
+            }
+            const meta = { rows: rows.length, updated: new Date().toISOString(), files, sizeMB: files.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1) };
+            await sbUploadFile(cfg, 'meta.json', JSON.stringify(meta), 'application/json');
+            return meta;
+        }
+
+        // Keep months imported on other machines: cloud rows survive unless this machine has the same month+source
+        async function mergeNewerCloudData(cfg, setInfo) {
+            let meta = null;
+            try {
+                const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                if (m.ok) meta = await m.json();
+            } catch {}
+            if (!meta || !meta.updated) return;
+            const lastSync = Number(localStorage.getItem('rxmuk_sb_last_push') || 0);
+            if (Date.parse(meta.updated) <= lastSync) return;
+            setInfo('⏳ Cloud มีข้อมูลใหม่กว่าเครื่องนี้ กำลังรวมข้อมูลก่อนอัปโหลด...');
+            const cloud = await sbDownloadAll(cfg);
+            const localMonths = new Set();
+            const localMonthSrc = new Set();
+            for (const r of rawTransactions) { localMonths.add(r.month || ''); localMonthSrc.add((r.month || '') + '|' + (r.src || '')); }
+            const extra = cloud.filter(r => !localMonths.has(r.month || '') || (r.src && !localMonthSrc.has((r.month || '') + '|' + r.src)));
+            if (extra.length) {
+                rawTransactions = rawTransactions.concat(extra);
+                await idbSet('rxmuk_raw_data', rawTransactions);
+                refreshAllUI(); updateNavDataStatus(); populateAllFilterDropdowns();
+            }
+        }
+
+        async function sbDownloadAll(cfg) {
+            let meta = null;
+            try {
+                const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                if (m.ok) meta = await m.json();
+            } catch {}
+            const files = meta && Array.isArray(meta.files) && meta.files.length ? meta.files : [{ name: SB_FILE }];
+            let all = [];
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
+                const label = files.length > 1 ? `ไฟล์ ${i + 1}/${files.length}${f.fy ? ` ปีงบ ${Number(f.fy) + 543 || f.fy}` : ''} ` : '';
+                const part = await gunzipJson(await readWithProgress(res, label));
+                if (Array.isArray(part)) all = all.concat(part);
+            }
+            return all;
+        }
+
+        async function readWithProgress(res, label = '') {
             const total = parseInt(res.headers.get('content-length') || '0');
             let box = document.getElementById('cloud-load-overlay');
+            if (box && box._removeTimer) clearTimeout(box._removeTimer);
             if (!box) {
                 box = document.createElement('div');
                 box.id = 'cloud-load-overlay';
@@ -8052,9 +8130,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     if (total) {
                         const pct = Math.min(100, Math.round(got / total * 100));
                         bar.style.width = pct + '%';
-                        text.textContent = `☁️ กำลังโหลดข้อมูลจาก Cloud ${pct}% (${mb} / ${(total / 1048576).toFixed(1)} MB) ห้ามปิดหน้านี้`;
+                        text.textContent = `☁️ กำลังโหลดข้อมูลจาก Cloud ${label}${pct}% (${mb} / ${(total / 1048576).toFixed(1)} MB) ห้ามปิดหน้านี้`;
                     } else {
-                        text.textContent = `☁️ กำลังโหลดข้อมูลจาก Cloud ${mb} MB ห้ามปิดหน้านี้`;
+                        text.textContent = `☁️ กำลังโหลดข้อมูลจาก Cloud ${label}${mb} MB ห้ามปิดหน้านี้`;
                     }
                 }
                 bar.style.width = '100%';
@@ -8065,7 +8143,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 for (const c of chunks) { out.set(c, pos); pos += c.length; }
                 return out.buffer;
             } finally {
-                setTimeout(() => box.remove(), 4000);
+                box._removeTimer = setTimeout(() => box.remove(), 4000);
             }
         }
 
@@ -8087,33 +8165,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const setInfo = t => { if (info) info.textContent = t; };
             setInfo(`⏳ กำลัง compress ${rawTransactions.length.toLocaleString()} แถว...`);
             try {
-                // Ensure bucket exists before upload
-                const bucketCheck = await fetch(`${cfg.url}/storage/v1/bucket/${SB_BUCKET}`, { headers: sbHeaders(cfg.key) });
-                if (bucketCheck.status === 404) await supabaseCreateBucket(cfg.url, cfg.key);
-                const json = JSON.stringify(rawTransactions);
-                const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
-                const compressed = await new Response(stream).arrayBuffer();
-                setInfo(`⏳ กำลังอัปโหลด ${(compressed.byteLength/1024/1024).toFixed(1)}MB...`);
-                const res = await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/${SB_FILE}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${cfg.key}`,
-                        'apikey': cfg.key,
-                        'Content-Type': 'application/gzip',
-                        'x-upsert': 'true'
-                    },
-                    body: compressed
-                });
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(`${res.status}: ${errText}`);
-                }
-                const meta = { rows: rawTransactions.length, updated: new Date().toISOString(), sizeMB: (compressed.byteLength/1024/1024).toFixed(1) };
-                await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/meta.json`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${cfg.key}`, 'apikey': cfg.key, 'Content-Type': 'application/json', 'x-upsert': 'true' },
-                    body: JSON.stringify(meta)
-                });
+                await mergeNewerCloudData(cfg, setInfo);
+                const meta = await sbUploadAll(cfg, rawTransactions, setInfo);
+                localStorage.setItem('rxmuk_sb_last_push', Date.now());
                 setInfo(`✅ อัปโหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว (${meta.sizeMB}MB) — ${new Date().toLocaleTimeString('th-TH')}`);
                 showToast(`✅ Cloud sync สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
             } catch(e) {
@@ -8130,18 +8184,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const setInfo = t => { if (info) info.textContent = t; };
             setInfo('⏳ กำลังโหลดจาก Cloud...');
             try {
-                let metaRows = 0;
-                try {
-                    const metaRes = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key) });
-                    if (metaRes.ok) { const m = await metaRes.json(); metaRows = m.rows || 0; }
-                } catch {}
-                if (metaRows > 0) setInfo(`⏳ กำลังดาวน์โหลด ${metaRows.toLocaleString()} แถว...`);
-                const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${SB_FILE}`, { headers: sbHeaders(cfg.key) });
-                if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
-                const compressed = await readWithProgress(res);
-                const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
-                const json = await new Response(stream).text();
-                const data = JSON.parse(json);
+                const data = await sbDownloadAll(cfg);
                 if (!Array.isArray(data) || data.length === 0) throw new Error('ข้อมูลว่างเปล่า');
                 rawTransactions = data;
                 hasUnsavedChanges = false;
