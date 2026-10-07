@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RxMuk | HDC Data Quality & Import Control Center</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
     <meta name="description" content="ระบบวิเคราะห์ข้อมูลเวชภัณฑ์ จากฐานข้อมูล 43 แฟ้ม HDC จังหวัดมุกดาหาร — ABC/VED, RDU, ราคายา, คุณภาพข้อมูล">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1504,88 +1505,34 @@
                     <div class="panel" id="cloud-config-panel" style="border-color: rgba(0,212,255,0.25); background: rgba(0,212,255,0.03);">
                         <div class="panel-header" style="margin-bottom:14px;">
                             <h3 class="panel-title" style="color: var(--c-primary);">
-                                <span>☁️</span> ตั้งค่า Cloud Sync (เก็บข้อมูลออนไลน์)
+                                <span>☁️</span> Cloud Sync — Supabase
                             </h3>
-                            <span id="cloud-status-badge" class="badge-status" style="font-size:0.75rem;">ยังไม่เชื่อมต่อ</span>
+                            <span id="cloud-status-badge" class="badge-status success" style="font-size:0.75rem;">✅ เชื่อมต่อแล้ว</span>
                         </div>
 
-                        <!-- Tab switcher -->
-                        <div style="display:flex; gap:0; margin-bottom:16px; border:1px solid var(--card-border); border-radius:8px; overflow:hidden; width:fit-content;">
-                            <button id="cloud-tab-gist" onclick="switchCloudTab('gist')"
-                                style="padding:7px 18px; font-size:0.82rem; font-weight:600; border:none; cursor:pointer; background:var(--c-primary); color:#0d1b2e;">
-                                GitHub Gist (แนะนำ)
+                        <!-- Hidden inputs for compatibility -->
+                        <input type="hidden" id="gh-token-input">
+                        <span id="gist-sync-info" style="display:none;"></span>
+                        <input type="hidden" id="sb-url">
+                        <input type="hidden" id="sb-key">
+
+                        <!-- Supabase status (read-only) -->
+                        <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; padding:10px 14px; background:rgba(62,207,142,0.08); border:1px solid rgba(62,207,142,0.25); border-radius:10px;">
+                            <span style="font-size:1.1rem;">🗄️</span>
+                            <div>
+                                <div style="font-size:0.82rem; font-weight:700; color:#3ecf8e;">ระบบเชื่อมต่อ Supabase อัตโนมัติ</div>
+                                <div style="font-size:0.72rem; color:var(--text-muted);">ข้อมูลถูก sync ขึ้น cloud ทุกครั้งที่ import — เปิดจากเครื่องไหนก็ได้</div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <button onclick="supabasePushData()" style="padding:8px 16px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-weight:700; color:#0d1b2e; cursor:pointer; font-size:0.82rem;">
+                                ☁️ อัปโหลดขึ้น Cloud
                             </button>
-                            <button id="cloud-tab-sb" onclick="switchCloudTab('sb')"
-                                style="padding:7px 18px; font-size:0.82rem; font-weight:600; border:none; cursor:pointer; background:rgba(255,255,255,0.06); color:var(--text-muted);">
-                                Supabase
+                            <button onclick="supabasePullData()" style="padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.25); border-radius:8px; font-size:0.82rem; color:var(--c-primary); cursor:pointer; font-weight:600;">
+                                📥 โหลดจาก Cloud
                             </button>
-                        </div>
-
-                        <!-- GIST PANEL -->
-                        <div id="cloud-panel-gist">
-                            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
-                                ใช้ <strong>GitHub Personal Access Token</strong> (scope: gist) — ไม่มีค่าใช้จ่าย ข้อมูลเป็น private gist
-                            </p>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:flex-end;">
-                                <div style="flex:1 1 280px; display:flex; flex-direction:column; gap:4px;">
-                                    <label style="font-size:0.72rem; color:var(--text-muted);">GitHub Personal Access Token (gist scope)</label>
-                                    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                                        class="search-control" style="font-size:0.82rem; font-family:monospace;">
-                                </div>
-                                <button onclick="gistSaveConfig()" style="padding:8px 16px; background:linear-gradient(135deg,var(--c-primary),#7c3aed); border:none; border-radius:8px; font-weight:700; color:#fff; cursor:pointer; font-size:0.82rem; white-space:nowrap;">
-                                    💾 บันทึกและทดสอบ
-                                </button>
-                            </div>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                                <button onclick="gistPushData()" style="padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); border-radius:8px; font-size:0.82rem; color:var(--c-primary); cursor:pointer; font-weight:600;">
-                                    ☁️ อัปโหลดขึ้น Gist
-                                </button>
-                                <button onclick="gistPullData()" style="padding:8px 14px; background:rgba(124,58,237,0.12); border:1px solid rgba(124,58,237,0.3); border-radius:8px; font-size:0.82rem; color:#a78bfa; cursor:pointer; font-weight:600;">
-                                    📥 โหลดจาก Gist
-                                </button>
-                                <span id="gist-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
-                            </div>
-                            <details style="margin-top:12px;">
-                                <summary style="font-size:0.78rem; color:var(--text-muted); cursor:pointer;">📖 วิธีสร้าง GitHub Token (30 วินาที)</summary>
-                                <div style="margin-top:8px; font-size:0.78rem; color:var(--text-muted); line-height:1.8; padding:10px; background:rgba(0,0,0,0.15); border-radius:8px;">
-                                    1. ไปที่ <strong style="color:var(--c-primary);">github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</strong><br>
-                                    2. Generate new token → ตั้งชื่อ เช่น <code>rxmuk-sync</code><br>
-                                    3. เลือก scope: <strong>gist</strong> เท่านั้น (ไม่ต้องติ๊กอื่น)<br>
-                                    4. คัดลอก token ที่ขึ้นต้นด้วย <code>ghp_</code> ใส่ในช่องด้านบน<br>
-                                    <strong style="color:var(--c-yellow);">⚠️ token จะเก็บใน browser ของคุณเท่านั้น ไม่เข้า source code</strong>
-                                </div>
-                            </details>
-                        </div>
-
-                        <!-- SUPABASE PANEL -->
-                        <div id="cloud-panel-sb" style="display:none;">
-                            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
-                                Supabase Storage (ฟรี 1GB) — เหมาะถ้าต้องการ performance สูง
-                            </p>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-                                <div style="flex:2 1 200px; display:flex; flex-direction:column; gap:4px;">
-                                    <label style="font-size:0.72rem; color:var(--text-muted);">Project URL</label>
-                                    <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co"
-                                        class="search-control" style="font-size:0.82rem; font-family:monospace;">
-                                </div>
-                                <div style="flex:2 1 200px; display:flex; flex-direction:column; gap:4px;">
-                                    <label style="font-size:0.72rem; color:var(--text-muted);">anon key</label>
-                                    <input type="password" id="sb-key" placeholder="eyJ..."
-                                        class="search-control" style="font-size:0.82rem; font-family:monospace;">
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                                <button onclick="supabaseSaveConfig()" style="padding:8px 16px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-weight:700; color:#0d1b2e; cursor:pointer; font-size:0.82rem;">
-                                    💾 บันทึกและทดสอบ
-                                </button>
-                                <button onclick="supabasePushData()" style="padding:8px 14px; background:rgba(62,207,142,0.12); border:1px solid rgba(62,207,142,0.3); border-radius:8px; font-size:0.82rem; color:#3ecf8e; cursor:pointer; font-weight:600;">
-                                    ☁️ อัปโหลด
-                                </button>
-                                <button onclick="supabasePullData()" style="padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.25); border-radius:8px; font-size:0.82rem; color:var(--c-primary); cursor:pointer; font-weight:600;">
-                                    📥 โหลด
-                                </button>
-                                <span id="supabase-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
-                            </div>
+                            <span id="supabase-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
                         </div>
                     </div>
 
