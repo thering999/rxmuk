@@ -6006,59 +6006,376 @@ ORDER BY name;
             downloadCSV(`raw_data_export_${new Date().toISOString().slice(0,10)}.csv`, csv);
         }
 
-        // Offline bot reply fallback helper
+        // ─── LOCAL KNOWLEDGE BOT (offline fallback, 25+ topics) ────────────
         function getLocalBotReply(text) {
-            const query = text.toLowerCase();
-            if (query.includes('s_tmp_drug_opd') || query.includes('ตาราง') || query.includes('field') || query.includes('ฟิลด์')) {
-                return `ตาราง **s_tmp_drug_opd** เป็นตารางนำเข้าข้อมูลยาชั่วคราว มีฟิลด์สำคัญดังนี้:
-- \`import_id\`: ID การอัปโหลด
-- \`hospcode\`: รหัสสถานบริการ 5 หลัก
-- \`pid\`: รหัสผู้ป่วย (Patient ID)
-- \`date_serv\`: วันที่รับบริการ
-- \`didstd\`: รหัสยามาตรฐาน 24 หลัก
-- \`dname\`: ชื่อยา
-- \`amount\`: จำนวนที่จ่าย
-- \`price\`: ราคายา
-- \`cost\`: ราคาทุน`;
+            const q = text.toLowerCase();
+            const has = (...kw) => kw.some(k => q.includes(k));
+
+            // ── DATA CONTEXT ───────────────────────────────────────────────
+            const txs = rawTransactions || [];
+            const rowCount = txs.length;
+            const dataCtx = rowCount > 0
+                ? `*(ข้อมูลปัจจุบันในระบบ: ${rowCount.toLocaleString()} แถว)*\n\n`
+                : '';
+
+            // ── TABLE SCHEMA ───────────────────────────────────────────────
+            if (has('s_tmp_drug_opd','tmp_drug','ตาราง','schema','field','ฟิลด์','คอลัมน์','struct')) {
+                return dataCtx + `**โครงสร้างตาราง s_tmp_drug_opd** (ตารางนำเข้ายาชั่วคราว 43 แฟ้ม)
+
+| ฟิลด์ | ประเภท | คำอธิบาย |
+|-------|--------|----------|
+| \`hospcode\` | VARCHAR(5) | รหัสสถานบริการ 5 หลัก ***(จำเป็น)*** |
+| \`pid\` | VARCHAR(13) | รหัสผู้ป่วย (เลขบัตรประชาชน / HN) |
+| \`date_serv\` | DATE | วันที่รับบริการ (YYYYMMDD หรือ YYYY-MM-DD) |
+| \`didstd\` | VARCHAR(24) | รหัสยามาตรฐาน 24 หลัก ***(จำเป็น)*** |
+| \`dname\` | VARCHAR(255) | ชื่อยา (Trade / Generic name) |
+| \`amount\` | DECIMAL | จำนวนยาที่จ่าย (หน่วย) |
+| \`price\` | DECIMAL | มูลค่าราคารวมยา (บาท) |
+| \`cost\` | DECIMAL | ราคาทุนต่อหน่วย (บาท) |
+| \`import_id\` | INT | ID batch การนำเข้า |
+
+ตาราง **tmp_drug_opd** (รายละเอียด transaction รายบริการ) มีฟิลด์เพิ่ม:
+- \`hn\`, \`vstdate\`, \`seq\`, \`drugcode\`, \`qty\`, \`unitprice\`, \`totalprice\``;
             }
-            if (query.includes('sql') || query.includes('คำสั่ง') || query.includes('ลบ')) {
-                return `คำสั่ง SQL สำหรับลบข้อมูลซ้ำซ้อนในตาราง \`s_tmp_drug_opd\` (กรองเอาตัวล่าสุดเก็บไว้):
+
+            // ── SQL QUERIES ────────────────────────────────────────────────
+            if (has('ลบซ้ำ','ลบข้อมูลซ้ำ','duplicate','deduplicate')) {
+                return `**SQL ลบข้อมูลซ้ำใน s_tmp_drug_opd** (เก็บ id ใหม่สุด):
 \`\`\`sql
 DELETE t1 FROM s_tmp_drug_opd t1
-INNER JOIN s_tmp_drug_opd t2 
-WHERE t1.id < t2.id 
-  AND t1.hospcode = t2.hospcode 
-  AND t1.pid = t2.pid 
-  AND t1.date_serv = t2.date_serv 
-  AND t1.didstd = t2.didstd;
+INNER JOIN s_tmp_drug_opd t2
+  ON  t1.hospcode   = t2.hospcode
+  AND t1.pid        = t2.pid
+  AND t1.date_serv  = t2.date_serv
+  AND t1.didstd     = t2.didstd
+WHERE t1.id < t2.id;
 \`\`\``;
             }
-            if (query.includes('didstd') || query.includes('รหัสยา') || query.includes('did')) {
-                return `**รหัสยามาตรฐาน 24 หลัก (DIDSTD)** เป็นรหัสอ้างอิงระดับประเทศที่กระทรวงสาธารณสุขกำหนด เพื่อควบคุมความกว้างและมาตรฐานของชื่อยา รวมถึงการนำมารวบรวมคำนวณมูลค่าราคากลางและการวิเคราะห์แบบ ABC/VEN ในระบบจัดซื้อจัดจ้างคลังเวชภัณฑ์ของจังหวัดมุกดาหาร`;
+
+            if (has('sql','คำสั่ง sql','query','select','insert','update','delete','join') && !has('ลบซ้ำ')) {
+                return `**SQL ที่ใช้บ่อยใน HDC 43 แฟ้ม:**
+
+**ดึงยอดรวมแยกตามหน่วยบริการ:**
+\`\`\`sql
+SELECT hospcode, COUNT(*) AS cnt, SUM(price) AS total
+FROM s_tmp_drug_opd
+WHERE date_serv BETWEEN '2026-10-01' AND '2027-09-30'
+GROUP BY hospcode
+ORDER BY total DESC;
+\`\`\`
+
+**ตรวจ DID ไม่ครบ 24 หลัก:**
+\`\`\`sql
+SELECT hospcode, didstd, dname, COUNT(*) AS cnt
+FROM s_tmp_drug_opd
+WHERE LENGTH(didstd) != 24
+GROUP BY hospcode, didstd;
+\`\`\`
+
+**ดึงยาที่มีราคาผิดปกติ (price=0):**
+\`\`\`sql
+SELECT * FROM s_tmp_drug_opd WHERE price <= 0 OR price IS NULL;
+\`\`\``;
             }
-            if (query.includes('คุณภาพ') || query.includes('qc') || query.includes('เกณฑ์')) {
-                return `**เกณฑ์คุณภาพข้อมูล (HDC Data Quality)**:
-1. **รหัสสถานบริการ (hospcode)** ต้องมีความยาวถูกต้อง 5 หลักและอยู่ในฐานข้อมูลจังหวัดมุกดาหาร
-2. **รหัสยามาตรฐาน (didstd)** ต้องมีความยาวครบ 24 หลัก
-3. **ฟิลด์ปริมาณ (amount) และ ราคา (price)** ต้องเป็นตัวเลขบวกที่สมเหตุสมผล
-4. **ความครบถ้วนของข้อมูลสำคัญ** ต้องผ่าน 100% จึงจะประเมินเป็น "ผ่านเกณฑ์"`;
+
+            // ── DID / DRUG CODE ────────────────────────────────────────────
+            if (has('didstd','รหัสยา','did std','24 หลัก','drug code')) {
+                return `**รหัสยามาตรฐาน DIDSTD 24 หลัก** (Drug Item Description Standard)
+
+โครงสร้างรหัส:
+- หลักที่ 1–8: รหัสฐานยา (Generic ID)
+- หลักที่ 9–12: ความแรง (Strength code)
+- หลักที่ 13–16: รูปแบบยา (Dosage form)
+- หลักที่ 17–20: เส้นทางให้ยา (Route)
+- หลักที่ 21–24: บรรจุภัณฑ์ (Package)
+
+ตัวอย่าง:
+- \`100752000004493120381169\` = Paracetamol 500mg tablet (VED: E)
+- \`100245200000000000000000\` = Aerobidol inhaler (VED: V)
+
+ตรวจสอบด้วย: \`SELECT didstd FROM s_tmp_drug_opd WHERE LENGTH(didstd) != 24\``;
             }
-            if (query.includes('อำเภอ') || query.includes('district') || query.includes('พื้นที่')) {
-                return `ระบบรองรับการกรองวิเคราะห์ข้อมูลยารายอำเภอ 7 อำเภอหลักของมุกดาหาร:
-- **เมืองมุกดาหาร** (รหัส 4901)
-- **นิคมคำสร้อย** (รหัส 4902)
-- **ดอนตาล** (รหัส 4903)
-- **ดงหลวง** (รหัส 4904)
-- **คำชะอี** (รหัส 4905)
-- **หว้านใหญ่** (รหัส 4906)
-- **หนองสูง** (รหัส 4907)`;
+
+            // ── ABC CLASSIFICATION ─────────────────────────────────────────
+            if (has('abc','class a','class b','class c','abc class','การจำแนก abc')) {
+                return `**ABC Classification** — จำแนกยาตามมูลค่าการใช้สะสม (Pareto 80/20)
+
+| กลุ่ม | เกณฑ์มูลค่า | ความถี่ตรวจ | กลยุทธ์ |
+|-------|------------|------------|---------|
+| **A** | มูลค่าสูง 70% แรก | ทุกสัปดาห์ | JIT, สัญญาจัดซื้อ, ต่อรองราคา |
+| **B** | มูลค่ากลาง 20% | ทุก 2 สัปดาห์ | สำรองตามปกติ |
+| **C** | มูลค่าต่ำ 10% สุดท้าย | รายเดือน | Safety stock สูง |
+
+ใน RxMuk: A = price > 100,000 บาท/รายการ, B = 25,000–100,000, C = < 25,000`;
             }
-            return `คีย์ Gemini API ของคุณยังไม่ได้ตั้งค่า หรือตั้งค่าไม่ถูกต้อง ทำให้ระบบบอทช่วยเหลือออฟไลน์ทำงานแทนครับ คุณสามารถสอบถามเกี่ยวกับ:
-- **"ตาราง"** หรือ **"field"** (โครงสร้างข้อมูลนำเข้า s_tmp_drug_opd)
-- **"คำสั่ง SQL"** (ลบข้อมูลซ้ำซ้อน)
-- **"รหัสยา"** หรือ **"didstd"** (ความหมายของรหัสยา 24 หลัก)
-- **"คุณภาพ"** หรือ **"qc"** (เกณฑ์คุณภาพข้อมูล)
-- **"อำเภอ"** (รายชื่อรหัสอำเภอของมุกดาหาร)`;
+
+            // ── VED CLASSIFICATION ─────────────────────────────────────────
+            if (has('ved','vital','essential','desirable','ven','ved','v/e/d')) {
+                return `**VED Classification** — จำแนกตามความสำคัญทางคลินิก
+
+| กลุ่ม | ความหมาย | ตัวอย่าง |
+|-------|----------|---------|
+| **V** (Vital) | ยาช่วยชีวิต / ขาดไม่ได้ | Adrenaline, Atropine, Insulin |
+| **E** (Essential) | ยาจำเป็นพื้นฐาน | Paracetamol, Metformin, Amoxicillin |
+| **D** (Desirable) | ยาเสริม / ทดแทนได้ | Vitamins, Cough syrup |
+
+**ABC-VED Matrix** — Category I (AV,AE,AD,BV,CV): ควบคุมเข้มงวด, Category II (BE,BD,CE): ปกติ, Category III (CD): ผ่อนคลาย`;
+            }
+
+            // ── RDU / ANTIBIOTIC ───────────────────────────────────────────
+            if (has('rdu','rational','ยาปฏิชีวนะ','antibiotic','อย่างสมเหตุสมผล','had','high alert')) {
+                return `**RDU — Rational Drug Use (การใช้ยาอย่างสมเหตุสมผล)**
+
+เกณฑ์ตรวจติดตาม:
+1. **อัตราการใช้ยาปฏิชีวนะ** ≤ 20% ของ OPD (เป้าหมายระดับประเทศ)
+2. **HAD (High Alert Drug)** — ต้องมี protocol ป้องกันความคลาดเคลื่อน
+3. **Polypharmacy** — ผู้ป่วย 1 รายได้รับยา ≥ 5 รายการ/ครั้ง
+
+กลุ่มยา HAD ที่ต้องระวัง:
+- Warfarin, Digoxin, Heparin, Potassium chloride, Methotrexate
+- Insulin glargine, Morphine, Concentrated electrolytes`;
+            }
+
+            // ── BURN RATE / BUDGET ─────────────────────────────────────────
+            if (has('burn rate','งบประมาณ','budget','ใช้งบ','เบิกจ่าย','วงเงิน')) {
+                const totalBudget = txs.reduce((s, t) => s + t.price, 0);
+                const budgetStr = totalBudget > 0 ? `งบสะสมปัจจุบัน: **${(totalBudget/1e6).toFixed(2)} ล้านบาท**` : '';
+                return `**Strategic Burn Rate — อัตราการเบิกจ่ายงบประมาณเวชภัณฑ์**
+
+${budgetStr}
+
+สูตรคำนวณ:
+- Burn Rate (%) = (งบเบิกจ่ายสะสม ÷ วงเงินปีงบประมาณ) × 100
+- เป้าหมาย: ≤ (เดือนที่ผ่านมา ÷ 12) × 100%
+
+สถานะ Traffic Light:
+- 🟢 ปกติ: อัตราเบิกจ่ายใกล้เคียงแผน ±10%
+- 🟡 เฝ้าระวัง: เกินแผน 10–25%
+- 🔴 วิกฤต: เกินแผน > 25% หรือ burn rate > 90% ก่อนสิ้นปีงบ`;
+            }
+
+            // ── ACCESS INDEX / PER CAPITA ─────────────────────────────────
+            if (has('access index','per capita','ต่อหัว','การเข้าถึง','equity')) {
+                return `**Drug Access Index — ดัชนีการเข้าถึงยาต่อหัวประชากร**
+
+สูตร: Access Index = มูลค่าเวชภัณฑ์สะสม (บาท) ÷ ประชากรอำเภอ
+
+ประชากรอ้างอิง จ.มุกดาหาร:
+- เมืองมุกดาหาร: 137,485 คน
+- นิคมคำสร้อย: 44,311 คน
+- ดอนตาล: 44,349 คน
+- ดงหลวง: 38,820 คน
+- คำชะอี: 47,268 คน
+- หว้านใหญ่: 19,553 คน
+- หนองสูง: 20,716 คน
+
+ค่า Index ต่ำผิดปกติ → อาจมีปัญหาการเข้าถึงยาหรือการบันทึกข้อมูลไม่ครบ`;
+            }
+
+            // ── FISCAL YEAR ────────────────────────────────────────────────
+            if (has('ปีงบ','fiscal year','ปีงบประมาณ','2570','2569','ไทย')) {
+                return `**ปีงบประมาณไทย (Thai Fiscal Year)**
+
+ปีงบประมาณไทยเริ่ม **ตุลาคม** ถึง **กันยายน** ปีถัดไป
+
+| ปีงบประมาณ | ช่วงเวลา |
+|-----------|---------|
+| 2568 | ต.ค. 2567 – ก.ย. 2568 |
+| 2569 | ต.ค. 2568 – ก.ย. 2569 |
+| **2570** | **ต.ค. 2569 – ก.ย. 2570** ← ปัจจุบัน |
+
+RxMuk คำนวณปีงบอัตโนมัติ: เดือน ต.ค.–ธ.ค. = ปีงบ (ปีค.ศ.+544), ม.ค.–ก.ย. = ปีงบ (ปีค.ศ.+543)`;
+            }
+
+            // ── HOSPCODE ──────────────────────────────────────────────────
+            if (has('hospcode','รหัสหน่วยบริการ','รพ.สต','โรงพยาบาล','สถานบริการ')) {
+                return `**รหัสหน่วยบริการ (Hospcode) มุกดาหาร**
+
+- โรงพยาบาลชุมชน: 5 หลัก ขึ้นต้นด้วย **1049x**
+- รพ.สต.: 5 หลัก ขึ้นต้นด้วย **2499x / 0499x**
+- คลินิกเอกชน: ขึ้นต้นด้วย **3xxx**
+
+ตรวจ hospcode ผิดในฐาน:
+\`\`\`sql
+SELECT hospcode, COUNT(*) FROM s_tmp_drug_opd
+WHERE hospcode NOT REGEXP '^[0-9]{5}$'
+   OR hospcode NOT IN (SELECT hospcode FROM hospitals_db)
+GROUP BY hospcode;
+\`\`\``;
+            }
+
+            // ── DATA IMPORT / FORMAT ───────────────────────────────────────
+            if (has('นำเข้า','import','csv','excel','xlsx','upload','อัปโหลด','format')) {
+                return `**การนำเข้าข้อมูลใน RxMuk**
+
+รูปแบบที่รองรับ:
+1. **s_tmp_drug_opd.xlsx / .csv** — ข้อมูลสรุปรายเดือนต่อหน่วยบริการ
+2. **tmp_drug_opd.xlsx / .csv** — ข้อมูล transaction รายบริการ (ขนาดใหญ่ได้ถึง 2 ล้านแถว)
+
+คอลัมน์ที่ระบบตรวจจับอัตโนมัติ (ไม่ต้องตั้งชื่อให้ตรง):
+- hospcode, hcode, รหัสหน่วยบริการ
+- didstd, did_std, รหัสยา
+- amount, qty, จำนวน
+- price, total_price, ราคารวม
+- date_serv, vstdate, วันที่
+
+**ปัญหาข้อมูลหายหลัง refresh** → ใช้ปุ่ม **💾 บันทึกข้อมูลสำรอง (.json)** ใต้ประวัติการ upload แล้วเก็บไฟล์ไว้`;
+            }
+
+            // ── DATA LOSS / PERSISTENCE ────────────────────────────────────
+            if (has('หาย','ข้อมูลหาย','data loss','0 rows','persist','เก็บ','บันทึก','cache','storage')) {
+                return `**ข้อมูลหายหลัง refresh — สาเหตุและวิธีแก้**
+
+**สาเหตุ:**
+1. IndexedDB ถูกเคลียร์เมื่อ Clear Browser Cache
+2. Private/Incognito mode (ลบอัตโนมัติเมื่อปิด tab)
+3. เปลี่ยน Browser หรือเครื่องใหม่
+4. Cloud sync (GitHub Gist) ล้มเหลวเพราะ token หมดอายุ
+
+**วิธีแก้:**
+1. ไปที่แท็บ **"นำเข้าข้อมูล"** → กด **💾 บันทึกข้อมูลสำรอง (.json)**
+2. เก็บไฟล์ .json ไว้ในเครื่อง
+3. เมื่อข้อมูลหาย → กด **📂 โหลดจากไฟล์สำรอง** แล้วเลือกไฟล์ .json
+
+หรือ **นำเข้าไฟล์ CSV/Excel ใหม่** อีกครั้ง`;
+            }
+
+            // ── PRICE VARIANCE ─────────────────────────────────────────────
+            if (has('variance','ราคาผิดปกติ','ราคาแพง','ราคาถูก','เปรียบเทียบราคา','price compare')) {
+                return `**การเปรียบเทียบราคาเวชภัณฑ์ (Price Variance)**
+
+ระบบตรวจจับความแตกต่างราคาระหว่างหน่วยบริการสำหรับยา DID เดียวกัน
+
+สูตร Variance:
+- **Variance (%)** = ((ราคาต่อหน่วยสถานบริการ − ราคากลาง) ÷ ราคากลาง) × 100
+- 🔴 > +20%: ราคาสูงกว่าเกณฑ์ ควรตรวจสอบสัญญาจัดซื้อ
+- 🟡 ±10–20%: ใกล้เคลียง ติดตามต่อ
+- 🟢 < ±10%: ปกติ
+
+ข้อมูลราคากลางอ้างอิง: ราคา GPO หรือ median ของจังหวัด`;
+            }
+
+            // ── QC / DATA QUALITY ─────────────────────────────────────────
+            if (has('คุณภาพ','qc','quality','เกณฑ์','scorecard','ประเมิน','data quality')) {
+                return `**เกณฑ์คุณภาพข้อมูล HDC (Data Quality Scorecard)**
+
+| เกณฑ์ | รายละเอียด | น้ำหนัก |
+|-------|-----------|--------|
+| DID 24 หลัก | DIDSTD ต้องครบ 24 หลัก | 30% |
+| Hospcode ถูกต้อง | ต้องอยู่ในทะเบียนจังหวัด | 25% |
+| ราคาสมเหตุผล | price > 0 และไม่เกิน 999,999 | 20% |
+| วันที่ถูกต้อง | date_serv ต้องเป็น format ถูกต้อง | 15% |
+| ปริมาณถูกต้อง | amount > 0 | 10% |
+
+เกรด: A = 95–100%, B = 85–94%, C = 70–84%, F = < 70%`;
+            }
+
+            // ── 43 FILES HDC ──────────────────────────────────────────────
+            if (has('43 แฟ้ม','43แฟ้ม','hdc','health data center','แฟ้มข้อมูล','ฐานข้อมูล hdc')) {
+                return `**ระบบ 43 แฟ้ม HDC (Health Data Center)**
+
+แฟ้มหลักที่เกี่ยวข้องกับเวชภัณฑ์:
+- **DRUG (tmp_drug_opd)** — การจ่ายยาผู้ป่วยนอก
+- **DRUGALLERGY** — ประวัติแพ้ยา
+- **DRUGITEMS** — บัญชียา รพ.
+- **PERSON** — ทะเบียนราษฎร์ (เชื่อม PID)
+- **VISIT (OPD)** — ข้อมูลการเยี่ยมผู้ป่วย
+
+ส่งข้อมูลไปที่: **https://hdc.moph.go.th**
+รูปแบบไฟล์: CSV UTF-8 ไม่มี header หรือ header ตามมาตรฐาน MOPH
+
+จังหวัดมุกดาหาร จัดส่งข้อมูล HDC ผ่าน: สสจ.มุกดาหาร`;
+            }
+
+            // ── GEOSPATIAL / MAP ──────────────────────────────────────────
+            if (has('map','แผนที่','geospatial','ภูมิศาสตร์','coordinate','พิกัด')) {
+                return `**การวิเคราะห์เชิงพื้นที่ (Geospatial Analysis)**
+
+RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำเภอ:
+- ขนาด bubble = มูลค่าเวชภัณฑ์สะสม
+- สี = เทียบ per capita access index
+
+ข้อมูลภูมิศาสตร์: ใช้ centroid ของอำเภอจาก GADM Thailand
+พิกัดอ้างอิง มุกดาหาร: 16.5°N, 104.7°E
+
+วิเคราะห์ความเหลื่อมล้ำ: อำเภอที่มี per capita < 0.5× ค่าเฉลี่ยจังหวัด = ต้องสอบสวน`;
+            }
+
+            // ── HELP / MENU ────────────────────────────────────────────────
+            if (has('help','ช่วย','สอบถาม','ถามอะไร','ทำอะไรได้','เมนู','คำสั่งทั้งหมด')) {
+                return `**RxMuk AI Assistant** — หัวข้อที่ตอบได้ (Offline Mode):
+
+📊 **ข้อมูลและ Schema**
+- "โครงสร้างตาราง s_tmp_drug_opd" / "ฟิลด์มีอะไรบ้าง"
+- "รหัสยา DIDSTD 24 หลัก"
+- "รหัสหน่วยบริการ hospcode"
+- "43 แฟ้ม HDC คืออะไร"
+
+💊 **การวิเคราะห์ยา**
+- "ABC Classification คืออะไร"
+- "VED Classification"
+- "RDU การใช้ยาอย่างสมเหตุสมผล"
+- "HAD High Alert Drug"
+
+📈 **งบประมาณ**
+- "Burn Rate งบประมาณ"
+- "Price Variance เปรียบเทียบราคา"
+- "Access Index ต่อหัวประชากร"
+- "ปีงบประมาณ 2570"
+
+🛠️ **เทคนิค / SQL**
+- "SQL ลบข้อมูลซ้ำ"
+- "SQL query หน่วยบริการ"
+- "นำเข้าไฟล์ CSV"
+- "ข้อมูลหายทำอย่างไร"
+
+🗺️ **อื่นๆ**
+- "อำเภอในมุกดาหาร" / "แผนที่"
+- "Data Quality QC เกณฑ์"
+
+💡 ใส่ Gemini API Key เพื่อรับคำตอบอัจฉริยะจาก AI`;
+            }
+
+            // ── DISTRICT LIST ──────────────────────────────────────────────
+            if (has('อำเภอ','district','พื้นที่','4901','4902','4903','4904','4905','4906','4907')) {
+                return `**7 อำเภอ จังหวัดมุกดาหาร**
+
+| รหัส | ชื่ออำเภอ | ประชากร |
+|------|---------|--------|
+| 4901 | เมืองมุกดาหาร | 137,485 |
+| 4902 | นิคมคำสร้อย | 44,311 |
+| 4903 | ดอนตาล | 44,349 |
+| 4904 | ดงหลวง | 38,820 |
+| 4905 | คำชะอี | 47,268 |
+| 4906 | หว้านใหญ่ | 19,553 |
+| 4907 | หนองสูง | 20,716 |
+
+รวม: **352,502 คน** (ข้อมูลอ้างอิง กรมการปกครอง)`;
+            }
+
+            // ── DATA SUMMARY (ใช้ข้อมูลจริงในระบบ) ────────────────────────
+            if (rowCount > 0 && has('สรุป','summary','ภาพรวม','overview','วิเคราะห์')) {
+                const totalBudget = txs.reduce((s, t) => s + t.price, 0);
+                const uniqueHosps = new Set(txs.map(t => t.hospcode)).size;
+                const uniqueDrugs = new Set(txs.map(t => t.didstd)).size;
+                const drugAgg = {};
+                txs.forEach(t => { drugAgg[t.dname] = (drugAgg[t.dname]||0) + t.price; });
+                const top3 = Object.entries(drugAgg).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,v])=>`**${n.substring(0,30)}** (${(v/1e6).toFixed(2)} ล้านบาท)`).join('\n- ');
+                return `**สรุปข้อมูลปัจจุบันในระบบ**
+
+- จำนวนแถวทั้งหมด: **${rowCount.toLocaleString()} รายการ**
+- มูลค่ารวม: **${(totalBudget/1e6).toFixed(2)} ล้านบาท**
+- หน่วยบริการ: **${uniqueHosps} แห่ง**
+- รายการยา: **${uniqueDrugs} รายการ**
+
+**ยา Top 3 มูลค่าสูงสุด:**
+- ${top3}`;
+            }
+
+            // ── DEFAULT ────────────────────────────────────────────────────
+            return `ไม่พบหัวข้อตรงกัน พิมพ์ว่า **"help"** หรือ **"ช่วย"** เพื่อดูหัวข้อทั้งหมดที่ตอบได้
+
+หรือใส่ **Gemini API Key** ในช่องด้านบนเพื่อเปิดใช้งาน AI อัจฉริยะ (สอบถามได้ไม่จำกัด)`;
         }
 
         function renderRduMonitoring() {
