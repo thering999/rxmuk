@@ -7923,7 +7923,28 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             updateDashboardOverview();
             if (typeof updateImportStatusBar === 'function') updateImportStatusBar();
 
-            // AUTO-LOAD only when local storage has no data (avoid overwriting IndexedDB data)
+            // AUTO-PUSH to Supabase if data loaded from IndexedDB but Supabase may not have it yet
+            if (rawTransactions.length > 0 && sbGetConfig()) {
+                const lsKey = 'rxmuk_sb_last_push';
+                const lastPush = localStorage.getItem(lsKey);
+                const hoursSincePush = lastPush ? (Date.now() - parseInt(lastPush)) / 3600000 : 999;
+                if (hoursSincePush > 12) {
+                    showToast(`☁️ Auto-sync ${rawTransactions.length.toLocaleString()} แถว → Supabase...`, 'info');
+                    supabasePushData()
+                        .then(() => { localStorage.setItem(lsKey, Date.now()); })
+                        .catch(e => console.warn('Auto Supabase push failed:', e));
+                }
+            }
+
+            // AUTO-PULL from Supabase if local is empty
+            if (rawTransactions.length === 0 && sbGetConfig()) {
+                showToast('☁️ โหลดข้อมูลจาก Supabase...', 'info');
+                try {
+                    await supabasePullData();
+                } catch(e) { console.warn('Auto Supabase pull failed:', e); }
+            }
+
+            // AUTO-LOAD from server CSV only when still empty
             if (rawTransactions.length === 0) {
                 loadLatestDataFromServer();
             }
