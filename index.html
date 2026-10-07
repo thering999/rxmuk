@@ -84,14 +84,43 @@
             font-family: var(--font-main);
             background-color: var(--bg-color);
             background-image:
-                radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.12) 0%, transparent 45%),
-                radial-gradient(circle at 85% 15%, rgba(217, 70, 239, 0.10) 0%, transparent 40%),
-                radial-gradient(circle at 50% 80%, rgba(124, 58, 237, 0.10) 0%, transparent 45%),
-                radial-gradient(circle at 80% 80%, rgba(34, 211, 160, 0.06) 0%, transparent 35%);
+                radial-gradient(ellipse at 10% 20%, rgba(0, 212, 255, 0.14) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 15%, rgba(217, 70, 239, 0.11) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 80%, rgba(124, 58, 237, 0.10) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 75%, rgba(34, 211, 160, 0.07) 0%, transparent 38%);
+            background-attachment: fixed;
             color: var(--text-main);
             line-height: 1.6;
             padding-bottom: 60px;
             overflow-x: hidden;
+        }
+
+        /* Light mode */
+        body.light-mode {
+            --bg-color: #f0f4fa;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 150, 200, 0.25);
+            --text-main: #1e2d40;
+            --text-muted: #4a6280;
+            --c-primary: #0077cc;
+            --c-primary-glow: rgba(0, 119, 204, 0.18);
+            --c-secondary: #9333ea;
+            --c-green: #0e9e74;
+            --c-red: #dc2626;
+            --c-yellow: #d97706;
+            background-image:
+                radial-gradient(ellipse at 10% 20%, rgba(0, 150, 220, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 15%, rgba(147, 51, 234, 0.07) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 80%, rgba(14, 158, 116, 0.05) 0%, transparent 50%);
+        }
+
+        body.light-mode header {
+            background: rgba(240, 244, 250, 0.92);
+            border-bottom-color: rgba(0, 150, 200, 0.2);
+        }
+
+        body.light-mode .panel {
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
         }
 
         /* Scrollbar */
@@ -219,6 +248,17 @@
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @keyframes bgShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         /* Hero Section */
@@ -992,7 +1032,11 @@
                     <button class="btn" onclick="if(!sessionStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
                 </li>
             </ul>
-            <div class="user-status-area">
+            <div class="user-status-area" style="display:flex; align-items:center; gap:10px;">
+                <button id="theme-toggle" onclick="toggleTheme()" title="สลับ Light/Dark Mode"
+                    style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:1rem; color:var(--text-main); transition:all 0.2s;">
+                    🌙
+                </button>
                 <div class="status-pill" id="login-status-pill" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--c-red);">
                     <span class="status-indicator" style="background: var(--c-red); box-shadow: 0 0 8px var(--c-red);"></span>
                     <span id="user-display-name">ยังไม่ได้เข้าระบบ</span>
@@ -1064,8 +1108,8 @@
                         <svg id="dash-trend-svg" viewBox="0 0 600 180" style="width: 100%; height: 100%; overflow: visible;">
                             <defs>
                                 <linearGradient id="trend-area-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.35"/>
-                                    <stop offset="100%" stop-color="#00f2fe" stop-opacity="0.00"/>
+                                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.50"/>
+                                    <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.05"/>
                                 </linearGradient>
                             </defs>
                             <g id="dash-trend-elements">
@@ -1434,7 +1478,7 @@
                     </div>
 
                     <!-- Import History / File logs panel (client-side log via IndexedDB) -->
-                    <div class="panel">
+                    <div class="panel" id="import-history-box">
                         <div class="panel-header">
                             <h3 class="panel-title">
                                 <span>📋</span>
@@ -1584,7 +1628,7 @@
                         <svg viewBox="0 0 400 450" style="width: 100%; height: 430px;">
                             <defs>
                                 <linearGradient id="purple-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#a855f7" />
+                                    <stop offset="0%" stop-color="#00d4ff" />
                                     <stop offset="100%" stop-color="#d946ef" />
                                 </linearGradient>
                             </defs>
@@ -1698,8 +1742,8 @@
                             </g>
                             <defs>
                                 <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#00f2fe"/>
-                                    <stop offset="100%" stop-color="#4facfe"/>
+                                    <stop offset="0%" stop-color="#22d3a0"/>
+                                    <stop offset="100%" stop-color="#00d4ff"/>
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -7391,8 +7435,142 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             renderAccessIndex();
             updateDashboardOverview();
 
-            // AUTO-LOAD on start
-            loadLatestDataFromServer();
+            // AUTO-LOAD only when local storage has no data (avoid overwriting IndexedDB data)
+            if (rawTransactions.length === 0) {
+                loadLatestDataFromServer();
+            }
+
+            // Show data-loss warning when 0 rows but history shows prior imports
+            if (rawTransactions.length === 0) {
+                try {
+                    const hist = await getImportHistory();
+                    if (hist && hist.length > 0) {
+                        showDataLostBanner(hist[hist.length - 1]);
+                    }
+                } catch(e) { /* ignore */ }
+            }
+        });
+
+        // ─── LIGHT/DARK THEME TOGGLE ────────────────────────────────────────
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-mode');
+            const btn = document.getElementById('theme-toggle');
+            if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+            try { localStorage.setItem('rxmuk_theme', isLight ? 'light' : 'dark'); } catch(e) {}
+        }
+        // Restore saved theme on load
+        try {
+            if (localStorage.getItem('rxmuk_theme') === 'light') {
+                document.body.classList.add('light-mode');
+                document.addEventListener('DOMContentLoaded', () => {
+                    const btn = document.getElementById('theme-toggle');
+                    if (btn) btn.textContent = '☀️';
+                });
+            }
+        } catch(e) {}
+
+        // ─── JSON BACKUP / RESTORE ──────────────────────────────────────────
+        function exportDataBackup() {
+            if (!rawTransactions || rawTransactions.length === 0) {
+                showToast('ไม่มีข้อมูลให้บันทึก', 'error');
+                return;
+            }
+            const payload = JSON.stringify(rawTransactions);
+            const blob = new Blob([payload], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            const d = new Date().toISOString().slice(0, 10);
+            a.download = `rxmuk_backup_${rawTransactions.length}rows_${d}.json`;
+            a.click();
+            showToast(`✅ บันทึกสำรอง ${rawTransactions.length.toLocaleString()} แถว สำเร็จ`, 'success');
+        }
+
+        function importDataBackup(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data) || data.length === 0) throw new Error('ไฟล์ว่างหรือรูปแบบผิด');
+                    rawTransactions = data;
+                    hasUnsavedChanges = false;
+                    await idbSet('rxmuk_raw_data', rawTransactions);
+                    sessionImportStarted = true;
+                    refreshAllUI();
+                    updateNavDataStatus();
+                    populateAllFilterDropdowns();
+                    showToast(`✅ โหลดสำรอง ${rawTransactions.length.toLocaleString()} แถว สำเร็จ`, 'success');
+                    // hide banner if visible
+                    const b = document.getElementById('data-lost-banner');
+                    if (b) b.remove();
+                } catch(err) {
+                    showToast('โหลดไฟล์ล้มเหลว: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showDataLostBanner(lastEntry) {
+            const existing = document.getElementById('data-lost-banner');
+            if (existing) return;
+            const banner = document.createElement('div');
+            banner.id = 'data-lost-banner';
+            banner.style.cssText = `
+                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                background: linear-gradient(135deg, #1e1030 0%, #0d1b2e 100%);
+                border: 1px solid rgba(251,191,36,0.5); border-radius: 14px;
+                padding: 18px 24px; max-width: 540px; width: calc(100% - 40px);
+                box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(251,191,36,0.2);
+                z-index: 9999; display: flex; flex-direction: column; gap: 12px;
+                animation: slideUp 0.4s ease-out;
+            `;
+            banner.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.3rem;">⚠️</span>
+                    <div>
+                        <div style="font-weight:700; color:#fbbf24; font-size:0.95rem;">ข้อมูลหายจาก Browser</div>
+                        <div style="font-size:0.8rem; color:#94b8d4; margin-top:2px;">
+                            เคยนำเข้า <strong style="color:#e8f4fd;">${(lastEntry.rows||0).toLocaleString()} แถว</strong>
+                            จาก <strong style="color:#e8f4fd;">${lastEntry.filename||'-'}</strong>
+                            (${lastEntry.date||'-'})
+                            — IndexedDB ถูกเคลียร์หรือใช้คนละ Browser
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('data-lost-banner').remove()" style="margin-left:auto; background:none; border:none; color:#94b8d4; cursor:pointer; font-size:1.2rem; padding:0 4px;">✕</button>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:linear-gradient(135deg,#00d4ff,#7c3aed); border-radius:8px; font-size:0.82rem; font-weight:600; color:#fff;">
+                        <span>📂</span> โหลดจากไฟล์สำรอง (.json)
+                        <input type="file" accept=".json" style="display:none" onchange="importDataBackup(this.files[0])">
+                    </label>
+                    <button onclick="document.getElementById('tab-import').scrollIntoView({behavior:'smooth'}); document.getElementById('data-lost-banner').remove();"
+                        style="padding:8px 14px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:0.82rem; color:#e8f4fd; cursor:pointer;">
+                        📤 นำเข้าไฟล์ใหม่
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(banner);
+        }
+
+        // Attach backup/restore buttons after page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add backup button to import history section
+            const importHistBox = document.getElementById('import-history-box');
+            if (importHistBox) {
+                const bar = document.createElement('div');
+                bar.style.cssText = 'display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;';
+                bar.innerHTML = `
+                    <button onclick="exportDataBackup()" style="display:inline-flex; align-items:center; gap:6px; padding:9px 16px; background:linear-gradient(135deg,#22d3a0,#00d4ff); border:none; border-radius:8px; font-size:0.82rem; font-weight:700; color:#0d1b2e; cursor:pointer;">
+                        💾 บันทึกข้อมูลสำรอง (.json)
+                    </button>
+                    <label style="display:inline-flex; align-items:center; gap:6px; padding:9px 16px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); border-radius:8px; font-size:0.82rem; font-weight:600; color:#00d4ff; cursor:pointer;">
+                        📂 โหลดจากไฟล์สำรอง
+                        <input type="file" accept=".json" style="display:none" onchange="importDataBackup(this.files[0])">
+                    </label>
+                    <span style="font-size:0.75rem; color:#94b8d4; align-self:center;">💡 บันทึกไว้ป้องกันข้อมูลหายเมื่อ clear cache หรือเปลี่ยน browser</span>
+                `;
+                importHistBox.insertBefore(bar, importHistBox.firstChild);
+            }
         });
     </script>
 </body>
