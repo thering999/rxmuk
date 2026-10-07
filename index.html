@@ -7909,12 +7909,6 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
         // ─── CLOUD SYNC UI HELPERS ──────────────────────────────────────────
         function switchCloudTab(tab) {
-            document.getElementById('cloud-panel-gist').style.display = tab === 'gist' ? '' : 'none';
-            document.getElementById('cloud-panel-sb').style.display   = tab === 'sb'   ? '' : 'none';
-            document.getElementById('cloud-tab-gist').style.background = tab === 'gist' ? 'var(--c-primary)' : 'rgba(255,255,255,0.06)';
-            document.getElementById('cloud-tab-gist').style.color      = tab === 'gist' ? '#0d1b2e' : 'var(--text-muted)';
-            document.getElementById('cloud-tab-sb').style.background   = tab === 'sb'   ? 'var(--c-primary)' : 'rgba(255,255,255,0.06)';
-            document.getElementById('cloud-tab-sb').style.color        = tab === 'sb'   ? '#0d1b2e' : 'var(--text-muted)';
             try { localStorage.setItem('rxmuk_cloud_tab', tab); } catch {}
         }
 
