@@ -57,20 +57,20 @@
     </script>
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --card-bg: rgba(17, 24, 39, 0.7);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --c-primary: #00f2fe;
-            --c-primary-glow: rgba(0, 242, 254, 0.15);
-            --c-secondary: #c084fc;
-            --c-accent: #a855f7;
-            --c-green: #10b981;
-            --c-red: #ef4444;
-            --c-yellow: #f59e0b;
-            --gradient-1: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-            --gradient-2: linear-gradient(135deg, #7f00ff 0%, #ff007f 100%);
+            --bg-color: #0d1b2e;
+            --card-bg: rgba(15, 30, 55, 0.75);
+            --card-border: rgba(0, 210, 255, 0.18);
+            --text-main: #e8f4fd;
+            --text-muted: #94b8d4;
+            --c-primary: #00d4ff;
+            --c-primary-glow: rgba(0, 212, 255, 0.25);
+            --c-secondary: #d946ef;
+            --c-accent: #818cf8;
+            --c-green: #22d3a0;
+            --c-red: #f87171;
+            --c-yellow: #fbbf24;
+            --gradient-1: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+            --gradient-2: linear-gradient(135deg, #d946ef 0%, #f97316 100%);
             --font-main: 'Outfit', 'Sarabun', sans-serif;
         }
 
@@ -83,9 +83,11 @@
         body {
             font-family: var(--font-main);
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 80% 80%, rgba(127, 0, 255, 0.05) 0%, transparent 40%);
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 85% 15%, rgba(217, 70, 239, 0.10) 0%, transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(124, 58, 237, 0.10) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(34, 211, 160, 0.06) 0%, transparent 35%);
             color: var(--text-main);
             line-height: 1.6;
             padding-bottom: 60px;
@@ -126,7 +128,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(11, 15, 25, 0.8);
+            background: rgba(10, 20, 40, 0.85);
         }
 
         .navbar {
@@ -227,9 +229,10 @@
         }
 
         .hero-badge {
-            background: rgba(0, 242, 254, 0.08);
-            border: 1px solid rgba(0, 242, 254, 0.2);
+            background: rgba(0, 212, 255, 0.14);
+            border: 1px solid rgba(0, 212, 255, 0.4);
             color: var(--c-primary);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
             padding: 6px 16px;
             border-radius: 50px;
             font-size: 0.85rem;
@@ -244,7 +247,7 @@
             font-size: 3rem;
             line-height: 1.1;
             margin-bottom: 16px;
-            background: linear-gradient(to right, #fff 40%, var(--c-primary) 70%, var(--c-secondary) 100%);
+            background: linear-gradient(to right, #e8f4fd 30%, #00d4ff 60%, #d946ef 90%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -332,9 +335,9 @@
         }
 
         .stat-card:hover {
-            border-color: rgba(0, 242, 254, 0.3);
+            border-color: rgba(0, 212, 255, 0.5);
             transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.15), 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .stat-icon {
@@ -347,10 +350,10 @@
             font-size: 1.4rem;
         }
 
-        .stat-icon.blue { background: rgba(0, 242, 254, 0.1); color: var(--c-primary); }
-        .stat-icon.purple { background: rgba(192, 132, 252, 0.1); color: var(--c-secondary); }
-        .stat-icon.green { background: rgba(16, 185, 129, 0.1); color: var(--c-green); }
-        .stat-icon.yellow { background: rgba(245, 158, 11, 0.1); color: var(--c-yellow); }
+        .stat-icon.blue { background: rgba(0, 212, 255, 0.18); color: var(--c-primary); box-shadow: 0 0 12px rgba(0, 212, 255, 0.3); }
+        .stat-icon.purple { background: rgba(217, 70, 239, 0.18); color: var(--c-secondary); box-shadow: 0 0 12px rgba(217, 70, 239, 0.3); }
+        .stat-icon.green { background: rgba(34, 211, 160, 0.18); color: var(--c-green); box-shadow: 0 0 12px rgba(34, 211, 160, 0.3); }
+        .stat-icon.yellow { background: rgba(251, 191, 36, 0.18); color: var(--c-yellow); box-shadow: 0 0 12px rgba(251, 191, 36, 0.3); }
 
         .stat-info h4 {
             font-size: 0.78rem;
@@ -412,7 +415,7 @@
             border-radius: 16px;
             padding: 28px;
             backdrop-filter: blur(12px);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 212, 255, 0.05);
             margin-bottom: 30px;
         }
 
@@ -1359,9 +1362,17 @@
                                 <div style="flex: 1 1 140px; display: flex; flex-direction: column; gap: 6px;">
                                     <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ปีปฏิทิน (ค.ศ.)</label>
                                     <select id="import-default-year" class="select-control" style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;">
-                                        <option value="2025">ปี 2568 (2025 AD)</option>
-                                        <option value="2026" selected>ปี 2569 (2026 AD)</option>
                                     </select>
+                                    <script>
+                                        // Years relative to today so new fiscal years (2570+) need no edit
+                                        (function () {
+                                            const sel = document.getElementById('import-default-year');
+                                            const now = new Date().getFullYear();
+                                            for (let y = now - 2; y <= now + 1; y++) {
+                                                sel.add(new Option(`ปี ${y + 543} (${y} AD)`, String(y), false, y === now));
+                                            }
+                                        })();
+                                    </script>
                                 </div>
                                 <div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px;">
                                     <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">เดือน</label>
@@ -1379,6 +1390,9 @@
                                         <option value="11">พฤศจิกายน</option>
                                         <option value="12">ธันวาคม</option>
                                     </select>
+                                    <script>
+                                        document.getElementById('import-default-month').value = String(new Date().getMonth() + 1).padStart(2, '0');
+                                    </script>
                                 </div>
                             </div>
                         </div>
@@ -3272,16 +3286,15 @@
         async function cloudStoragePut(filename, data) {
             const chunks = [];
             for (let i = 0; i < data.length; i += CLOUD_CHUNK_SIZE) chunks.push(data.slice(i, i + CLOUD_CHUNK_SIZE));
-            const fileMap = {};
             let totalOrig = 0, totalComp = 0;
+            // Upload each chunk separately to avoid request body size limit
             for (let i = 0; i < chunks.length; i++) {
                 const { b64, origMB, compMB } = await gzipBase64(chunks[i]);
-                fileMap[`${filename}.${i}`] = b64;
                 totalOrig += parseFloat(origMB); totalComp += parseFloat(compMB);
+                await gistPutFiles({ [`${filename}.${i}`]: b64 });
             }
-            fileMap[`${filename}.meta`] = JSON.stringify({ chunks: chunks.length, total: data.length, updated: new Date().toISOString() });
+            await gistPutFiles({ [`${filename}.meta`]: JSON.stringify({ chunks: chunks.length, total: data.length, updated: new Date().toISOString() }) });
             console.log(`Cloud upload: ${totalOrig.toFixed(1)}MB → ${totalComp.toFixed(1)}MB (${chunks.length} chunks)`);
-            await gistPutFiles(fileMap);
         }
 
         async function cloudStorageGet(filename) {
@@ -3595,7 +3608,7 @@
                     return;
                 }
             // Extract unique values with safety guards
-            const years = [...new Set(rawTransactions.filter(t => t && t.month).map(t => (t.month && typeof t.month === 'string') ? t.month.split('-')[0] : ''))].filter(Boolean).sort();
+            const years = [...new Set(rawTransactions.filter(t => t && t.month).map(t => getThaiFiscalYear(t.month)))].filter(Boolean).sort();
             const months = [...new Set(rawTransactions.filter(t => t && t.month).map(t => t.month))].filter(Boolean).sort();
             
             // Districts with safety guards
@@ -3631,25 +3644,14 @@
                     years.forEach(y => {
                         const opt = document.createElement('option');
                         opt.value = y;
-                        opt.textContent = `ปี ${parseInt(y) + 543}`;
+                        opt.textContent = `ปีงบ ${y}`;
                         ySelect.appendChild(opt);
                     });
                     ySelect.value = years.includes(curr) ? curr : 'all';
                 }
 
                 // Populate Months
-                const mSelect = document.getElementById(`${prefix}-month-select`);
-                if (mSelect) {
-                    const curr = mSelect.value;
-                    mSelect.innerHTML = '<option value="all">📅 ทุกช่วงเวลา/เดือน</option>';
-                    months.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m;
-                        opt.textContent = getThaiMonthYearName(m);
-                        mSelect.appendChild(opt);
-                    });
-                    mSelect.value = months.includes(curr) ? curr : 'all';
-                }
+                updateMonthsDropdown(prefix, ySelect ? ySelect.value : 'all', months);
 
                 // Populate Districts
                 const dSelect = document.getElementById(`${prefix}-district-select`);
@@ -3688,6 +3690,30 @@
             }
         }
 
+        // Thai fiscal year runs Oct-Sep: 2026-10 belongs to FY 2570
+        function getThaiFiscalYear(yearMonthStr) {
+            if (typeof yearMonthStr !== 'string') return '';
+            const [y, m] = yearMonthStr.split('-').map(n => parseInt(n, 10));
+            if (!y || !m) return '';
+            return String(y + 543 + (m >= 10 ? 1 : 0));
+        }
+
+        function updateMonthsDropdown(prefix, fiscalYear, allMonths) {
+            const mSelect = document.getElementById(`${prefix}-month-select`);
+            if (!mSelect) return;
+            const months = (allMonths || [...new Set(rawTransactions.filter(t => t && t.month).map(t => t.month))].sort())
+                .filter(m => fiscalYear === 'all' || getThaiFiscalYear(m) === fiscalYear);
+            const curr = mSelect.value;
+            mSelect.innerHTML = '<option value="all">📅 ทุกช่วงเวลา/เดือน</option>';
+            months.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = getThaiMonthYearName(m);
+                mSelect.appendChild(opt);
+            });
+            mSelect.value = months.includes(curr) ? curr : 'all';
+        }
+
         // Shared dynamic filter resolver
         function getFilteredTransactions(prefix) {
             let txs = rawTransactions;
@@ -3702,7 +3728,7 @@
             const endDateVal = document.getElementById(`${prefix}-end-date`) ? document.getElementById(`${prefix}-end-date`).value : '';
 
             if (yearVal !== 'all') {
-                txs = txs.filter(t => t && t.month && typeof t.month === 'string' && t.month.startsWith(yearVal));
+                txs = txs.filter(t => t && getThaiFiscalYear(t.month) === yearVal);
             }
             if (monthVal !== 'all') {
                 txs = txs.filter(t => t && t.month === monthVal);
@@ -3929,7 +3955,7 @@ ORDER BY name;
 
         function resetDrugTable() {
             document.getElementById('drug-breakdown-search').value = '';
-            document.getElementById('drug-year-select').value = 'all';
+            document.getElementById('drug-year-select').value = 'all'; updateMonthsDropdown('drug', 'all');
             document.getElementById('drug-month-select').value = 'all';
             if (document.getElementById('drug-abc-select')) document.getElementById('drug-abc-select').value = 'all';
             if (document.getElementById('drug-start-date')) document.getElementById('drug-start-date').value = '';
@@ -4151,7 +4177,7 @@ ORDER BY name;
         }
 
         function resetDistrictTable() {
-            document.getElementById('district-year-select').value = 'all';
+            document.getElementById('district-year-select').value = 'all'; updateMonthsDropdown('district', 'all');
             document.getElementById('district-month-select').value = 'all';
             if (document.getElementById('district-start-date')) document.getElementById('district-start-date').value = '';
             if (document.getElementById('district-end-date')) document.getElementById('district-end-date').value = '';
@@ -4163,7 +4189,7 @@ ORDER BY name;
 
         function resetHospTable() {
             document.getElementById('hosp-search').value = '';
-            document.getElementById('hosp-year-select').value = 'all';
+            document.getElementById('hosp-year-select').value = 'all'; updateMonthsDropdown('hosp', 'all');
             document.getElementById('hosp-month-select').value = 'all';
             if (document.getElementById('hosp-start-date')) document.getElementById('hosp-start-date').value = '';
             if (document.getElementById('hosp-end-date')) document.getElementById('hosp-end-date').value = '';
@@ -4481,7 +4507,7 @@ ORDER BY name;
                 }
             }
             // Fallback default date from settings
-            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : '2026';
+            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : String(new Date().getFullYear());
             const defMonth = document.getElementById('import-default-month') ? document.getElementById('import-default-month').value : '06';
             return `${defYear}-${defMonth}-01`;
         }
@@ -4784,7 +4810,7 @@ ORDER BY name;
                 h.toLowerCase() === 'hdc_date'
             );
 
-            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : '2026';
+            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : String(new Date().getFullYear());
             const defMonth = document.getElementById('import-default-month') ? document.getElementById('import-default-month').value : '06';
             const fallbackDate = `${defYear}-${defMonth}-01`;
 
@@ -5399,6 +5425,9 @@ ORDER BY name;
             });
 
             // 2. Handle cascades
+            if (selectorType === 'year') {
+                suffixList.forEach(prefix => updateMonthsDropdown(prefix, val));
+            }
             if (selectorType === 'hosp') {
                 // If a specific hospital is selected, sync its district
                 if (val !== 'all') {
@@ -6060,7 +6089,7 @@ WHERE t1.id < t2.id
         }
 
         function resetRduDashboard() {
-        document.getElementById('rdu-year-select').value = 'all';
+        document.getElementById('rdu-year-select').value = 'all'; updateMonthsDropdown('rdu', 'all');
         document.getElementById('rdu-month-select').value = 'all';
         document.getElementById('rdu-district-select').value = 'all';
         renderRduMonitoring();
@@ -6286,7 +6315,7 @@ WHERE t1.id < t2.id
 
         function resetVarianceTable() {
             document.getElementById('variance-search').value = '';
-            document.getElementById('variance-year-select').value = 'all';
+            document.getElementById('variance-year-select').value = 'all'; updateMonthsDropdown('variance', 'all');
             document.getElementById('variance-month-select').value = 'all';
             if (document.getElementById('variance-start-date')) document.getElementById('variance-start-date').value = '';
             if (document.getElementById('variance-end-date')) document.getElementById('variance-end-date').value = '';
@@ -6643,7 +6672,7 @@ WHERE t1.id < t2.id
         }
 
         function resetAbcVedTable() {
-            document.getElementById('abc-ved-year-select').value = 'all';
+            document.getElementById('abc-ved-year-select').value = 'all'; updateMonthsDropdown('abc-ved', 'all');
             document.getElementById('abc-ved-month-select').value = 'all';
             if (document.getElementById('abc-ved-start-date')) document.getElementById('abc-ved-start-date').value = '';
             if (document.getElementById('abc-ved-end-date')) document.getElementById('abc-ved-end-date').value = '';
@@ -6892,7 +6921,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
         function resetQualityTable() {
             document.getElementById('quality-search').value = '';
-            document.getElementById('quality-year-select').value = 'all';
+            document.getElementById('quality-year-select').value = 'all'; updateMonthsDropdown('quality', 'all');
             document.getElementById('quality-month-select').value = 'all';
             if (document.getElementById('quality-start-date')) document.getElementById('quality-start-date').value = '';
             if (document.getElementById('quality-end-date')) document.getElementById('quality-end-date').value = '';
@@ -7104,7 +7133,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
 
         function resetMapDashboard() {
-            document.getElementById('map-year-select').value = 'all';
+            document.getElementById('map-year-select').value = 'all'; updateMonthsDropdown('map', 'all');
             document.getElementById('map-month-select').value = 'all';
             if (document.getElementById('map-start-date')) document.getElementById('map-start-date').value = '';
             if (document.getElementById('map-end-date')) document.getElementById('map-end-date').value = '';
@@ -7309,7 +7338,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
 
         function resetAccessIndexTable() {
-            document.getElementById('access-index-year-select').value = 'all';
+            document.getElementById('access-index-year-select').value = 'all'; updateMonthsDropdown('access-index', 'all');
             document.getElementById('access-index-month-select').value = 'all';
             renderAccessIndex();
         }
