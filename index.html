@@ -3217,6 +3217,7 @@
                 tx.objectStore(RXMUK_DB_STORE).put(value, key);
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error || new Error('IndexedDB write aborted (storage quota?)'));
             });
         }
 
@@ -3502,7 +3503,7 @@
                             {
                                 if (parsed && parsed.length > 0) {
                                     data = parsed;
-                                    await idbSet('rxmuk_raw_data', data);
+                                    idbSet('rxmuk_raw_data', data).catch(e => console.warn('Local cache save failed (data still shown):', e));
                                     localStorage.setItem('rxmuk_sb_last_push', Date.now());
                                     showToast(`✅ โหลดสำเร็จ ${data.length.toLocaleString()} แถว จาก Supabase`, 'success');
                                 }
@@ -8101,7 +8102,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const extra = cloud.filter(r => !localMonths.has(r.month || '') || (r.src && !localMonthSrc.has((r.month || '') + '|' + r.src)));
             if (extra.length) {
                 rawTransactions = rawTransactions.concat(extra);
-                await idbSet('rxmuk_raw_data', rawTransactions);
+                idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('Local cache save failed:', e));
                 refreshAllUI(); updateNavDataStatus(); populateAllFilterDropdowns();
             }
         }
@@ -8210,7 +8211,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 if (!Array.isArray(data) || data.length === 0) throw new Error('ข้อมูลว่างเปล่า');
                 rawTransactions = data;
                 hasUnsavedChanges = false;
-                await idbSet('rxmuk_raw_data', rawTransactions);
+                idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('Local cache save failed (data still shown):', e));
                 localStorage.setItem('rxmuk_sb_last_push', Date.now());
                 sessionImportStarted = true;
                 refreshAllUI(); updateNavDataStatus(); populateAllFilterDropdowns();
