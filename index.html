@@ -1477,52 +1477,93 @@
                         </div>
                     </div>
 
-                    <!-- ☁️ SUPABASE CLOUD SYNC CONFIG -->
-                    <div class="panel" id="supabase-config-panel" style="border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.04);">
-                        <div class="panel-header" style="margin-bottom:12px;">
-                            <h3 class="panel-title" style="color: #3ecf8e;">
-                                <span>☁️</span> ตั้งค่า Cloud Sync (Supabase)
+                    <!-- ☁️ CLOUD SYNC CONFIG (GitHub Gist recommended) -->
+                    <div class="panel" id="cloud-config-panel" style="border-color: rgba(0,212,255,0.25); background: rgba(0,212,255,0.03);">
+                        <div class="panel-header" style="margin-bottom:14px;">
+                            <h3 class="panel-title" style="color: var(--c-primary);">
+                                <span>☁️</span> ตั้งค่า Cloud Sync (เก็บข้อมูลออนไลน์)
                             </h3>
-                            <span id="supabase-status-badge" class="badge-status" style="font-size:0.75rem;">ยังไม่เชื่อมต่อ</span>
+                            <span id="cloud-status-badge" class="badge-status" style="font-size:0.75rem;">ยังไม่เชื่อมต่อ</span>
                         </div>
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
-                            ข้อมูลจะเก็บบน Supabase ของคุณเอง (ฟรี 1GB) — ใช้ได้ทุก browser / ทุกเครื่อง
-                            <a href="https://supabase.com" target="_blank" style="color:#3ecf8e; margin-left:4px;">สร้างบัญชีฟรี ↗</a>
-                        </p>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-                            <div style="flex:2 1 240px; display:flex; flex-direction:column; gap:4px;">
-                                <label style="font-size:0.72rem; color:var(--text-muted);">Project URL</label>
-                                <input type="text" id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co"
-                                    class="search-control" style="font-size:0.82rem; font-family:monospace;">
+
+                        <!-- Tab switcher -->
+                        <div style="display:flex; gap:0; margin-bottom:16px; border:1px solid var(--card-border); border-radius:8px; overflow:hidden; width:fit-content;">
+                            <button id="cloud-tab-gist" onclick="switchCloudTab('gist')"
+                                style="padding:7px 18px; font-size:0.82rem; font-weight:600; border:none; cursor:pointer; background:var(--c-primary); color:#0d1b2e;">
+                                GitHub Gist (แนะนำ)
+                            </button>
+                            <button id="cloud-tab-sb" onclick="switchCloudTab('sb')"
+                                style="padding:7px 18px; font-size:0.82rem; font-weight:600; border:none; cursor:pointer; background:rgba(255,255,255,0.06); color:var(--text-muted);">
+                                Supabase
+                            </button>
+                        </div>
+
+                        <!-- GIST PANEL -->
+                        <div id="cloud-panel-gist">
+                            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                                ใช้ <strong>GitHub Personal Access Token</strong> (scope: gist) — ไม่มีค่าใช้จ่าย ข้อมูลเป็น private gist
+                            </p>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:flex-end;">
+                                <div style="flex:1 1 280px; display:flex; flex-direction:column; gap:4px;">
+                                    <label style="font-size:0.72rem; color:var(--text-muted);">GitHub Personal Access Token (gist scope)</label>
+                                    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                                        class="search-control" style="font-size:0.82rem; font-family:monospace;">
+                                </div>
+                                <button onclick="gistSaveConfig()" style="padding:8px 16px; background:linear-gradient(135deg,var(--c-primary),#7c3aed); border:none; border-radius:8px; font-weight:700; color:#fff; cursor:pointer; font-size:0.82rem; white-space:nowrap;">
+                                    💾 บันทึกและทดสอบ
+                                </button>
                             </div>
-                            <div style="flex:2 1 240px; display:flex; flex-direction:column; gap:4px;">
-                                <label style="font-size:0.72rem; color:var(--text-muted);">anon/public key</label>
-                                <input type="password" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                                    class="search-control" style="font-size:0.82rem; font-family:monospace;">
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <button onclick="gistPushData()" style="padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); border-radius:8px; font-size:0.82rem; color:var(--c-primary); cursor:pointer; font-weight:600;">
+                                    ☁️ อัปโหลดขึ้น Gist
+                                </button>
+                                <button onclick="gistPullData()" style="padding:8px 14px; background:rgba(124,58,237,0.12); border:1px solid rgba(124,58,237,0.3); border-radius:8px; font-size:0.82rem; color:#a78bfa; cursor:pointer; font-weight:600;">
+                                    📥 โหลดจาก Gist
+                                </button>
+                                <span id="gist-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
+                            </div>
+                            <details style="margin-top:12px;">
+                                <summary style="font-size:0.78rem; color:var(--text-muted); cursor:pointer;">📖 วิธีสร้าง GitHub Token (30 วินาที)</summary>
+                                <div style="margin-top:8px; font-size:0.78rem; color:var(--text-muted); line-height:1.8; padding:10px; background:rgba(0,0,0,0.15); border-radius:8px;">
+                                    1. ไปที่ <strong style="color:var(--c-primary);">github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</strong><br>
+                                    2. Generate new token → ตั้งชื่อ เช่น <code>rxmuk-sync</code><br>
+                                    3. เลือก scope: <strong>gist</strong> เท่านั้น (ไม่ต้องติ๊กอื่น)<br>
+                                    4. คัดลอก token ที่ขึ้นต้นด้วย <code>ghp_</code> ใส่ในช่องด้านบน<br>
+                                    <strong style="color:var(--c-yellow);">⚠️ token จะเก็บใน browser ของคุณเท่านั้น ไม่เข้า source code</strong>
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- SUPABASE PANEL -->
+                        <div id="cloud-panel-sb" style="display:none;">
+                            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                                Supabase Storage (ฟรี 1GB) — เหมาะถ้าต้องการ performance สูง
+                            </p>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                                <div style="flex:2 1 200px; display:flex; flex-direction:column; gap:4px;">
+                                    <label style="font-size:0.72rem; color:var(--text-muted);">Project URL</label>
+                                    <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co"
+                                        class="search-control" style="font-size:0.82rem; font-family:monospace;">
+                                </div>
+                                <div style="flex:2 1 200px; display:flex; flex-direction:column; gap:4px;">
+                                    <label style="font-size:0.72rem; color:var(--text-muted);">anon key</label>
+                                    <input type="password" id="sb-key" placeholder="eyJ..."
+                                        class="search-control" style="font-size:0.82rem; font-family:monospace;">
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <button onclick="supabaseSaveConfig()" style="padding:8px 16px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-weight:700; color:#0d1b2e; cursor:pointer; font-size:0.82rem;">
+                                    💾 บันทึกและทดสอบ
+                                </button>
+                                <button onclick="supabasePushData()" style="padding:8px 14px; background:rgba(62,207,142,0.12); border:1px solid rgba(62,207,142,0.3); border-radius:8px; font-size:0.82rem; color:#3ecf8e; cursor:pointer; font-weight:600;">
+                                    ☁️ อัปโหลด
+                                </button>
+                                <button onclick="supabasePullData()" style="padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.25); border-radius:8px; font-size:0.82rem; color:var(--c-primary); cursor:pointer; font-weight:600;">
+                                    📥 โหลด
+                                </button>
+                                <span id="supabase-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
                             </div>
                         </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                            <button onclick="supabaseSaveConfig()" style="padding:8px 16px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-weight:700; color:#0d1b2e; cursor:pointer; font-size:0.82rem;">
-                                💾 บันทึกและทดสอบ
-                            </button>
-                            <button onclick="supabasePushData()" style="padding:8px 16px; background:rgba(62,207,142,0.15); border:1px solid rgba(62,207,142,0.3); border-radius:8px; font-weight:600; color:#3ecf8e; cursor:pointer; font-size:0.82rem;">
-                                ☁️ อัปโหลดข้อมูลขึ้น Cloud
-                            </button>
-                            <button onclick="supabasePullData()" style="padding:8px 16px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.25); border-radius:8px; font-weight:600; color:var(--c-primary); cursor:pointer; font-size:0.82rem;">
-                                📥 โหลดข้อมูลจาก Cloud
-                            </button>
-                            <span id="supabase-sync-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
-                        </div>
-                        <details style="margin-top:12px;">
-                            <summary style="font-size:0.78rem; color:var(--text-muted); cursor:pointer;">📖 วิธีตั้งค่า Supabase (คลิกเพื่อดู)</summary>
-                            <div style="margin-top:8px; font-size:0.78rem; color:var(--text-muted); line-height:1.7; padding:10px; background:rgba(0,0,0,0.15); border-radius:8px;">
-                                1. ไปที่ <strong style="color:#3ecf8e;">supabase.com</strong> → สร้าง Project ใหม่ (ฟรี)<br>
-                                2. Project Settings → API → คัดลอก <strong>Project URL</strong> และ <strong>anon public key</strong><br>
-                                3. ไปที่ Storage → Create bucket ชื่อ <strong>rxmuk</strong> (Public หรือ Private ก็ได้)<br>
-                                4. ใส่ค่าในช่องด้านบน กด "บันทึกและทดสอบ"<br>
-                                5. กด "อัปโหลดข้อมูลขึ้น Cloud" หลังนำเข้าไฟล์ทุกครั้ง
-                            </div>
-                        </details>
                     </div>
 
                     <!-- Import History / File logs panel (client-side log via IndexedDB) -->
@@ -3255,11 +3296,11 @@
             return await idbGetHistory();
         }
 
-        // SHARED STORAGE: GitHub Gist (cross-device, no pause, gist-scope token only)
-        const GITHUB_TOKEN = ['ghp_hp1t5AR27', 'RORaTD9lofFmQHX', '9nGXMW278sS1'].join('');
+        // SHARED STORAGE: GitHub Gist (token stored in localStorage by user — never hardcoded)
+        const GH_TOKEN_LSKEY = 'rxmuk_gh_token';
+        const GIST_ID_LSKEY  = 'rxmuk_gist_id';
 
-        function getGithubToken() { return GITHUB_TOKEN; }
-        const GIST_ID_LSKEY = 'rxmuk_gist_id';
+        function getGithubToken() { try { return localStorage.getItem(GH_TOKEN_LSKEY) || ''; } catch { return ''; } }
 
         function gistHeaders() {
             return {
@@ -3445,13 +3486,12 @@
                 if (rawTransactions && rawTransactions.length > 0) {
                     idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('IndexedDB save failed:', e));
                     localStorage.removeItem('rxmuk_raw_data');
-                    // Auto-push to Supabase if configured
+                    // Auto-push: Supabase if configured, else Gist if token set
                     const sbCfg = sbGetConfig();
                     if (sbCfg) {
                         supabasePushData().catch(e => console.warn('Supabase auto-push failed:', e));
-                    } else {
-                        // Fallback to Gist only if Supabase not configured
-                        saveToServerCache();
+                    } else if (getGithubToken()) {
+                        gistPushData().catch(e => console.warn('Gist auto-push failed:', e));
                     }
                 }
             } catch (e) {
@@ -3506,8 +3546,8 @@
                             console.warn('Supabase load failed:', e);
                         }
                     }
-                    // Fallback 2: GitHub Gist (legacy)
-                    if (!data) {
+                    // Fallback 2: GitHub Gist (using user's own token from localStorage)
+                    if (!data && getGithubToken()) {
                         try {
                             const cloudData = await cloudStorageGet('raw_data.json');
                             if (cloudData && cloudData.length > 0) {
@@ -7843,6 +7883,89 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             }
         });
 
+        // ─── CLOUD SYNC UI HELPERS ──────────────────────────────────────────
+        function switchCloudTab(tab) {
+            document.getElementById('cloud-panel-gist').style.display = tab === 'gist' ? '' : 'none';
+            document.getElementById('cloud-panel-sb').style.display   = tab === 'sb'   ? '' : 'none';
+            document.getElementById('cloud-tab-gist').style.background = tab === 'gist' ? 'var(--c-primary)' : 'rgba(255,255,255,0.06)';
+            document.getElementById('cloud-tab-gist').style.color      = tab === 'gist' ? '#0d1b2e' : 'var(--text-muted)';
+            document.getElementById('cloud-tab-sb').style.background   = tab === 'sb'   ? 'var(--c-primary)' : 'rgba(255,255,255,0.06)';
+            document.getElementById('cloud-tab-sb').style.color        = tab === 'sb'   ? '#0d1b2e' : 'var(--text-muted)';
+            try { localStorage.setItem('rxmuk_cloud_tab', tab); } catch {}
+        }
+
+        function gistSaveConfig() {
+            const token = document.getElementById('gh-token-input').value.trim();
+            if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+                showToast('Token ต้องขึ้นต้นด้วย ghp_ หรือ github_pat_', 'error'); return;
+            }
+            try { localStorage.setItem(GH_TOKEN_LSKEY, token); } catch(e) { showToast('บันทึกล้มเหลว: ' + e.message, 'error'); return; }
+            // Clear old gist id so it re-discovers
+            try { localStorage.removeItem(GIST_ID_LSKEY); } catch {}
+            const badge = document.getElementById('cloud-status-badge');
+            const info  = document.getElementById('gist-sync-info');
+            badge.textContent = '⏳ ทดสอบ...'; badge.className = 'badge-status';
+            fetch('https://api.github.com/user', { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } })
+                .then(r => r.json())
+                .then(u => {
+                    if (u.login) {
+                        badge.textContent = `✅ เชื่อมต่อแล้ว (${u.login})`; badge.className = 'badge-status success';
+                        info.textContent = `บัญชี: ${u.login}`;
+                        showToast(`✅ GitHub Gist พร้อมใช้งาน (${u.login})`, 'success');
+                    } else { throw new Error('invalid token'); }
+                })
+                .catch(() => { badge.textContent = '❌ token ผิด'; badge.className = 'badge-status danger'; showToast('❌ Token ไม่ถูกต้อง', 'error'); });
+        }
+
+        async function gistPushData() {
+            if (!rawTransactions || rawTransactions.length === 0) { showToast('ไม่มีข้อมูล', 'error'); return; }
+            if (!getGithubToken()) { showToast('กรุณาใส่ GitHub Token ก่อน', 'error'); return; }
+            const info = document.getElementById('gist-sync-info');
+            info.textContent = `⏳ อัปโหลด ${rawTransactions.length.toLocaleString()} แถว...`;
+            try {
+                await cloudStoragePut('raw_data.json', rawTransactions);
+                info.textContent = `✅ อัปโหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว — ${new Date().toLocaleTimeString('th-TH')}`;
+                showToast(`✅ Gist sync สำเร็จ`, 'success');
+            } catch(e) {
+                info.textContent = '❌ ' + e.message;
+                showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        async function gistPullData() {
+            if (!getGithubToken()) { showToast('กรุณาใส่ GitHub Token ก่อน', 'error'); return; }
+            const info = document.getElementById('gist-sync-info');
+            info.textContent = '⏳ กำลังโหลดจาก Gist...';
+            try {
+                const data = await cloudStorageGet('raw_data.json');
+                if (!data || data.length === 0) throw new Error('ไม่พบข้อมูลบน Gist (อัปโหลดก่อน)');
+                rawTransactions = data;
+                hasUnsavedChanges = false;
+                await idbSet('rxmuk_raw_data', rawTransactions);
+                sessionImportStarted = true;
+                refreshAllUI(); updateNavDataStatus(); populateAllFilterDropdowns();
+                const b = document.getElementById('data-lost-banner'); if (b) b.remove();
+                info.textContent = `✅ โหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว`;
+                showToast(`✅ โหลดจาก Gist สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
+            } catch(e) {
+                info.textContent = '❌ ' + e.message;
+                showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        // Restore saved cloud tab + token on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTab = localStorage.getItem('rxmuk_cloud_tab') || 'gist';
+            switchCloudTab(savedTab);
+            const savedToken = getGithubToken();
+            if (savedToken) {
+                const el = document.getElementById('gh-token-input');
+                if (el) el.value = savedToken;
+                const badge = document.getElementById('cloud-status-badge');
+                if (badge) { badge.textContent = '✅ Token บันทึกแล้ว'; badge.className = 'badge-status success'; }
+            }
+        });
+
         // ─── SUPABASE STORAGE CLOUD SYNC ────────────────────────────────────
         const SB_BUCKET = 'rxmuk';
         const SB_FILE   = 'raw_data.json.gz';
@@ -8073,9 +8196,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     <button onclick="document.getElementById('data-lost-banner').remove()" style="margin-left:auto; background:none; border:none; color:#94b8d4; cursor:pointer; font-size:1.2rem; padding:0 4px;">✕</button>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button onclick="supabasePullData().then(()=>{ const b=document.getElementById('data-lost-banner'); if(b) b.remove(); })"
-                        style="padding:8px 14px; background:linear-gradient(135deg,#3ecf8e,#00d4ff); border:none; border-radius:8px; font-size:0.82rem; font-weight:700; color:#0d1b2e; cursor:pointer;">
-                        ☁️ โหลดจาก Supabase Cloud
+                    <button onclick="(getGithubToken() ? gistPullData() : supabasePullData()).then(()=>{ const b=document.getElementById('data-lost-banner'); if(b) b.remove(); }).catch(()=>{})"
+                        style="padding:8px 14px; background:linear-gradient(135deg,var(--c-primary),#7c3aed); border:none; border-radius:8px; font-size:0.82rem; font-weight:700; color:#fff; cursor:pointer;">
+                        ☁️ โหลดจาก Cloud
                     </button>
                     <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); border-radius:8px; font-size:0.82rem; font-weight:600; color:#00d4ff;">
                         <span>📂</span> โหลดจากไฟล์สำรอง (.json)
