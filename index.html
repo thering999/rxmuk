@@ -3509,12 +3509,10 @@
                 if (rawTransactions && rawTransactions.length > 0) {
                     idbSet('rxmuk_raw_data', rawTransactions).catch(e => console.warn('IndexedDB save failed:', e));
                     localStorage.removeItem('rxmuk_raw_data');
-                    // Auto-push: Supabase if configured, else Gist if token set
+                    // Auto-push: Supabase only (Gist has 10MB limit + rate limits, unsuitable for large datasets)
                     const sbCfg = sbGetConfig();
                     if (sbCfg) {
                         supabasePushData().catch(e => console.warn('Supabase auto-push failed:', e));
-                    } else if (getGithubToken()) {
-                        gistPushData().catch(e => console.warn('Gist auto-push failed:', e));
                     }
                 }
             } catch (e) {
@@ -4501,9 +4499,10 @@ ORDER BY name;
                     processParsedExcelData(rows, file.name, dateStr);
                     try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
                     resultMsg.className = "badge-status success";
-                    resultMsg.innerHTML = `✅ นำเข้าสำเร็จ! ${rowCount.toLocaleString()} แถว จาก "${sheetName}"`;
+                    resultMsg.innerHTML = `✅ นำเข้าสำเร็จ! ${rowCount.toLocaleString()} แถว จาก "${sheetName}" — กำลังบันทึก backup อัตโนมัติ...`;
                     resultMsg.style.display = 'block';
                     updateImportStatusBar();
+                    setTimeout(() => autoSaveBackup(file.name, rowCount, resultMsg), 800);
                 }, 300);
             }
 
@@ -4544,9 +4543,10 @@ ORDER BY name;
                             processPreAggregatedData(rows, file.name, dateStr);
                             try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
                             resultMsg.className = "badge-status success";
-                            resultMsg.innerHTML = `✅ นำเข้าสำเร็จ (streaming)! ${rowCount.toLocaleString()} รายการสะสม`;
+                            resultMsg.innerHTML = `✅ นำเข้าสำเร็จ (streaming)! ${rowCount.toLocaleString()} รายการสะสม — กำลังบันทึก backup...`;
                             resultMsg.style.display = 'block';
                             updateImportStatusBar();
+                            setTimeout(() => autoSaveBackup(file.name, rowCount, resultMsg), 800);
                         }, 300);
                     },
                     (err) => showError(err)
@@ -8166,6 +8166,26 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         } catch(e) {}
 
         // ─── JSON BACKUP / RESTORE ──────────────────────────────────────────
+        function autoSaveBackup(srcFilename, rowCount, statusEl) {
+            if (!rawTransactions || rawTransactions.length === 0) return;
+            try {
+                const payload = JSON.stringify(rawTransactions);
+                const blob = new Blob([payload], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                const d = new Date().toISOString().slice(0, 10);
+                a.download = `rxmuk_backup_${rawTransactions.length}rows_${d}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+                if (statusEl) statusEl.innerHTML = `✅ นำเข้าสำเร็จ ${rowCount.toLocaleString()} แถว — <strong>💾 บันทึก backup อัตโนมัติแล้ว</strong> (เก็บไฟล์ .json ไว้ด้วยนะ!)`;
+                showToast(`💾 Auto-backup บันทึกแล้ว ${rawTransactions.length.toLocaleString()} แถว`, 'success');
+            } catch(e) {
+                console.warn('Auto backup failed:', e);
+            }
+        }
+
         function exportDataBackup() {
             if (!rawTransactions || rawTransactions.length === 0) {
                 showToast('ไม่มีข้อมูลให้บันทึก', 'error');
