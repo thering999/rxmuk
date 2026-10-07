@@ -7846,7 +7846,21 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
 
         // Initialize selectors & data
+        // Reload once if the browser served a stale cached copy of this page
+        async function reloadIfStale() {
+            try {
+                const url = location.pathname;
+                const cached = await fetch(url, { cache: 'force-cache' }).then(r => r.text());
+                const fresh = await fetch(url, { cache: 'reload' }).then(r => r.text());
+                if (cached !== fresh && !sessionStorage.getItem('rxmuk_stale_reload')) {
+                    sessionStorage.setItem('rxmuk_stale_reload', '1');
+                    location.reload();
+                }
+            } catch (e) { console.warn('Version check skipped:', e); }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
+            reloadIfStale();
             await loadAppConfig();
             generateSecuredLocks();
             checkAuthState();
