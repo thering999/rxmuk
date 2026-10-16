@@ -3128,7 +3128,10 @@
             if (e.message && (e.message.includes('Extension') || e.message.includes('browser-polyfill'))) return;
             
             const msg = e.message || "Unknown Error";
-            alert("พบข้อผิดพลาดในระบบ: " + msg + "\nกรุณากด Ctrl + F5 หากยังพบปัญหา");
+            // A toast instead of alert(): a blocking popup on every runtime error froze the whole page
+            const text = "พบข้อผิดพลาดในระบบ: " + msg + " — กด Ctrl + F5 หากยังพบปัญหา";
+            if (typeof showToast === 'function') showToast(text, 'error');
+            else console.warn(text);
         });
     </script>
     <script>
