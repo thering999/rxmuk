@@ -1242,6 +1242,7 @@
                                     <div id="dash-burn-bar" style="height: 100%; width: 0%; background: var(--gradient-1); transition: width 1s ease-in-out;"></div>
                                 </div>
                                 <div id="dash-burn-status" style="font-size: 0.7rem; color: var(--c-green); margin-top: 5px; font-weight: 600;">สถานะปกติ: งบประมาณเพียงพอถึงสิ้นปี</div>
+                                <div id="dash-burn-basis" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 3px;"></div>
                             </div>
 
                             <h4 style="margin-top: 0; color: var(--c-primary); margin-bottom: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
@@ -5256,8 +5257,16 @@ ORDER BY name;
             if (itemsEl) itemsEl.textContent = `${uniqueDrugs.toLocaleString()} รายการ`;
             if (hospsEl) hospsEl.textContent = `${uniqueHosps.toLocaleString()} แห่ง`;
             
-            // --- DYNAMIC BUDGET TRACKING (Assumption: 250M Provincial Budget) ---
-            const annualBudget = 250000000; 
+            // --- DYNAMIC BUDGET TRACKING ---
+            // Provincial drug budget: annual_budget in public/rxmuk-config.json, else a 250M placeholder labelled on screen
+            const annualBudget = window.rxmukAnnualBudget || 250000000;
+            const basisEl = document.getElementById('dash-burn-basis');
+            if (basisEl) {
+                const yearSel = document.getElementById('drug-year-select');
+                basisEl.textContent = `เทียบงบ ${(annualBudget / 1e6).toLocaleString('th-TH')} ล้านบาท/ปี`
+                    + (window.rxmukAnnualBudget ? '' : ' (ค่าสมมติ: ตั้ง annual_budget ใน public/rxmuk-config.json)')
+                    + (!yearSel || yearSel.value === 'all' ? ' · ยอดนี้รวมทุกปีงบ เลือกปีงบเพื่อดูรายปี' : '');
+            }
             const burnPct = Math.min(100, (totalBudget / annualBudget) * 100);
             const burnPctEl = document.getElementById('dash-burn-pct');
             const burnBarEl = document.getElementById('dash-burn-bar');
@@ -8011,6 +8020,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 if (cfg.default_user && !localStorage.getItem('rxmuk_auth_user')) {
                     localStorage.setItem('rxmuk_auth_user', cfg.default_user);
                 }
+                if (Number(cfg.annual_budget) > 0) window.rxmukAnnualBudget = Number(cfg.annual_budget);
             } catch(e) { console.warn('Config load failed:', e); }
         }
 
