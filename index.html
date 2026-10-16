@@ -3135,6 +3135,12 @@
         });
     </script>
     <script>
+        // Text from imported files and the cloud (drug/hospital names, codes, months, file names) is put into
+        // HTML templates. The cloud bucket is writable with the public key, so escape it before it reaches the page.
+        function escapeHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
         // Tab switching logic
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -3206,10 +3212,10 @@
                     const sorted = history.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
                     body.innerHTML = sorted.map(h => `
                         <tr>
-                            <td>${h.date}</td>
-                            <td><code>${h.filename}</code></td>
-                            <td>${h.rows}</td>
-                            <td><span class="badge-status success">${h.user}</span></td>
+                            <td>${escapeHtml(h.date)}</td>
+                            <td><code>${escapeHtml(h.filename)}</code></td>
+                            <td>${escapeHtml(h.rows)}</td>
+                            <td><span class="badge-status success">${escapeHtml(h.user)}</span></td>
                         </tr>
                     `).join('');
                 } else {
@@ -3314,7 +3320,7 @@
                     const abcColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)');
                     return `<tr>
                         <td>${i+1}</td>
-                        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.name}">${d.name}</td>
+                        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</td>
                         <td><span class="badge-class" style="background:${abcColor}">${d.abc}</span></td>
                         <td>${d.price.toLocaleString()}</td>
                     </tr>`;
@@ -4092,7 +4098,7 @@ ORDER BY name;
                 
                 svg.innerHTML += `
                     <circle cx="${x}" cy="${y}" r="4" fill="${color}" opacity="0.7">
-                        <title>${h.name}\nQC: ${h.score.toFixed(1)}%\nBudget: ${Math.round(h.budget).toLocaleString()}</title>
+                        <title>${escapeHtml(h.name)}\nQC: ${h.score.toFixed(1)}%\nBudget: ${Math.round(h.budget).toLocaleString()}</title>
                     </circle>
                 `;
             });
@@ -4184,8 +4190,8 @@ ORDER BY name;
                 const adc = (d.amount / 30).toFixed(1);
                 
                 tr.innerHTML = `
-                    <td><code>${d.didstd}</code></td>
-                    <td><strong>${d.name}</strong> ${anomalyBadge}</td>
+                    <td><code>${escapeHtml(d.didstd)}</code></td>
+                    <td><strong>${escapeHtml(d.name)}</strong> ${anomalyBadge}</td>
                     <td>${d.amount.toLocaleString()}</td>
                     <td style="color:var(--c-primary); font-weight:bold;">${adc}</td>
                     <td>${d.price.toLocaleString()} บาท</td>
@@ -4234,7 +4240,7 @@ ORDER BY name;
 
                     chartG.innerHTML += `
                         <!-- Drug Name (Left) -->
-                        <text x="10" y="${yPos}" fill="var(--text-light)" font-size="12" font-weight="600">${shortName}</text>
+                        <text x="10" y="${yPos}" fill="var(--text-light)" font-size="12" font-weight="600">${escapeHtml(shortName)}</text>
                         
                         <!-- Value & Percent (Right) -->
                         <text x="390" y="${yPos}" fill="var(--c-secondary)" font-size="11" font-weight="bold" text-anchor="end">${Math.round(d.price).toLocaleString()} บาท (${percent}%)</text>
@@ -4294,8 +4300,8 @@ ORDER BY name;
                 const percent = ((d.budget / totalBudget) * 100).toFixed(1);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><code>${d.code}</code></td>
-                    <td><strong>${d.name}</strong></td>
+                    <td><code>${escapeHtml(d.code)}</code></td>
+                    <td><strong>${escapeHtml(d.name)}</strong></td>
                     <td>${d.count.toLocaleString()} ครั้ง</td>
                     <td>${d.budget.toLocaleString()} บาท</td>
                     <td><span style="color: var(--c-primary); font-weight: bold;">${percent}%</span></td>
@@ -4316,7 +4322,7 @@ ORDER BY name;
 
                     chartG.innerHTML += `
                         <!-- District Name (Left) -->
-                        <text x="10" y="${yPos}" fill="var(--text-light)" font-size="12" font-weight="600">${d.name}</text>
+                        <text x="10" y="${yPos}" fill="var(--text-light)" font-size="12" font-weight="600">${escapeHtml(d.name)}</text>
                         
                         <!-- Value & Percent (Right) -->
                         <text x="390" y="${yPos}" fill="var(--c-primary)" font-size="11" font-weight="bold" text-anchor="end">${Math.round(d.budget).toLocaleString()} บาท (${percent}%)</text>
@@ -4378,12 +4384,12 @@ ORDER BY name;
                     tr.style.background = 'rgba(0, 242, 254, 0.1)';
                 }
                 tr.innerHTML = `
-                    <td><code>${h.hospcode}</code></td>
-                    <td><strong>${h.name}</strong></td>
+                    <td><code>${escapeHtml(h.hospcode)}</code></td>
+                    <td><strong>${escapeHtml(h.name)}</strong></td>
                     <td>${h.count.toLocaleString()}</td>
                     <td>${h.amount.toLocaleString()}</td>
                     <td>${h.budget.toLocaleString()} บาท</td>
-                    <td><span class="badge-status success">${h.qc}</span></td>
+                    <td><span class="badge-status success">${escapeHtml(h.qc)}</span></td>
                 `;
                 tr.onclick = () => {
                     qualitySelectedHosp = h.hospcode;
@@ -4646,12 +4652,12 @@ ORDER BY name;
                     const rowCount = rows.length;
                     const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
                     const newTr = document.createElement('tr');
-                    newTr.innerHTML = `<td>${dateStr}</td><td><code>${file.name}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
+                    newTr.innerHTML = `<td>${dateStr}</td><td><code>${escapeHtml(file.name)}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
                     if (importHistoryBody) importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
                     processParsedExcelData(rows, file.name, dateStr);
                     try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
                     resultMsg.className = "badge-status success";
-                    resultMsg.innerHTML = `✅ นำเข้าสำเร็จ! ${rowCount.toLocaleString()} แถว จาก "${sheetName}" — กำลังบันทึก backup อัตโนมัติ...`;
+                    resultMsg.innerHTML = `✅ นำเข้าสำเร็จ! ${rowCount.toLocaleString()} แถว จาก "${escapeHtml(sheetName)}" — กำลังบันทึก backup อัตโนมัติ...`;
                     resultMsg.style.display = 'block';
                     updateImportStatusBar();
                     setTimeout(() => autoSaveBackup(file.name, rowCount, resultMsg), 800);
@@ -4661,7 +4667,7 @@ ORDER BY name;
             function showError(err) {
                 progressArea.style.display = 'none';
                 resultMsg.className = "badge-status danger";
-                resultMsg.innerHTML = `❌ ข้อผิดพลาด: ${err.message}`;
+                resultMsg.innerHTML = `❌ ข้อผิดพลาด: ${escapeHtml(err.message)}`;
                 resultMsg.style.display = 'block';
             }
 
@@ -4699,7 +4705,7 @@ ORDER BY name;
                             const rowCount = rows.length;
                             const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
                             const newTr = document.createElement('tr');
-                            newTr.innerHTML = `<td>${dateStr}</td><td><code>${file.name}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
+                            newTr.innerHTML = `<td>${dateStr}</td><td><code>${escapeHtml(file.name)}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
                             if (importHistoryBody) importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
                             processPreAggregatedData(rows, file.name, dateStr);
                             try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
@@ -5365,7 +5371,7 @@ ORDER BY name;
                 const topBudget = [...hospList].sort((a,b) => b.budget - a.budget).slice(0, 5);
                 budgetLeaderboard.innerHTML = topBudget.length ? topBudget.map(h => `
                     <tr>
-                        <td><strong>${h.name}</strong></td>
+                        <td><strong>${escapeHtml(h.name)}</strong></td>
                         <td style="text-align: right; color: var(--c-green); font-weight: bold;">${Math.round(h.budget).toLocaleString()} ฿</td>
                     </tr>
                 `).join('') : '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูล</td></tr>';
@@ -5377,7 +5383,7 @@ ORDER BY name;
                 const topQuality = [...hospList].sort((a,b) => b.score - a.score || b.total - a.total).slice(0, 5);
                 qualityLeaderboard.innerHTML = topQuality.length ? topQuality.map(h => `
                     <tr>
-                        <td><strong>${h.name}</strong></td>
+                        <td><strong>${escapeHtml(h.name)}</strong></td>
                         <td style="text-align: right; color: var(--c-primary); font-weight: bold;">${h.score.toFixed(1)}%</td>
                     </tr>
                 `).join('') : '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูล</td></tr>';
@@ -5464,7 +5470,7 @@ ORDER BY name;
                             </text>
                             
                             <text x="${p.x}" y="156" fill="var(--text-muted)" font-size="9" text-anchor="middle">
-                                ${p.month}
+                                ${escapeHtml(p.month)}
                             </text>
                         `;
                     });
@@ -5546,9 +5552,9 @@ ORDER BY name;
                         <br>
                         • งบประมาณเวชภัณฑ์รวม: <strong style="color: var(--c-primary);">${(totalBudget / 1000000).toFixed(1)} ล้านบาท</strong>
                         <br>
-                        • อำเภอที่มีมูลค่าการเข้าถึงยาต่อหัวสูงสุด: <strong>อำเภอ${highAccessDist}</strong> (${highAccessVal.toFixed(2)} บาท/คน)
+                        • อำเภอที่มีมูลค่าการเข้าถึงยาต่อหัวสูงสุด: <strong>อำเภอ${escapeHtml(highAccessDist)}</strong> (${highAccessVal.toFixed(2)} บาท/คน)
                         <br>
-                        • ตัวยาที่มีอัตราการสั่งใช้สูงสุด: <strong>${topDrug.substring(0, 25)}${topDrug.length > 25 ? '...' : ''}</strong> (${(topDrugVal / 1000000).toFixed(1)} ล้านบาท)
+                        • ตัวยาที่มีอัตราการสั่งใช้สูงสุด: <strong>${escapeHtml(topDrug.substring(0, 25))}${topDrug.length > 25 ? '...' : ''}</strong> (${(topDrugVal / 1000000).toFixed(1)} ล้านบาท)
                         <br>
                         <div style="margin-top: 8px; font-style: italic; color: var(--c-secondary);">* ระบบประเมินว่าควรตรวจสอบความเหลื่อมล้ำในพื้นที่ที่มีค่า Per Capita ต่ำกว่าค่าเฉลี่ยจังหวัด</div>
                     `;
@@ -5947,7 +5953,8 @@ ORDER BY name;
             bubble.className = `chat-bubble ${isBot ? 'bot' : 'user'}`;
             
             if (isBot) {
-                let formatted = text
+                // Replies quote drug names from the data (and model output): escape first, then add the markdown tags
+                let formatted = escapeHtml(text)
                     .replace(/\n/g, '<br>')
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -6291,16 +6298,16 @@ ORDER BY name;
             const slice = txs.slice(0, 2000);   // cap at 2000 rows for DOM perf
             slice.forEach(t => {
                 html += `<tr>
-                    <td>${t.month || ''}</td>
-                    <td>${t.amphurName || t.amphurCode || ''}</td>
-                    <td><code>${t.hospcode || ''}</code></td>
-                    <td>${t.hospname || ''}</td>
-                    <td><code>${t.didstd || ''}</code></td>
-                    <td>${t.dname || ''}</td>
+                    <td>${escapeHtml(t.month)}</td>
+                    <td>${escapeHtml(t.amphurName || t.amphurCode)}</td>
+                    <td><code>${escapeHtml(t.hospcode)}</code></td>
+                    <td>${escapeHtml(t.hospname)}</td>
+                    <td><code>${escapeHtml(t.didstd)}</code></td>
+                    <td>${escapeHtml(t.dname)}</td>
                     <td>${(t.amount || 0).toLocaleString()}</td>
                     <td>${(t.price || 0).toLocaleString()}</td>
                     <td>${(t.cost || 0).toLocaleString()}</td>
-                    <td style="font-size:0.78rem;color:var(--text-muted);">${t.uploadTime || 'System (Auto)'}</td>
+                    <td style="font-size:0.78rem;color:var(--text-muted);">${escapeHtml(t.uploadTime || 'System (Auto)')}</td>
                 </tr>`;
             });
 
@@ -6741,7 +6748,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             const sortedAnti = Object.entries(antiAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
             antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([name, count]) => `
                 <tr>
-                    <td><strong>${name}</strong></td>
+                    <td><strong>${escapeHtml(name)}</strong></td>
                     <td>${count.toLocaleString()}</td>
                     <td>${((count/antiCount)*100).toFixed(1)}%</td>
                 </tr>
@@ -6758,7 +6765,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             const sortedHad = Object.entries(hadAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
             hadBody.innerHTML = sortedHad.length ? sortedHad.map(([name, budget]) => `
                 <tr>
-                    <td><strong>${name}</strong></td>
+                    <td><strong>${escapeHtml(name)}</strong></td>
                     <td>${Math.round(budget).toLocaleString()} ฿</td>
                     <td><span class="badge-status danger">High Alert</span></td>
                 </tr>
@@ -6941,9 +6948,9 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 }
 
                 tr.innerHTML = `
-                    <td><code>${d.didstd.substring(0, 10)}...</code></td>
+                    <td><code>${escapeHtml(d.didstd.substring(0, 10))}...</code></td>
                     <td>
-                        <strong>${d.name}</strong>
+                        <strong>${escapeHtml(d.name)}</strong>
                         ${isAnomaly ? '<span class="badge-status danger" style="padding: 2px 6px; font-size: 0.65rem; margin-left: 8px;">Anomaly</span>' : ''}
                     </td>
                     <td>${d.minPrice.toFixed(2)} บาท</td>
@@ -6981,8 +6988,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 selectedItem.purchases.forEach(p => {
                     const dTr = document.createElement('tr');
                     dTr.innerHTML = `
-                        <td><code>${p.hospcode}</code></td>
-                        <td><strong>${p.hospname}</strong></td>
+                        <td><code>${escapeHtml(p.hospcode)}</code></td>
+                        <td><strong>${escapeHtml(p.hospname)}</strong></td>
                         <td style="color: var(--c-primary); font-weight: bold;">${p.avgUnitPrice.toFixed(2)} บาท</td>
                         <td>${p.amount.toLocaleString()}</td>
                         <td>${p.budget.toLocaleString()} บาท</td>
@@ -7347,8 +7354,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 const vedColor = d.ved === 'V' ? 'var(--c-red)' : (d.ved === 'E' ? 'var(--c-yellow)' : (d.ved === 'D' ? 'var(--c-green)' : 'var(--text-muted)'));
 
                 tr.innerHTML = `
-                    <td><code>${d.didstd}</code></td>
-                    <td><strong>${d.name}</strong></td>
+                    <td><code>${escapeHtml(d.didstd)}</code></td>
+                    <td><strong>${escapeHtml(d.name)}</strong></td>
                     <td style="font-weight:bold; color:var(--text-light);">${d.price.toLocaleString()} บาท</td>
                     <td><span class="badge-class" style="background: ${d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)')}">${d.abc}</span></td>
                     <td><span class="badge-class" style="background: ${vedColor}">${d.ved || '—'}</span></td>
@@ -7495,8 +7502,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 else if (h.grade === 'B') badgeClass = 'warning';
 
                 tr.innerHTML = `
-                    <td><code>${h.hospcode}</code></td>
-                    <td><strong>${h.hospname}</strong></td>
+                    <td><code>${escapeHtml(h.hospcode)}</code></td>
+                    <td><strong>${escapeHtml(h.hospname)}</strong></td>
                     <td>${h.totalRows.toLocaleString()}</td>
                     <td style="color: ${h.missingDid > 0 ? 'var(--c-red)' : 'var(--text-muted)'};">${h.missingDid.toLocaleString()}</td>
                     <td style="color: ${h.invalidDid > 0 ? 'var(--c-red)' : 'var(--text-muted)'};">${h.invalidDid.toLocaleString()}</td>
@@ -7529,7 +7536,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                             <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                     <span style="font-size:0.75rem; color:var(--c-primary); font-weight:bold;">🛠️ SQL Auto-Fix Script (HIS Correction)</span>
-                                    <button class="btn btn-secondary" onclick="copySqlToClipboard('${h.hospcode}')" style="padding: 2px 8px; font-size: 0.65rem;">📋 ก๊อปปี้สคริปต์</button>
+                                    <button class="btn btn-secondary" onclick="copySqlToClipboard('${String(h.hospcode).replace(/[^0-9A-Za-z]/g, '')}')" style="padding: 2px 8px; font-size: 0.65rem;">📋 ก๊อปปี้สคริปต์</button>
                                 </div>
                                 <div id="sql-fix-display" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:10px; font-family:monospace; font-size:0.7rem; color:#a5f3fc; white-space:pre-wrap; max-height:100px; overflow:auto;">-- คลิกก๊อปปี้เพื่อนำสคริปต์ไปตรวจสอบในฐานข้อมูล --
 SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';</div>
@@ -7565,7 +7572,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                         const barColor = item.hospcode === qualitySelectedHosp ? 'var(--c-primary)' : 'var(--c-secondary)';
 
                         chartSvg.innerHTML += `
-                            <text x="10" y="${yPos}" fill="var(--text-light)" font-size="11" font-weight="600">${shortName}</text>
+                            <text x="10" y="${yPos}" fill="var(--text-light)" font-size="11" font-weight="600">${escapeHtml(shortName)}</text>
                             <rect x="150" y="${yPos - 10}" width="220" height="11" fill="rgba(255,255,255,0.06)" rx="5.5"/>
                             <rect x="150" y="${yPos - 10}" width="${barWidth}" height="11" fill="${barColor}" rx="5.5"/>
                             <text x="380" y="${yPos}" fill="#fff" font-size="10.5" font-weight="bold" text-anchor="end">${item.score.toFixed(1)}%</text>
@@ -7771,7 +7778,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                             .reduce((acc, curr) => acc + curr.amount, 0);
 
                         tr.innerHTML = `
-                            <td><strong>${d.name}</strong></td>
+                            <td><strong>${escapeHtml(d.name)}</strong></td>
                             <td>${dAmount.toLocaleString()}</td>
                             <td style="color: var(--c-green); font-weight:bold;">${Math.round(d.price).toLocaleString()} บาท</td>
                         `;
@@ -7808,7 +7815,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                         const dAmount = txs.filter(t => t.dname === d.name).reduce((acc, curr) => acc + curr.amount, 0);
 
                         tr.innerHTML = `
-                            <td><strong>${d.name}</strong></td>
+                            <td><strong>${escapeHtml(d.name)}</strong></td>
                             <td>${dAmount.toLocaleString()}</td>
                             <td style="color: var(--c-green); font-weight:bold;">${Math.round(d.price).toLocaleString()} บาท</td>
                         `;
@@ -7880,7 +7887,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             list.forEach(d => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${d.name}</strong></td>
+                    <td><strong>${escapeHtml(d.name)}</strong></td>
                     <td>${d.pop.toLocaleString()}</td>
                     <td>${Math.round(d.budget).toLocaleString()} บาท</td>
                     <td style="color: var(--c-primary); font-weight:bold;">${d.perCapita.toFixed(2)}</td>
@@ -7900,7 +7907,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     const barWidth = (d.perCapita / maxPC) * 280;
                     
                     chartSvg.innerHTML += `
-                        <text x="10" y="${yPos - 5}" fill="var(--text-light)" font-size="12" font-weight="600">${d.name}</text>
+                        <text x="10" y="${yPos - 5}" fill="var(--text-light)" font-size="12" font-weight="600">${escapeHtml(d.name)}</text>
                         <text x="390" y="${yPos - 5}" fill="var(--c-primary)" font-size="11" font-weight="bold" text-anchor="end">${d.perCapita.toFixed(2)} บาท/คน</text>
                         <rect x="10" y="${yPos}" width="380" height="8" fill="rgba(255,255,255,0.05)" rx="4"/>
                         <rect x="10" y="${yPos}" width="${barWidth}" height="8" fill="url(#cyan-gradient)" rx="4">
@@ -8018,7 +8025,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
                 verdictEl.innerHTML = `
                     <span style="color: ${color}; font-weight: 600;">
-                        ${icon} อำเภอ${higherName} มีการเข้าถึงยาต่อหัวสูงกว่า ${lowerName} อยู่ <strong>${diff.toFixed(2)} บาท</strong> (แตกต่าง ${pctDiff.toFixed(1)}%)
+                        ${icon} อำเภอ${escapeHtml(higherName)} มีการเข้าถึงยาต่อหัวสูงกว่า ${escapeHtml(lowerName)} อยู่ <strong>${diff.toFixed(2)} บาท</strong> (แตกต่าง ${pctDiff.toFixed(1)}%)
                     </span>
                 `;
             }
@@ -8575,8 +8582,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                         <div style="font-weight:700; color:#fbbf24; font-size:0.95rem;">ข้อมูลหายจาก Browser</div>
                         <div style="font-size:0.8rem; color:#94b8d4; margin-top:2px;">
                             เคยนำเข้า <strong style="color:#e8f4fd;">${(lastEntry.rows||0).toLocaleString()} แถว</strong>
-                            จาก <strong style="color:#e8f4fd;">${lastEntry.filename||'-'}</strong>
-                            (${lastEntry.date||'-'})
+                            จาก <strong style="color:#e8f4fd;">${escapeHtml(lastEntry.filename || '-')}</strong>
+                            (${escapeHtml(lastEntry.date || '-')})
                             — IndexedDB ถูกเคลียร์หรือใช้คนละ Browser
                         </div>
                     </div>
