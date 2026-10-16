@@ -4826,9 +4826,11 @@ ORDER BY name;
                 const didstd = row[didstdKey] !== undefined ? String(row[didstdKey]).trim() : 'N/A';
                 const dname = row[dnameKey] || 'ไม่ระบุตัวยา';
                 const pid = row[pidKey] !== undefined ? String(row[pidKey]).trim() : 'Unknown';
-                const amount = parseFloat(row[amountKey]) || 1;
-                const price = parseFloat(row[priceKey]) || (amount * 5);
-                const cost = parseFloat(row[costKey]) || (price * 0.7);
+                // Keep missing/zero values as 0: inventing them (amount×5 baht, cost = 70%) inflated totals
+                // and hid the "price is 0" data-quality error
+                const amount = parseFloat(row[amountKey]) || 0;
+                const price = parseFloat(row[priceKey]) || 0;
+                const cost = parseFloat(row[costKey]) || 0;
                 
                 // Get correct names from hospitals database
                 const hInfo = getHospitalInfo(hospcode);
@@ -5107,9 +5109,10 @@ ORDER BY name;
                 const didstd = values[didstdIdx] !== undefined ? String(values[didstdIdx]).trim() : 'N/A';
                 const dname = values[dnameIdx] || 'ไม่ระบุตัวยา';
                 const pid = pidIdx !== -1 && values[pidIdx] !== undefined ? String(values[pidIdx]).trim() : 'Unknown';
-                const amount = parseFloat(values[amountIdx]) || 1;
-                const price = parseFloat(values[priceIdx]) || (amount * 5);
-                const cost = parseFloat(values[costIdx]) || (price * 0.7);
+                // Keep missing/zero values as 0 so the zeroPrice check below can see them
+                const amount = parseFloat(values[amountIdx]) || 0;
+                const price = parseFloat(values[priceIdx]) || 0;
+                const cost = parseFloat(values[costIdx]) || 0;
 
                 // Date extraction
                 let dateStr = fallbackDate;
