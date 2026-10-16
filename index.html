@@ -4535,7 +4535,29 @@ ORDER BY name;
             });
         }
 
-        function processUploadFile(file) {
+        // Date-column rules of the two import paths (Excel rows / streamed CSV)
+        function isExcelDateKey(k) {
+            const key = k.toLowerCase();
+            return key.includes('date') || key.includes('serv') || key === 'd_update' || key === 'hdc_date' ||
+                key.includes('เดือน') || key.includes('ปี') || key.includes('ym') || key.includes('month');
+        }
+        function isCsvDateHeader(h) {
+            const key = h.toLowerCase();
+            return key.includes('date') || key.includes('serv') || key === 'd_update' || key === 'hdc_date';
+        }
+
+        // A file without a date column gets every row stamped with the default import month, so a
+        // yearly summary lands in a single month (that is how ต.ค. 69 got 390M baht): ask first
+        function confirmUndatedImport(filename) {
+            const y = document.getElementById('import-default-year');
+            const m = document.getElementById('import-default-month');
+            const month = y && m ? getThaiMonthYearName(`${y.value}-${m.value}`) : 'เดือนที่ตั้งไว้';
+            return confirm(`ไฟล์ "${filename}" ไม่มีคอลัมน์วันที่\n\n`
+                + `ทุกแถวจะถูกบันทึกเป็นเดือน ${month} (เปลี่ยนได้ที่ "กำหนดรอบข้อมูล")\n`
+                + `ถ้าไฟล์นี้เป็นยอดรวมหลายเดือนหรือทั้งปี ตัวเลขรายเดือนจะผิด\n\nนำเข้าต่อหรือไม่?`);
+        }
+
+        async function processUploadFile(file) {
             progressArea.style.display = 'block';
             progressBar.style.width = '0%';
             resultMsg.style.display = 'none';
@@ -4545,6 +4567,14 @@ ORDER BY name;
             if (labelEl) labelEl.textContent = `อ่านไฟล์: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
 
             const isCSV = file.name.toLowerCase().endsWith('.csv');
+
+            function cancelUndated() {
+                progressArea.style.display = 'none';
+                updateNavDataStatus();
+                resultMsg.className = "badge-status warning";
+                resultMsg.textContent = `⏸️ ยกเลิกการนำเข้า "${file.name}" — ตั้งเดือนที่ "กำหนดรอบข้อมูล" ให้ตรงก่อน แล้วนำเข้าใหม่`;
+                resultMsg.style.display = 'block';
+            }
 
             function parseAndProcess(rows, sheetName) {
                 progressBar.style.width = '100%';
@@ -4557,6 +4587,10 @@ ORDER BY name;
                         resultMsg.className = "badge-status danger";
                         resultMsg.innerHTML = `❌ ไม่สามารถนำเข้าได้: ไฟล์ว่างเปล่าหรือไม่มีข้อมูล`;
                         resultMsg.style.display = 'block';
+                        return;
+                    }
+                    if (!Object.keys(rows[0]).some(isExcelDateKey) && !confirmUndatedImport(file.name)) {
+                        cancelUndated();
                         return;
                     }
                     const rowCount = rows.length;
@@ -4583,6 +4617,15 @@ ORDER BY name;
 
             if (isCSV) {
                 const navCount = document.getElementById('nav-data-count');
+                // Read the header row first: an undated file needs the user's OK before it is stamped
+                let headers;
+                try {
+                    headers = splitCSVLine((await file.slice(0, 65536).text()).split(/\r?\n/)[0] || '');
+                } catch (err) { showError(err); return; }
+                if (!headers.some(isCsvDateHeader) && !confirmUndatedImport(file.name)) {
+                    cancelUndated();
+                    return;
+                }
                 if (navCount) navCount.textContent = `⏳ ${file.name}...`;
                 parseLargeCSVInChunks(
                     file,
@@ -4794,16 +4837,7 @@ ORDER BY name;
             const pidKey = keys.find(k => k.toLowerCase() === 'pid' || k.toLowerCase() === 'patient_id' || k.toLowerCase().includes('pid') || k.toLowerCase().includes('idผู้ป่วย'));
             
             // Date column keys
-            const dateKeys = keys.filter(k => 
-                k.toLowerCase().includes('date') || 
-                k.toLowerCase().includes('serv') || 
-                k.toLowerCase() === 'd_update' || 
-                k.toLowerCase() === 'hdc_date' ||
-                k.toLowerCase().includes('เดือน') ||
-                k.toLowerCase().includes('ปี') ||
-                k.toLowerCase().includes('ym') ||
-                k.toLowerCase().includes('month')
-            );
+            const dateKeys = keys.filter(isExcelDateKey);
 
             const newTxs = [];
 
@@ -5075,12 +5109,7 @@ ORDER BY name;
             const amountIdx = headers.findIndex(h => h.toLowerCase() === 'amount' || h.toLowerCase() === 'sumamount' || h.toLowerCase() === 'qty');
             const priceIdx = headers.findIndex(h => h.toLowerCase() === 'drugprice' || h.toLowerCase() === 'sumdrugprice' || h.toLowerCase() === 'price');
             const costIdx = headers.findIndex(h => h.toLowerCase() === 'drugcost' || h.toLowerCase() === 'sumdrugcost' || h.toLowerCase() === 'cost');
-            const dateIdx = headers.findIndex(h => 
-                h.toLowerCase().includes('date') || 
-                h.toLowerCase().includes('serv') || 
-                h.toLowerCase() === 'd_update' || 
-                h.toLowerCase() === 'hdc_date'
-            );
+            const dateIdx = headers.findIndex(isCsvDateHeader);
 
             const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : String(new Date().getFullYear());
             const defMonth = document.getElementById('import-default-month') ? document.getElementById('import-default-month').value : '06';
