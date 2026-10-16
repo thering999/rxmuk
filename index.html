@@ -4938,10 +4938,20 @@ ORDER BY name;
                 });
             });
 
-            // Update global transactions
-            rawTransactions = newTxs;
+            // Replace only same source + same months, like the CSV path. Replacing everything here made the
+            // auto-push upload just this file's months and then delete every other month from the cloud
+            const srcKey = sourceKeyOf(filename);
+            newTxs.forEach(t => { t.src = srcKey; });
+            const newMonths = new Set(newTxs.map(t => t.month || ''));
+            const before = rawTransactions.length;
+            rawTransactions = rawTransactions.filter(r => !(newMonths.has(r.month || '') && (!r.src || r.src === srcKey)));
+            const replaced = before - rawTransactions.length;
+            rawTransactions = rawTransactions.concat(newTxs);
+            sessionImportStarted = true;
             hasUnsavedChanges = true;
             console.log(`Updated rawTransactions: ${rawTransactions.length} records`);
+            const monthList = [...newMonths].filter(Boolean).sort().join(', ');
+            showToast(`📅 นำเข้าเดือน ${monthList || '-'}: เพิ่ม ${newTxs.length.toLocaleString()} แถว${replaced ? `, แทนที่ข้อมูลเดิมของเดือนเดียวกัน ${replaced.toLocaleString()} แถว` : ''} (เดือนอื่นเก็บไว้ครบ)`, 'success');
 
             // Reset all filters to 'all' first
             const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
