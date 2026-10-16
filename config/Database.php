@@ -3,11 +3,19 @@
  * Database Connection Class
  */
 class Database {
-    private $host = 'mysql-docker';
-    private $db_name = 'rxmuk_db';
-    private $user = 'root';
-    private $pass = '123456';
+    private $host;
+    private $db_name;
+    private $user;
+    private $pass;
     private $conn;
+
+    // Credentials come from the environment (docker-compose / .env), never from the public repo
+    public function __construct() {
+        $this->host = getenv('DB_HOST') ?: 'mysql-docker';
+        $this->db_name = getenv('DB_NAME') ?: 'rxmuk_db';
+        $this->user = getenv('DB_USER') ?: 'root';
+        $this->pass = getenv('DB_PASSWORD') ?: '';
+    }
 
     public function connect() {
         $this->conn = null;
