@@ -251,6 +251,12 @@
             color: var(--c-primary);
         }
 
+        .nav-links a:focus-visible {
+            outline: 2px solid var(--c-primary);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+
         .user-status-area {
             display: flex;
             align-items: center;
@@ -3722,8 +3728,10 @@
             tabBtns.forEach(btn => {
                 if(btn.dataset.tab === targetTab) {
                     btn.classList.add('active');
+                    btn.setAttribute('aria-current', 'page');
                 } else {
                     btn.classList.remove('active');
+                    btn.removeAttribute('aria-current');
                 }
             });
 
@@ -3764,6 +3772,14 @@
                 const targetTab = btn.dataset.tab;
                 if (!targetTab) return;
                 switchTab(targetTab);
+            });
+            // The tabs are <a> without href, which the keyboard cannot reach: make them focusable buttons
+            if (!btn.dataset.tab) return;
+            btn.tabIndex = 0;
+            btn.setAttribute('role', 'button');
+            if (btn.classList.contains('active')) btn.setAttribute('aria-current', 'page');
+            btn.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
             });
         });
 
