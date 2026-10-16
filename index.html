@@ -958,8 +958,114 @@
             50% { transform: translateY(-4px); opacity: 1; }
         }
 
+        /* ===== Filter picker: native <select> stays as the value holder, this button + popup show details ===== */
+        :root { --rx-heat: 0, 212, 255; }
+        body.light-mode { --rx-heat: 0, 119, 204; }
+        .rx-native { display: none !important; }
+        .rx-trigger {
+            display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%;
+            background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px;
+            padding: 5px 12px 5px 14px; color: var(--text-main); font-family: var(--font-main);
+            text-align: left; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .rx-trigger:hover { border-color: var(--c-primary); }
+        .rx-trigger:focus-visible, .rx-trigger[aria-expanded="true"] { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-primary-glow); }
+        .rx-trigger.is-set { border-color: rgba(0, 212, 255, 0.55); background: rgba(0, 212, 255, 0.08); }
+        .rx-trigger.is-busy { opacity: 0.6; cursor: progress; }
+        .rx-trig-text { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.3; }
+        .rx-trig-cap { font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rx-trig-val { font-size: 0.86rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rx-caret { flex: none; color: var(--text-muted); font-size: 0.75rem; transition: transform 0.15s; }
+        .rx-trigger[aria-expanded="true"] .rx-caret { transform: rotate(180deg); }
+        body.light-mode .rx-trigger { background: rgba(255, 255, 255, 0.8); }
+        body.light-mode .rx-trigger.is-set { background: rgba(0, 119, 204, 0.07); border-color: rgba(0, 119, 204, 0.45); }
+
+        .rx-backdrop { position: fixed; inset: 0; z-index: 10000; }
+        .rx-backdrop.rx-dim { background: rgba(0, 0, 0, 0.45); }
+        .rx-panel {
+            position: fixed; z-index: 10001; display: flex; flex-direction: column;
+            background: var(--bg-color); color: var(--text-main); font-family: var(--font-main);
+            border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+        }
+        .rx-panel[hidden], .rx-backdrop[hidden], .rx-panel [hidden] { display: none !important; }
+        .rx-panel:focus { outline: none; }
+        .rx-panel.rx-sheet { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 85vh; border-radius: 16px 16px 0 0; }
+        .rx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 2px; }
+        .rx-title { font-weight: 700; font-size: 0.95rem; }
+        .rx-close { background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+        .rx-close:hover { color: var(--text-main); background: rgba(127, 127, 127, 0.15); }
+        .rx-ctx { padding: 0 14px 8px; font-size: 0.72rem; color: var(--text-muted); }
+        .rx-search-wrap { padding: 0 12px 8px; }
+        .rx-search {
+            width: 100%; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--card-border); border-radius: 8px;
+            padding: 9px 12px; color: var(--text-main); font-family: inherit; font-size: 0.88rem; outline: none;
+        }
+        .rx-search:focus { border-color: var(--c-primary); }
+        body.light-mode .rx-search { background: #fff; }
+        .rx-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 0 14px 8px; font-size: 0.72rem; color: var(--text-muted); }
+        .rx-count { margin-right: auto; }
+        .rx-only { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+        .rx-sort { display: inline-flex; gap: 4px; }
+        .rx-sort button { background: transparent; border: 1px solid var(--card-border); color: var(--text-muted); border-radius: 999px; padding: 2px 10px; font-family: inherit; font-size: 0.72rem; cursor: pointer; }
+        .rx-sort button[aria-pressed="true"] { background: var(--c-primary-glow); color: var(--c-primary); border-color: var(--c-primary); }
+        .rx-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 6px 8px; border-top: 1px solid var(--card-border); outline: none; }
+        .rx-group { position: sticky; top: -4px; z-index: 1; background: var(--bg-color); padding: 8px 8px 4px; font-size: 0.72rem; font-weight: 700; color: var(--c-primary); }
+        .rx-opt { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+        .rx-opt + .rx-opt { margin-top: 2px; }
+        .rx-opt.is-active { background: rgba(var(--rx-heat), 0.10); border-color: rgba(var(--rx-heat), 0.35); }
+        .rx-opt.is-selected .rx-opt-title { color: var(--c-primary); }
+        .rx-opt.is-empty { opacity: 0.55; }
+        .rx-opt-main { flex: 1; min-width: 0; }
+        .rx-opt-title { font-size: 0.88rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+        .rx-opt-title mark, .rx-note mark { background: rgba(251, 191, 36, 0.35); color: inherit; border-radius: 3px; }
+        .rx-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .rx-chip { font-size: 0.68rem; line-height: 1.6; padding: 0 7px; border-radius: 999px; border: 1px solid var(--card-border); color: var(--text-muted); white-space: nowrap; }
+        .rx-chip.code { font-family: ui-monospace, Consolas, monospace; white-space: normal; overflow-wrap: anywhere; }
+        .rx-chip.type { color: var(--c-accent); border-color: rgba(129, 140, 248, 0.45); }
+        .rx-chip.abc-A { color: var(--c-red); border-color: currentColor; }
+        .rx-chip.abc-B { color: var(--c-yellow); border-color: currentColor; }
+        .rx-chip.abc-C { color: var(--c-green); border-color: currentColor; }
+        .rx-chip.warn { color: var(--c-yellow); border-color: rgba(251, 191, 36, 0.45); }
+        .rx-stats { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 5px; font-size: 0.74rem; color: var(--text-muted); }
+        .rx-stats b { color: var(--text-main); font-weight: 600; }
+        .rx-note { margin-top: 4px; font-size: 0.72rem; color: var(--text-muted); overflow-wrap: anywhere; }
+        .rx-check { flex: none; width: 16px; color: var(--c-primary); font-weight: 700; visibility: hidden; }
+        .rx-opt.is-selected .rx-check { visibility: visible; }
+        .rx-more { display: block; width: calc(100% - 8px); margin: 6px 4px 2px; padding: 8px; border: 1px dashed var(--card-border); border-radius: 8px; background: transparent; color: var(--c-primary); font-family: inherit; font-size: 0.8rem; cursor: pointer; }
+        .rx-empty { padding: 18px 12px; text-align: center; color: var(--text-muted); font-size: 0.82rem; }
+        .rx-foot { padding: 8px 14px 10px; border-top: 1px solid var(--card-border); font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; }
+        @media (pointer: coarse) { .rx-kbd { display: none; } }
+
+        /* ===== Summary pivot (district / hospital × month / fiscal year / top drugs) ===== */
+        .rx-pv-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+        .rx-pv-sub { margin-top: 4px; font-size: 0.78rem; color: var(--text-muted); }
+        .rx-pv-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .rx-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; }
+        .rx-seg button { background: transparent; border: 0; color: var(--text-muted); padding: 6px 12px; font-family: inherit; font-size: 0.78rem; cursor: pointer; }
+        .rx-seg button + button { border-left: 1px solid var(--card-border); }
+        .rx-seg button[aria-pressed="true"] { background: var(--c-primary-glow); color: var(--c-primary); font-weight: 700; }
+        .rx-pv-export { background: rgba(34, 211, 160, 0.12); border: 1px solid rgba(34, 211, 160, 0.4); color: var(--c-green); border-radius: 10px; padding: 6px 12px; font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+        .rx-pv-scroll { overflow: auto; max-height: 620px; border: 1px solid var(--card-border); border-radius: 10px; }
+        .rx-pv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
+        .rx-pv-table th, .rx-pv-table td { padding: 7px 10px; border-bottom: 1px solid var(--card-border); text-align: right; white-space: nowrap; }
+        .rx-pv-table thead th { position: sticky; top: 0; z-index: 2; background: var(--bg-color); color: var(--text-muted); font-weight: 600; vertical-align: bottom; }
+        .rx-pv-table tfoot th, .rx-pv-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: var(--bg-color); font-weight: 700; border-top: 2px solid var(--card-border); }
+        .rx-pv-table .rx-pv-unit { position: sticky; left: 0; z-index: 1; background: var(--bg-color); text-align: left; white-space: normal; min-width: 170px; max-width: 260px; }
+        .rx-pv-table thead .rx-pv-unit, .rx-pv-table tfoot .rx-pv-unit { z-index: 3; }
+        .rx-pv-col-sub { display: block; font-size: 0.66rem; font-weight: 400; opacity: 0.85; }
+        .rx-pv-drug { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; width: 128px; white-space: normal; text-align: left; }
+        .rx-pv-nm { font-weight: 600; color: var(--text-main); }
+        .rx-pv-mt { font-size: 0.68rem; color: var(--text-muted); font-weight: 400; }
+        .rx-pv-total { font-weight: 700; color: var(--text-main); }
+        .rx-pv-table tr.rx-pv-subtotal > * { background-color: var(--bg-color); background-image: linear-gradient(rgba(var(--rx-heat), 0.10), rgba(var(--rx-heat), 0.10)); font-weight: 700; }
+        .rx-pv-zero { color: var(--text-muted); opacity: 0.5; }
+        .rx-pv-note { margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); line-height: 1.6; }
+        .rx-pv-empty { padding: 28px; text-align: center; color: var(--text-muted); }
+
         /* Print Report styles */
         @media print {
+            .rx-pv-scroll { max-height: none; overflow: visible; }
             #print-executive-header {
                 display: block !important;
             }
@@ -1760,6 +1866,9 @@
                     </div>
                 </div>
 
+                <!-- Summary pivot: district × month / fiscal year / top drugs (filled by renderSummaryPivot) -->
+                <div class="panel rx-pv" id="district-summary-pivot" data-prefix="district" style="margin-bottom: 20px;"></div>
+
                 <div class="workspace-layout">
                     <!-- Breakdown Table -->
                     <div class="panel">
@@ -1881,6 +1990,9 @@
                         <button class="btn btn-primary" onclick="exportHospCSV()" style="background: var(--gradient-2); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3);">📤 ส่งออก CSV</button>
                     </div>
                 </div>
+
+                <!-- Summary pivot: hospital (grouped by district) × month / fiscal year / top drugs (filled by renderSummaryPivot) -->
+                <div class="panel rx-pv" id="hosp-summary-pivot" data-prefix="hosp" style="margin-bottom: 20px;"></div>
 
                 <!-- Split Workspace Layout -->
                 <div class="workspace-layout" style="grid-template-columns: 1fr; gap: 20px;">
@@ -3833,15 +3945,19 @@
             mSelect.value = months.includes(curr) ? curr : 'all';
         }
 
-        // Shared dynamic filter resolver
-        function getFilteredTransactions(prefix) {
+        // Shared dynamic filter resolver; `exclude` lists filter types to ignore (filter pickers use it to count what each choice would give)
+        function getFilteredTransactions(prefix, exclude) {
             let txs = rawTransactions;
-            
-            const yearVal = document.getElementById(`${prefix}-year-select`) ? document.getElementById(`${prefix}-year-select`).value : 'all';
-            const monthVal = document.getElementById(`${prefix}-month-select`) ? document.getElementById(`${prefix}-month-select`).value : 'all';
-            const districtVal = document.getElementById(`${prefix}-district-select`) ? document.getElementById(`${prefix}-district-select`).value : 'all';
-            const hospVal = document.getElementById(`${prefix}-hosp-select`) ? document.getElementById(`${prefix}-hosp-select`).value : 'all';
-            const itemVal = document.getElementById(`${prefix}-item-select`) ? document.getElementById(`${prefix}-item-select`).value : 'all';
+
+            const selectVal = type => {
+                const el = document.getElementById(`${prefix}-${type}-select`);
+                return el && !(exclude && exclude.includes(type)) ? el.value : 'all';
+            };
+            const yearVal = selectVal('year');
+            const monthVal = selectVal('month');
+            const districtVal = selectVal('district');
+            const hospVal = selectVal('hosp');
+            const itemVal = selectVal('item');
 
             const startDateVal = document.getElementById(`${prefix}-start-date`) ? document.getElementById(`${prefix}-start-date`).value : '';
             const endDateVal = document.getElementById(`${prefix}-end-date`) ? document.getElementById(`${prefix}-end-date`).value : '';
@@ -4086,6 +4202,7 @@ ORDER BY name;
         }
 
         function renderDistrictBreakdown() {
+            if (window.renderSummaryPivot) renderSummaryPivot('district');
             const body = document.getElementById('district-breakdown-body');
             if(!body) return;
 
@@ -4155,6 +4272,7 @@ ORDER BY name;
         }
 
         function renderHospBreakdown() {
+            if (window.renderSummaryPivot) renderSummaryPivot('hosp');
             const body = document.getElementById('hosp-breakdown-body');
             if(!body) return;
             const searchVal = document.getElementById('hosp-search').value.toLowerCase();
@@ -8377,6 +8495,941 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 importHistBox.insertBefore(bar, importHistBox.firstChild);
             }
         });
+    </script>
+
+    <!-- Filter pickers (searchable, per-option details) + summary pivot tables -->
+    <script>
+    (function () {
+        'use strict';
+
+        // ---------- shared helpers ----------
+        const FILTER_PREFIXES = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
+        const FILTER_TYPES = ['year', 'month', 'district', 'hosp', 'item'];
+        const TH_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const ABC_INFO = {
+            A: 'มูลค่ารวมมากกว่า 100,000 บาท — ยามูลค่าสูง ควรติดตามการใช้และสต็อกใกล้ชิด',
+            B: 'มูลค่ารวมมากกว่า 25,000 ถึง 100,000 บาท — ยามูลค่าปานกลาง',
+            C: 'มูลค่ารวมไม่เกิน 25,000 บาท — ยามูลค่าต่ำ'
+        };
+        const GROUP_INFO = {
+            all: 'รวมยาทุกกลุ่ม',
+            dm: 'ยาเบาหวาน เช่น Metformin, Glibenclamide',
+            lip: 'ยาลดไขมัน เช่น Simvastatin, Atorvastatin, Gemfibrozil',
+            ht: 'ยาลดความดัน/โรคหัวใจ เช่น Amlodipine, Enalapril, Losartan, Atenolol',
+            other: 'ยาที่ไม่อยู่ใน 3 กลุ่มข้างต้น'
+        };
+        const ZERO = [0, 0, 0];
+
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fmtInt = n => Math.round(n || 0).toLocaleString('th-TH');
+        const fmtNum = n => (n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+        const fmtBaht = v => '฿' + (Math.abs(v || 0) >= 1e6
+            ? (v / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 }) + ' ล้าน'
+            : (v || 0).toLocaleString('th-TH', { maximumFractionDigits: Math.abs(v || 0) < 100 ? 2 : 0 }));
+        const compact = v => Math.abs(v) >= 1e6 ? (v / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 }) + ' ล้าน' : fmtInt(v);
+        const cleanName = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+        const shortHospName = name => name.replace(/^โรงพยาบาลส่งเสริมสุขภาพตำบล\s*/, 'รพ.สต.');
+        const abcOf = value => value > 100000 ? 'A' : (value > 25000 ? 'B' : 'C');   // same thresholds as the drug table
+        const fiscalYearOf = ym => (typeof getThaiFiscalYear === 'function' ? getThaiFiscalYear(ym) : '');
+        const dataRows = () => (typeof rawTransactions !== 'undefined' && rawTransactions) || [];
+
+        function shortMonth(ym) {   // '2025-10' -> 'ต.ค. 68'
+            const [y, m] = String(ym).split('-').map(Number);
+            return y && m ? `${TH_MONTHS_SHORT[m - 1]} ${String(y + 543).slice(-2)}` : String(ym);
+        }
+        function thaiDate(iso) {    // '2025-10-01' -> '1 ต.ค. 68'
+            const [y, m, d] = String(iso).split('-').map(Number);
+            return y && m && d ? `${d} ${TH_MONTHS_SHORT[m - 1]} ${String(y + 543).slice(-2)}` : String(iso);
+        }
+        function monthSpan(months) {
+            const list = [...(months || [])].filter(Boolean).sort();
+            if (!list.length) return '—';
+            const a = list[0], b = list[list.length - 1];
+            return (a === b ? shortMonth(a) : `${shortMonth(a)} – ${shortMonth(b)}`) + ` (${list.length} เดือน)`;
+        }
+        function hospInfo(code) {
+            const h = (typeof MUKDAHAN_HOSPITALS !== 'undefined' && MUKDAHAN_HOSPITALS[code]) || null;
+            return h ? { name: cleanName(h.hosname), ampCode: h.amp_code, ampName: h.amp_name } : null;
+        }
+        function hospType(code, name) {
+            if (code === '10712') return 'รพท.';
+            if (/^โรงพยาบาลส่งเสริมสุขภาพตำบล/.test(name)) return 'รพ.สต.';
+            if (/^ศูนย์สุขภาพชุมชน/.test(name)) return 'ศสช.';
+            if (/^สถานีอนามัย/.test(name)) return 'สถานีอนามัย';
+            if (/^สถานพยาบาลเรือนจำ/.test(name)) return 'สถานพยาบาลเรือนจำ';
+            if (/^สำนักงานสาธารณสุข/.test(name)) return 'สสอ./สสจ.';
+            if (/^โรงพยาบาล/.test(name)) return 'รพช.';
+            return '';
+        }
+        // Label shown for a chosen value (trigger button, filter summaries)
+        function displayLabel(type, value, label) {
+            label = cleanName(label);
+            if (value === 'all') return label;
+            if (type === 'hosp') {
+                const h = hospInfo(value);
+                return shortHospName(h ? h.name : (label.startsWith(value + ' - ') ? label.slice(value.length + 3) : label));
+            }
+            if (type === 'district') return /^(อ\.|อำเภอ)/.test(label) ? label : 'อ.' + label;
+            if (type === 'item') return label.length > 48 ? label.slice(0, 46) + '…' : label;
+            return label;
+        }
+        // Readable list of the filters currently applied on a tab (skipping `exclude` types)
+        function describeFilters(prefix, exclude) {
+            const out = [];
+            FILTER_TYPES.forEach(type => {
+                if (exclude && exclude.includes(type)) return;
+                const el = document.getElementById(`${prefix}-${type}-select`);
+                if (!el || el.value === 'all' || el.selectedIndex < 0) return;
+                out.push(displayLabel(type, el.value, el.options[el.selectedIndex].textContent));
+            });
+            const start = document.getElementById(`${prefix}-start-date`), end = document.getElementById(`${prefix}-end-date`);
+            if (start && start.value) out.push('ตั้งแต่ ' + thaiDate(start.value));
+            if (end && end.value) out.push('ถึง ' + thaiDate(end.value));
+            return out;
+        }
+        function filterSignature(prefix, exclude) {
+            const parts = [prefix, dataRows().length];
+            FILTER_TYPES.forEach(type => {
+                if (exclude && exclude.includes(type)) return;
+                const el = document.getElementById(`${prefix}-${type}-select`);
+                if (el) parts.push(type + '=' + el.value);
+            });
+            ['start-date', 'end-date'].forEach(type => {
+                const el = document.getElementById(`${prefix}-${type}`);
+                if (el && el.value) parts.push(type + '=' + el.value);
+            });
+            return parts.join('|');
+        }
+        function filteredTx(prefix, exclude) {
+            return typeof getFilteredTransactions === 'function' ? getFilteredTransactions(prefix, exclude) : dataRows();
+        }
+        // Aggregations over 700k+ rows are cached per filter state; any new dataset array drops the cache
+        const cache = { ref: null, map: new Map() };
+        function cached(key, build) {
+            const rows = dataRows();
+            if (cache.ref !== rows) { cache.ref = rows; cache.map.clear(); }
+            if (cache.map.has(key)) return cache.map.get(key);
+            const value = build();
+            if (cache.map.size >= 12) cache.map.delete(cache.map.keys().next().value);   // drop the oldest
+            cache.map.set(key, value);
+            return value;
+        }
+        function fiscalYearKey() {
+            const memo = new Map();
+            return t => {
+                let fy = memo.get(t.month);
+                if (fy === undefined) memo.set(t.month, fy = fiscalYearOf(t.month) || '?');
+                return fy;
+            };
+        }
+
+        // ---------- Rich filter picker ----------
+        const PICK_META = {
+            year:     { cap: 'ปีงบประมาณ', title: 'เลือกปีงบประมาณ', unit: 'ปีงบ', exclude: ['year', 'month'] },
+            month:    { cap: 'เดือน', title: 'เลือกเดือนที่ให้บริการ', unit: 'เดือน', exclude: ['month'] },
+            district: { cap: 'อำเภอ', title: 'เลือกอำเภอ', unit: 'อำเภอ', exclude: ['district', 'hosp'] },
+            hosp:     { cap: 'หน่วยบริการ', title: 'เลือกหน่วยบริการ', unit: 'แห่ง', exclude: ['hosp'] },
+            item:     { cap: 'รายการยา', title: 'เลือกรายการยา', unit: 'รายการ', exclude: ['item'] },
+            abc:      { cap: 'กลุ่มมูลค่า ABC', title: 'เลือกกลุ่มมูลค่า ABC', unit: 'กลุ่ม', exclude: [] },
+            group:    { cap: 'กลุ่มยาตามโรค', title: 'เลือกกลุ่มยาตามโรค', unit: 'กลุ่ม', exclude: [] }
+        };
+        const FACET_SETS = { year: ['months', 'hosps'], month: ['hosps', 'drugs'], district: ['hosps', 'drugs'], hosp: ['drugs', 'months'], item: ['hosps'], group: ['drugs', 'hosps'], abc: [] };
+        const SEARCH_HINT = {
+            hosp: 'พิมพ์ชื่อ รหัส หรืออำเภอ เช่น บ้านบาก, 10247, ดอนตาล',
+            item: 'พิมพ์ชื่อยาหรือรหัส เช่น amlodipine, พาราเซตามอล',
+            month: 'พิมพ์ชื่อเดือน', district: 'พิมพ์ชื่ออำเภอ'
+        };
+        const PAGE = 150;
+        const VALUE_DESC = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+        const INDEX_DESC = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
+        let ui = null;      // shared popup, built on first open
+        let state = null;   // open popup state
+
+        function enhance(el, prefix, type) {
+            if (!el || el.dataset.rxPicker) return;
+            el.dataset.rxPicker = type;
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'rx-trigger';
+            trigger.setAttribute('aria-haspopup', 'dialog');
+            trigger.setAttribute('aria-expanded', 'false');
+            if (el.style.flex) trigger.style.flex = el.style.flex;
+            if (el.style.width) trigger.style.width = el.style.width;
+            trigger.innerHTML = '<span class="rx-trig-text"><span class="rx-trig-cap"></span><span class="rx-trig-val"></span></span><span class="rx-caret" aria-hidden="true">▾</span>';
+            el.insertAdjacentElement('afterend', trigger);
+            el.classList.add('rx-native');
+            const p = { el, prefix, type, trigger, queued: false };
+
+            // The app sets .value / rebuilds options in many places without firing events: mirror every change into the button
+            const queue = () => {
+                if (p.queued) return;
+                p.queued = true;
+                queueMicrotask(() => { p.queued = false; paintTrigger(p); });
+            };
+            [['value', VALUE_DESC], ['selectedIndex', INDEX_DESC]].forEach(([prop, desc]) => {
+                if (!desc || !desc.set) return;
+                Object.defineProperty(el, prop, {
+                    configurable: true,
+                    get() { return desc.get.call(this); },
+                    set(v) { desc.set.call(this, v); queue(); }
+                });
+            });
+            new MutationObserver(queue).observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['selected'] });
+            el.addEventListener('change', queue);
+
+            trigger.addEventListener('click', () => openPicker(p));
+            trigger.addEventListener('keydown', e => {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openPicker(p); }
+                else if (e.key.length === 1 && e.key !== ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); openPicker(p, e.key); }
+            });
+            paintTrigger(p);
+        }
+
+        function triggerDetail(type, value) {
+            if (type === 'hosp') { const h = hospInfo(value); return h ? `${value} · อ.${h.ampName}` : value; }
+            if (type === 'item' || type === 'district') return 'รหัส ' + value;
+            if (type === 'month') return 'ปีงบ ' + fiscalYearOf(value);
+            if (type === 'year') { const y = +value; return y ? `ต.ค. ${String(y - 1).slice(-2)} – ก.ย. ${String(y).slice(-2)}` : ''; }
+            if (type === 'abc') return { A: 'มากกว่า 100,000 บาท', B: '25,000–100,000 บาท', C: 'ไม่เกิน 25,000 บาท' }[value] || '';
+            return '';
+        }
+
+        function paintTrigger(p) {
+            const { el, type, trigger } = p;
+            const meta = PICK_META[type];
+            const opt = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+            const value = el.value;
+            const label = opt ? cleanName(opt.textContent) : '—';
+            const hasAll = el.options.length > 0 && el.options[0].value === 'all';
+            const isAll = value === 'all';
+            const detail = isAll ? `${fmtInt(el.options.length - 1)} ${meta.unit}` : triggerDetail(type, value);
+            trigger.querySelector('.rx-trig-cap').textContent = detail ? `${meta.cap} · ${detail}` : meta.cap;
+            trigger.querySelector('.rx-trig-val').textContent = opt ? displayLabel(type, value, label) : label;
+            trigger.title = `${meta.cap}: ${label}${detail && !isAll ? ` (${detail})` : ''}\nคลิกเพื่อค้นหาและดูรายละเอียดของแต่ละตัวเลือก`;
+            trigger.classList.toggle('is-set', hasAll && !isAll);
+        }
+
+        // Per-option numbers, counted with every other filter of the tab applied (so they match what you get after picking)
+        function facetStats(p) {
+            const exclude = PICK_META[p.type].exclude;
+            return cached(`facet|${p.type}|${filterSignature(p.prefix, exclude)}`, () => {
+                const txs = filteredTx(p.prefix, exclude);
+                const want = FACET_SETS[p.type] || [];
+                const keyOf = p.type === 'year' ? fiscalYearKey()
+                    : p.type === 'month' ? (t => t.month)
+                    : p.type === 'district' ? (t => t.amphurCode)
+                    : p.type === 'hosp' ? (t => t.hospcode)
+                    : p.type === 'group' ? (t => (typeof getDrugGroup === 'function' ? getDrugGroup(t.didstd) : 'other'))
+                    : (t => t.didstd);
+                const newAgg = () => { const a = { rows: 0, value: 0, amount: 0 }; want.forEach(w => { a[w] = new Set(); }); return a; };
+                const add = (a, t) => {
+                    a.rows++; a.value += +t.price || 0; a.amount += +t.amount || 0;
+                    if (a.hosps) a.hosps.add(t.hospcode);
+                    if (a.drugs) a.drugs.add(t.didstd);
+                    if (a.months) a.months.add(t.month);
+                };
+                const map = new Map();
+                const total = newAgg();
+                for (let i = 0; i < txs.length; i++) {
+                    const t = txs[i];
+                    if (!t) continue;
+                    const k = keyOf(t);
+                    let a = map.get(k);
+                    if (!a) map.set(k, a = newAgg());
+                    add(a, t);
+                    add(total, t);
+                }
+                if (p.type !== 'abc') return { map, total };
+                // ABC: classify each drug by its value, then count per class
+                const classes = new Map(['A', 'B', 'C'].map(c => [c, { drugs: 0, value: 0, rows: 0 }]));
+                map.forEach(a => { const c = classes.get(abcOf(a.value)); c.drugs++; c.value += a.value; c.rows += a.rows; });
+                return { map: classes, total: { drugs: map.size, value: total.value, rows: total.rows } };
+            });
+        }
+
+        // Every name each hospital uses for a drug code (searchable, shown as "ชื่ออื่น")
+        function drugNameIndex() {
+            const rows = dataRows();
+            return cached('names|' + rows.length, () => {
+                const idx = new Map();
+                for (let i = 0; i < rows.length; i++) {
+                    const t = rows[i];
+                    if (!t || !t.dname) continue;
+                    let names = idx.get(t.didstd);
+                    if (!names) idx.set(t.didstd, names = new Set());
+                    if (names.size < 6) names.add(t.dname);
+                }
+                return idx;
+            });
+        }
+
+        const chip = (text, cls, tip) => `<span class="rx-chip${cls ? ' ' + cls : ''}"${tip ? ` title="${esc(tip)}"` : ''}>${esc(text)}</span>`;
+        const stat = (pre, num, post) => `<span>${pre ? esc(pre) + ' ' : ''}<b>${esc(num)}</b>${post ? ' ' + esc(post) : ''}</span>`;
+
+        function describe(type, it, stats, names) {
+            const s = it.s, v = it.value, isAll = v === 'all';
+            const search = [it.label, v];
+            it.title = it.label; it.chips = []; it.stats = []; it.note = ''; it.group = '';
+            it.empty = !isAll && !(s && (s.rows || s.drugs));
+            const money = s ? stat('มูลค่า', fmtBaht(s.value)) : '';
+            const rows = s && s.rows != null ? stat('', fmtInt(s.rows), 'แถวข้อมูล') : '';
+            const allLine = unit => [stat('มีข้อมูล', fmtInt(stats.map.size), unit), money, rows];
+
+            if (type === 'hosp') {
+                if (isAll) it.stats = allLine('แห่ง');
+                else {
+                    const h = hospInfo(v);
+                    const name = h ? h.name : (it.label.startsWith(v + ' - ') ? it.label.slice(v.length + 3) : it.label);
+                    const kind = hospType(v, name);
+                    it.title = name;
+                    it.group = h ? `${h.ampCode}|${h.ampName}` : '~|ไม่ทราบอำเภอ';
+                    it.chips = [chip('รหัส ' + v, 'code'), h ? chip('อ.' + h.ampName) : '', kind ? chip(kind, 'type') : ''];
+                    if (s) it.stats = [stat('ยา', fmtInt(s.drugs.size), 'รายการ'), money, rows, stat('ข้อมูล', monthSpan(s.months))];
+                    search.push(name, shortHospName(name), h ? h.ampName : '', kind);
+                }
+            } else if (type === 'item') {
+                if (isAll) it.stats = allLine('รายการ');
+                else {
+                    const cls = s ? abcOf(s.value) : '';
+                    it.chips = [
+                        chip('รหัส ' + v, 'code'),
+                        cls ? chip('กลุ่ม ' + cls, 'abc-' + cls, ABC_INFO[cls]) : '',
+                        v.length !== 24 ? chip('⚠ ไม่ใช่รหัส DID 24 หลัก', 'warn', 'รหัสยาท้องถิ่นหรือรหัสไม่ครบ 24 หลัก — ควรตรวจสอบการ map รหัสยามาตรฐาน (DIDSTD)') : ''
+                    ];
+                    if (s) it.stats = [stat('ใช้ใน', fmtInt(s.hosps.size), 'หน่วยบริการ'), stat('จ่าย', fmtNum(s.amount), 'หน่วย'), money, rows];
+                    const alt = names && names.get(v) ? [...new Set([...names.get(v)].map(cleanName))].filter(n => n && n !== it.label) : [];
+                    if (alt.length) it.note = 'ชื่ออื่นที่หน่วยบริการใช้: ' + alt.slice(0, 3).join(' · ') + (alt.length > 3 ? ' …' : '');
+                    search.push(...alt);
+                }
+            } else if (type === 'district') {
+                if (isAll) it.stats = allLine('อำเภอ');
+                else {
+                    it.title = displayLabel('district', v, it.label);
+                    it.chips = [chip('รหัส ' + v, 'code')];
+                    if (s) it.stats = [stat('', fmtInt(s.hosps.size), 'หน่วยบริการ'), stat('ยา', fmtInt(s.drugs.size), 'รายการ'), money, rows];
+                }
+            } else if (type === 'year') {
+                if (isAll) it.stats = allLine('ปีงบ');
+                else {
+                    const y = +v;
+                    it.title = 'ปีงบประมาณ ' + v;
+                    if (y) it.chips = [chip(`1 ต.ค. ${y - 1} – 30 ก.ย. ${y}`)];
+                    if (s) it.stats = [stat('มีข้อมูล', `${s.months.size}/12`, 'เดือน'), stat('', fmtInt(s.hosps.size), 'หน่วยบริการ'), money, rows];
+                }
+            } else if (type === 'month') {
+                if (isAll) it.stats = allLine('เดือน');
+                else {
+                    it.chips = [chip('ปีงบ ' + fiscalYearOf(v))];
+                    if (s) it.stats = [stat('', fmtInt(s.hosps.size), 'หน่วยบริการส่งข้อมูล'), stat('ยา', fmtInt(s.drugs.size), 'รายการ'), money, rows];
+                }
+            } else if (type === 'abc') {
+                const total = stats.total;
+                if (isAll) {
+                    it.stats = [stat('ยาทั้งหมด', fmtInt(total.drugs), 'รายการ'), stat('มูลค่า', fmtBaht(total.value))];
+                    it.note = 'แบ่งกลุ่มจากมูลค่ารวมของยาแต่ละรายการ ตามช่วงเวลา/พื้นที่ที่กรอง';
+                } else {
+                    it.note = ABC_INFO[v] || '';
+                    if (s) it.stats = [stat('', fmtInt(s.drugs), 'รายการ'), stat('มูลค่า', fmtBaht(s.value), `(${total.value ? (s.value / total.value * 100).toFixed(1) : '0'}% ของทั้งหมด)`)];
+                }
+            } else if (type === 'group') {
+                it.note = GROUP_INFO[v] || '';
+                if (s) it.stats = [stat('ยา', fmtInt(s.drugs.size), 'รายการ'), stat('', fmtInt(s.hosps.size), 'หน่วยบริการ'), money];
+            }
+            if (!isAll && !s) it.stats = ['<span>ไม่มีข้อมูลตามตัวกรองที่เลือก</span>'];
+            it.chips = it.chips.filter(Boolean);
+            it.stats = it.stats.filter(Boolean);
+            it.search = search.filter(Boolean).join(' ').toLowerCase();
+        }
+
+        function buildItems(p) {
+            const stats = facetStats(p);
+            const names = p.type === 'item' ? drugNameIndex() : null;
+            return [...p.el.options].map((o, index) => {
+                const it = { value: o.value, label: cleanName(o.textContent), index, disabled: o.disabled };
+                it.s = o.value === 'all' ? stats.total : (stats.map.get(o.value) || null);
+                describe(p.type, it, stats, names);
+                return it;
+            });
+        }
+
+        function buildUi() {
+            if (ui) return;
+            const backdrop = document.createElement('div');
+            backdrop.className = 'rx-backdrop';
+            backdrop.hidden = true;
+            const panel = document.createElement('div');
+            panel.className = 'rx-panel';
+            panel.hidden = true;
+            panel.setAttribute('role', 'dialog');
+            panel.setAttribute('aria-labelledby', 'rx-panel-title');
+            panel.tabIndex = -1;   // clicks on plain text inside keep focus in the popup instead of closing it
+            panel.innerHTML = `
+                <div class="rx-head"><div class="rx-title" id="rx-panel-title"></div><button type="button" class="rx-close" aria-label="ปิด">✕</button></div>
+                <div class="rx-ctx"></div>
+                <div class="rx-search-wrap"><input type="text" class="rx-search" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="rx-listbox" autocomplete="off" spellcheck="false"></div>
+                <div class="rx-tools">
+                    <span class="rx-count" aria-live="polite"></span>
+                    <label class="rx-only"><input type="checkbox"> เฉพาะที่มีข้อมูล</label>
+                    <span class="rx-sort" role="group" aria-label="เรียงลำดับ"><button type="button" data-sort="name">เรียงตามชื่อ</button><button type="button" data-sort="value">มูลค่าสูงสุด</button></span>
+                </div>
+                <div class="rx-list" id="rx-listbox" role="listbox" tabindex="-1" aria-labelledby="rx-panel-title"></div>
+                <div class="rx-foot"></div>`;
+            document.body.append(backdrop, panel);
+            ui = {
+                backdrop, panel,
+                title: panel.querySelector('.rx-title'),
+                ctx: panel.querySelector('.rx-ctx'),
+                searchWrap: panel.querySelector('.rx-search-wrap'),
+                search: panel.querySelector('.rx-search'),
+                count: panel.querySelector('.rx-count'),
+                onlyWrap: panel.querySelector('.rx-only'),
+                only: panel.querySelector('.rx-only input'),
+                sortWrap: panel.querySelector('.rx-sort'),
+                list: panel.querySelector('.rx-list'),
+                foot: panel.querySelector('.rx-foot')
+            };
+            backdrop.addEventListener('click', () => closePicker(true));
+            panel.querySelector('.rx-close').addEventListener('click', () => closePicker(true));
+            let typing = 0;
+            ui.search.addEventListener('input', () => {
+                clearTimeout(typing);
+                typing = setTimeout(() => {
+                    if (!state) return;
+                    state.query = ui.search.value;
+                    state.limit = PAGE;
+                    renderList(true);
+                }, 90);
+            });
+            ui.only.addEventListener('change', () => {
+                if (!state) return;
+                state.onlyData = ui.only.checked;
+                state.limit = PAGE;
+                renderList(true);
+            });
+            ui.sortWrap.addEventListener('click', e => {
+                const b = e.target.closest('button[data-sort]');
+                if (!b || !state) return;
+                state.sort = b.dataset.sort;
+                state.limit = PAGE;
+                paintSortButtons();
+                renderList(true);
+            });
+            ui.list.addEventListener('click', e => {
+                if (!state) return;
+                if (e.target.closest('.rx-more')) {
+                    state.limit += PAGE;
+                    renderList(false, true);
+                    focusMain();
+                    return;
+                }
+                const o = e.target.closest('.rx-opt');
+                if (o) choose(+o.dataset.i);
+            });
+            ui.list.addEventListener('mousemove', e => {
+                const o = e.target.closest('.rx-opt');
+                if (o && state && +o.dataset.pos !== state.active) setActive(+o.dataset.pos, false);
+            });
+            panel.addEventListener('keydown', onKey);
+            panel.addEventListener('focusout', e => {
+                if (!state || (e.relatedTarget && panel.contains(e.relatedTarget))) return;
+                setTimeout(() => {
+                    if (state && document.hasFocus() && !panel.contains(document.activeElement)) closePicker(false);
+                }, 0);
+            });
+            let framed = false;
+            const follow = () => {
+                if (!state || framed) return;
+                framed = true;
+                requestAnimationFrame(() => { framed = false; position(); });
+            };
+            window.addEventListener('resize', follow);
+            window.addEventListener('scroll', follow, { passive: true });
+        }
+
+        function footHtml(type) {
+            const legend = {
+                hosp: 'รพท. = โรงพยาบาลทั่วไป · รพช. = โรงพยาบาลชุมชน · รพ.สต. = โรงพยาบาลส่งเสริมสุขภาพตำบล',
+                item: 'กลุ่ม A มูลค่ารวม > 100,000 บาท · B > 25,000–100,000 บาท · C ≤ 25,000 บาท · ค้นหาได้ทั้งรหัสยาและชื่อที่แต่ละหน่วยบริการใช้',
+                abc: 'ABC = จัดกลุ่มยาตามมูลค่าการจ่ายรวม เพื่อเลือกควบคุมยามูลค่าสูงก่อน',
+                group: 'จัดกลุ่มจากรหัสยามาตรฐาน (DID) ของยาหลักแต่ละโรค'
+            }[type];
+            return (legend ? `<div>${esc(legend)}</div>` : '')
+                + '<div>มูลค่า = ราคารวม (บาท) · แถวข้อมูล = จำนวนบรรทัดข้อมูลการจ่ายยาที่นำเข้า<span class="rx-kbd"> · ↑↓ เลื่อน · Enter เลือก · Esc ปิด</span></div>';
+        }
+
+        function openPicker(p, initialQuery) {
+            if (state && state.p === p) { closePicker(true); return; }
+            closePicker(false);
+            buildUi();
+            let items;
+            try {
+                items = buildItems(p);
+            } catch (err) {
+                console.error('rx picker:', err);
+                items = [...p.el.options].map((o, index) => {
+                    const label = cleanName(o.textContent);
+                    return { value: o.value, label, title: label, index, chips: [], stats: [], note: '', group: '', search: (label + ' ' + o.value).toLowerCase() };
+                });
+            }
+            const meta = PICK_META[p.type];
+            const long = items.length > 12;
+            const sortable = p.type === 'hosp' || p.type === 'item';
+            state = { p, items, query: long ? (initialQuery || '') : '', sort: 'name', onlyData: false, limit: PAGE, view: [], active: -1, terms: [] };
+            const ctx = describeFilters(p.prefix, meta.exclude);
+            ui.title.textContent = meta.title;
+            ui.ctx.textContent = ctx.length
+                ? 'ตัวเลขในแต่ละตัวเลือกคำนวณตามตัวกรองที่เลือกไว้: ' + ctx.join(' · ')
+                : `ตัวเลขในแต่ละตัวเลือกคำนวณจากข้อมูลทั้งหมดในระบบ (${fmtInt(dataRows().length)} แถว)`;
+            ui.searchWrap.hidden = !long;
+            ui.search.value = state.query;
+            ui.search.placeholder = SEARCH_HINT[p.type] || 'พิมพ์เพื่อค้นหา';
+            ui.onlyWrap.hidden = !sortable;
+            ui.only.checked = false;
+            ui.sortWrap.hidden = !sortable;
+            paintSortButtons();
+            ui.foot.innerHTML = footHtml(p.type);
+            ui.panel.hidden = false;
+            ui.backdrop.hidden = false;
+            p.trigger.setAttribute('aria-expanded', 'true');
+            renderList(true);
+            position();
+            focusMain();
+            if (long && state.query) ui.search.setSelectionRange(state.query.length, state.query.length);
+        }
+
+        function closePicker(focusTrigger) {
+            if (!state) return;
+            const p = state.p;
+            state = null;
+            ui.panel.hidden = true;
+            ui.backdrop.hidden = true;
+            ui.list.innerHTML = '';
+            p.trigger.setAttribute('aria-expanded', 'false');
+            if (focusTrigger) p.trigger.focus({ preventScroll: true });
+        }
+
+        const focusMain = () => (ui.searchWrap.hidden ? ui.list : ui.search).focus({ preventScroll: true });
+        const paintSortButtons = () => ui.sortWrap.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(state && b.dataset.sort === state.sort)));
+
+        function highlight(text, terms) {
+            if (!terms.length) return esc(text);
+            const low = text.toLowerCase();
+            const marked = new Uint8Array(text.length);
+            terms.forEach(term => {
+                for (let i = low.indexOf(term); i !== -1; i = low.indexOf(term, i + term.length)) marked.fill(1, i, i + term.length);
+            });
+            let out = '', open = false;
+            for (let i = 0; i < text.length; i++) {
+                if (marked[i] && !open) { out += '<mark>'; open = true; }
+                if (!marked[i] && open) { out += '</mark>'; open = false; }
+                out += esc(text[i]);
+            }
+            return open ? out + '</mark>' : out;
+        }
+
+        function optHtml(it, pos, selected) {
+            const cls = 'rx-opt' + (selected ? ' is-selected' : '') + (it.empty ? ' is-empty' : '');
+            return `<div class="${cls}" role="option" id="rx-opt-${pos}" data-i="${it.index}" data-pos="${pos}" aria-selected="${selected}">`
+                + '<div class="rx-opt-main">'
+                + `<div class="rx-opt-title">${highlight(it.title, state.terms)}</div>`
+                + (it.chips.length ? `<div class="rx-chips">${it.chips.join('')}</div>` : '')
+                + (it.stats.length ? `<div class="rx-stats">${it.stats.join('')}</div>` : '')
+                + (it.note ? `<div class="rx-note">${highlight(it.note, state.terms)}</div>` : '')
+                + '</div><span class="rx-check" aria-hidden="true">✓</span></div>';
+        }
+
+        function renderList(resetScroll, keepActive) {
+            const { p, items } = state;
+            const meta = PICK_META[p.type];
+            const terms = state.query.toLowerCase().split(/\s+/).filter(Boolean);
+            state.terms = terms;
+            let list = items.filter(it => {
+                if (it.value === 'all') return !terms.length;
+                if (state.onlyData && it.empty) return false;
+                return terms.every(term => it.search.includes(term));
+            });
+            const isAllFirst = (a, b) => (b.value === 'all') - (a.value === 'all');
+            if (state.sort === 'value') {
+                list.sort((a, b) => isAllFirst(a, b) || ((b.s ? b.s.value : -1) - (a.s ? a.s.value : -1)));
+            } else if (p.type === 'hosp') {
+                list.sort((a, b) => isAllFirst(a, b) || a.group.localeCompare(b.group));   // stable: keeps name order inside each district
+            }
+            const totalCount = items.filter(it => it.value !== 'all').length;
+            const shownCount = list.filter(it => it.value !== 'all').length;
+            ui.count.textContent = (terms.length || state.onlyData)
+                ? `พบ ${fmtInt(shownCount)} จาก ${fmtInt(totalCount)} ${meta.unit}`
+                : `ทั้งหมด ${fmtInt(totalCount)} ${meta.unit}`;
+
+            const selIdx = p.el.selectedIndex;
+            const selPos = list.findIndex(it => it.index === selIdx);
+            const grouped = p.type === 'hosp' && state.sort === 'name';
+            const groupSize = new Map();
+            if (grouped) list.forEach(it => groupSize.set(it.group, (groupSize.get(it.group) || 0) + 1));
+            const html = [];
+            state.view = [];
+            const push = it => {
+                html.push(optHtml(it, state.view.length, it.index === selIdx));
+                state.view.push(it.index);
+            };
+            // keep the current choice visible even when it sits beyond the first page
+            if (selPos >= state.limit) {
+                html.push('<div class="rx-group" aria-hidden="true">ที่เลือกอยู่ตอนนี้</div>');
+                push(list[selPos]);
+                html.push('<div class="rx-group" aria-hidden="true">รายการทั้งหมด</div>');
+            }
+            let lastGroup = null;
+            list.slice(0, state.limit).forEach(it => {
+                if (grouped && it.value !== 'all' && it.group !== lastGroup) {
+                    lastGroup = it.group;
+                    html.push(`<div class="rx-group" aria-hidden="true">อ.${esc(it.group.split('|')[1])} · ${groupSize.get(it.group)} แห่ง</div>`);
+                }
+                push(it);
+            });
+            const rest = list.length - state.limit;
+            if (rest > 0) html.push(`<button type="button" class="rx-more">แสดงเพิ่มอีก ${fmtInt(Math.min(PAGE, rest))} รายการ (เหลือ ${fmtInt(rest)})</button>`);
+            if (!list.length) html.push(`<div class="rx-empty">ไม่พบ “${esc(state.query)}” — ลองพิมพ์ชื่อบางส่วน หรือรหัส</div>`);
+            ui.list.innerHTML = html.join('');
+            if (resetScroll) ui.list.scrollTop = 0;
+            if (keepActive && state.active >= 0 && state.active < state.view.length) { setActive(state.active, false); return; }
+            const selected = state.view.indexOf(selIdx);
+            setActive(terms.length || selected < 0 ? (state.view.length ? 0 : -1) : selected, true);
+        }
+
+        function setActive(pos, scroll) {
+            const prev = ui.list.querySelector('.rx-opt.is-active');
+            if (prev) prev.classList.remove('is-active');
+            state.active = pos;
+            const owner = ui.searchWrap.hidden ? ui.list : ui.search;
+            const el = pos >= 0 ? document.getElementById('rx-opt-' + pos) : null;
+            if (!el) { owner.removeAttribute('aria-activedescendant'); return; }
+            el.classList.add('is-active');
+            owner.setAttribute('aria-activedescendant', el.id);
+            if (!scroll) return;
+            const box = ui.list.getBoundingClientRect(), r = el.getBoundingClientRect();
+            const top = box.top + 30;   // leave room for the sticky district header
+            if (r.top < top) ui.list.scrollTop -= top - r.top;
+            else if (r.bottom > box.bottom - 4) ui.list.scrollTop += r.bottom - box.bottom + 4;
+        }
+
+        function onKey(e) {
+            if (!state) return;
+            if (e.key === 'Escape') { e.preventDefault(); closePicker(true); return; }
+            if (e.target !== ui.search && e.target !== ui.list) return;
+            const last = state.view.length - 1;
+            const inSearch = e.target === ui.search;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (state.active >= last && ui.list.querySelector('.rx-more')) { state.limit += PAGE; renderList(false, true); }
+                setActive(Math.min(state.view.length - 1, state.active + 1), true);
+            } else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(0, state.active - 1), true); }
+            else if (e.key === 'PageDown') { e.preventDefault(); setActive(Math.min(last, state.active + 8), true); }
+            else if (e.key === 'PageUp') { e.preventDefault(); setActive(Math.max(0, state.active - 8), true); }
+            else if (e.key === 'Home' && !inSearch) { e.preventDefault(); setActive(0, true); }
+            else if (e.key === 'End' && !inSearch) { e.preventDefault(); setActive(last, true); }
+            else if (e.key === 'Enter') { e.preventDefault(); if (state.active >= 0) choose(state.view[state.active]); }
+        }
+
+        function choose(index) {
+            if (!state) return;
+            const p = state.p;
+            const opt = p.el.options[index];
+            closePicker(true);
+            if (!opt || opt.disabled || p.el.selectedIndex === index) return;
+            p.el.selectedIndex = index;
+            p.trigger.classList.add('is-busy');
+            // let the popup close on screen before every tab re-renders
+            requestAnimationFrame(() => setTimeout(() => {
+                try { p.el.dispatchEvent(new Event('change', { bubbles: true })); }
+                finally { p.trigger.classList.remove('is-busy'); }
+            }, 0));
+        }
+
+        function position() {
+            if (!state) return;
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const sheet = vw <= 640;
+            ui.panel.classList.toggle('rx-sheet', sheet);
+            ui.backdrop.classList.toggle('rx-dim', sheet);
+            const s = ui.panel.style;
+            if (sheet) { s.cssText = ''; return; }
+            const r = state.p.trigger.getBoundingClientRect();
+            const width = Math.min(Math.max(r.width, { item: 560, hosp: 500 }[state.p.type] || 420), vw - 16);
+            const below = vh - r.bottom - 14, above = r.top - 14;
+            s.width = width + 'px';
+            if (Math.max(below, above) < (ui.searchWrap.hidden ? 280 : 460)) {
+                // too little room beside the button for a usable list: show it as a centred dialog instead
+                const h = Math.min(vh - 24, 640);
+                ui.backdrop.classList.add('rx-dim');
+                s.left = Math.round((vw - width) / 2) + 'px';
+                s.maxHeight = h + 'px';
+                s.top = Math.max(12, Math.round((vh - h) / 2)) + 'px';
+                s.bottom = 'auto';
+                return;
+            }
+            const down = below >= 360 || below >= above;
+            s.left = Math.min(Math.max(8, r.left), vw - width - 8) + 'px';
+            s.maxHeight = Math.max(240, Math.min(620, down ? below : above)) + 'px';
+            s.top = down ? (r.bottom + 6) + 'px' : 'auto';
+            s.bottom = down ? 'auto' : (vh - r.top + 6) + 'px';
+        }
+
+        // ---------- Summary pivot: district / hospital × month / fiscal year / top drugs ----------
+        const PV_BREAKS = { month: 'รายเดือน', fy: 'รายปีงบประมาณ', drug: 'รายตัวยา (10 อันดับ)' };
+        const PV_METRICS = {
+            value: { label: 'มูลค่า (บาท)', noun: 'มูลค่า', i: 1 },
+            amount: { label: 'จำนวนจ่าย (หน่วย)', noun: 'จำนวนจ่าย', i: 2 },
+            rows: { label: 'แถวข้อมูล', noun: 'จำนวนแถวข้อมูล', i: 0 }
+        };
+        const TOP_DRUGS = 10;
+        const pivots = {};
+
+        function readPref(level) {
+            try { return JSON.parse(localStorage.getItem('rxmuk_pivot_' + level)) || {}; } catch (e) { return {}; }
+        }
+        function writePref(level, pref) {
+            try { localStorage.setItem('rxmuk_pivot_' + level, JSON.stringify(pref)); } catch (e) { /* storage full or blocked: keep in memory only */ }
+        }
+
+        function initPivot(level) {
+            const root = document.getElementById(level + '-summary-pivot');
+            if (!root) return;
+            const pref = readPref(level);
+            const pv = {
+                root, level,
+                prefix: root.dataset.prefix || level,
+                brk: PV_BREAKS[pref.brk] ? pref.brk : 'month',
+                metric: PV_METRICS[pref.metric] ? pref.metric : 'value',
+                table: null
+            };
+            const title = level === 'district' ? 'สรุปภาพรวมรายอำเภอ' : 'สรุปภาพรวมรายหน่วยบริการ (จัดกลุ่มตามอำเภอ)';
+            root.innerHTML = `
+                <div class="rx-pv-head">
+                    <div>
+                        <h3 class="panel-title"><span>📊</span> ${title}</h3>
+                        <div class="rx-pv-sub"></div>
+                    </div>
+                    <div class="rx-pv-controls">
+                        <div class="rx-seg" role="group" aria-label="แยกตาม">${Object.entries(PV_BREAKS).map(([k, label]) => `<button type="button" data-brk="${k}">${label}</button>`).join('')}</div>
+                        <div class="rx-seg" role="group" aria-label="ตัวชี้วัด">${Object.entries(PV_METRICS).map(([k, m]) => `<button type="button" data-metric="${k}">${m.label}</button>`).join('')}</div>
+                        <button type="button" class="rx-pv-export">🟢 ส่งออก Excel</button>
+                    </div>
+                </div>
+                <div class="rx-pv-body"><div class="rx-pv-empty">ยังไม่มีข้อมูล</div></div>
+                <div class="rx-pv-note"></div>`;
+            pv.ctx = root.querySelector('.rx-pv-sub');
+            pv.body = root.querySelector('.rx-pv-body');
+            pv.note = root.querySelector('.rx-pv-note');
+            root.addEventListener('click', e => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                if (b.classList.contains('rx-pv-export')) { exportPivot(pv); return; }
+                if (b.dataset.brk) pv.brk = b.dataset.brk;
+                else if (b.dataset.metric) pv.metric = b.dataset.metric;
+                else return;
+                writePref(level, { brk: pv.brk, metric: pv.metric });
+                renderSummaryPivot(level);
+            });
+            pivots[level] = pv;
+        }
+
+        function pivotData(pv) {
+            return cached(`pivot|${pv.level}|${pv.brk}|${filterSignature(pv.prefix, [])}`, () => {
+                const txs = filteredTx(pv.prefix, []);
+                const byDistrict = pv.level === 'district';
+                const colOf = pv.brk === 'month' ? (t => t.month || '?') : pv.brk === 'fy' ? fiscalYearKey() : (t => t.didstd);
+                const cells = new Map(), unitTot = new Map(), colTot = new Map(), colName = new Map(), unitHosps = new Map();
+                const months = new Set();
+                const grand = [0, 0, 0];
+                const bump = (arr, t) => { arr[0]++; arr[1] += +t.price || 0; arr[2] += +t.amount || 0; };
+                for (let i = 0; i < txs.length; i++) {
+                    const t = txs[i];
+                    if (!t) continue;
+                    const u = (byDistrict ? t.amphurCode : t.hospcode) || '?';
+                    const c = colOf(t);
+                    let row = cells.get(u);
+                    if (!row) {
+                        cells.set(u, row = new Map());
+                        unitTot.set(u, [0, 0, 0]);
+                        if (byDistrict) unitHosps.set(u, new Set());
+                    }
+                    let cell = row.get(c);
+                    if (!cell) row.set(c, cell = [0, 0, 0]);
+                    let ct = colTot.get(c);
+                    if (!ct) {
+                        colTot.set(c, ct = [0, 0, 0]);
+                        if (pv.brk === 'drug') colName.set(c, t.dname);
+                    }
+                    bump(cell, t); bump(unitTot.get(u), t); bump(ct, t); bump(grand, t);
+                    if (byDistrict) unitHosps.get(u).add(t.hospcode);
+                    months.add(t.month);
+                }
+                return { cells, unitTot, colTot, colName, unitHosps, months, grand, n: txs.length };
+            });
+        }
+
+        function pivotColumns(pv, d, mi) {
+            if (pv.brk === 'drug') {
+                const ranked = [...d.colTot.entries()].sort((a, b) => b[1][mi] - a[1][mi]);
+                const cols = ranked.slice(0, TOP_DRUGS).map(([code], i) => {
+                    const name = cleanName(d.colName.get(code) || code);
+                    return { key: code, label: name, sub: `อันดับ ${i + 1}`, title: `${name} (รหัส ${code})`, drug: true };
+                });
+                if (ranked.length > TOP_DRUGS) cols.push({ key: '', other: true, label: 'ยาอื่น ๆ', sub: `${fmtInt(ranked.length - TOP_DRUGS)} รายการ`, title: 'ยาที่เหลือทั้งหมดรวมกัน' });
+                return cols;
+            }
+            const keys = [...d.colTot.keys()].sort();
+            if (pv.brk === 'month') {
+                let lastFy = '';
+                return keys.map(k => {
+                    const fy = fiscalYearOf(k);
+                    const sub = fy !== lastFy ? 'ปีงบ ' + fy : '';   // mark where each fiscal year starts
+                    lastFy = fy;
+                    return { key: k, label: shortMonth(k), sub, title: typeof getThaiMonthYearName === 'function' ? getThaiMonthYearName(k) : k };
+                });
+            }
+            // fiscal years: say how many months each one holds — a partial year is not comparable as-is
+            const perFy = new Map();
+            d.months.forEach(m => { const fy = fiscalYearOf(m); perFy.set(fy, (perFy.get(fy) || 0) + 1); });
+            return keys.map(k => ({ key: k, label: 'ปีงบ ' + k, sub: `มีข้อมูล ${perFy.get(k) || 0} เดือน`, title: `ปีงบประมาณ ${k} (1 ต.ค. ${+k - 1} – 30 ก.ย. ${k})` }));
+        }
+
+        function renderSummaryPivot(level) {
+            const pv = pivots[level];
+            if (!pv) return;
+            const tab = pv.root.closest('.tab-content');
+            if (tab && !tab.classList.contains('active')) return;   // switchTab re-renders it when the tab opens
+            try {
+                paintPivot(pv);
+            } catch (err) {
+                console.error('rx pivot:', err);
+                pv.body.innerHTML = `<div class="rx-pv-empty">แสดงตารางสรุปไม่ได้: ${esc(err.message)}</div>`;
+            }
+        }
+
+        function paintPivot(pv) {
+            const d = pivotData(pv);
+            const metric = PV_METRICS[pv.metric];
+            const mi = metric.i;
+            const filters = describeFilters(pv.prefix, []);
+            pv.ctx.textContent = (filters.length ? 'ตามตัวกรอง: ' + filters.join(' · ') : 'ข้อมูลทั้งหมดในระบบ') + ` · ${fmtInt(d.n)} แถวข้อมูล`;
+            pv.root.querySelectorAll('[data-brk]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.brk === pv.brk)));
+            pv.root.querySelectorAll('[data-metric]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.metric === pv.metric)));
+            pv.note.textContent = (pv.brk === 'drug'
+                ? `คอลัมน์ยา = 10 รายการที่มี${metric.noun}สูงสุดตามตัวกรอง ที่เหลือรวมใน “ยาอื่น ๆ” · `
+                : 'ต้องการดูยาตัวเดียว ให้เลือกที่ช่อง “รายการยา” ด้านบน · ')
+                + 'สีเข้ม = ค่าสูง · ค่าตั้งแต่ 1 ล้านแสดงเป็น “ล้าน” ชี้ที่ช่องเพื่อดูค่าเต็ม';
+            pv.table = null;
+            if (!d.n) { pv.body.innerHTML = '<div class="rx-pv-empty">ไม่มีข้อมูลตามตัวกรองที่เลือก — ลองกด 🔄 รีเซ็ต</div>'; return; }
+
+            const cols = pivotColumns(pv, d, mi);
+            const rowVals = u => {
+                const row = d.cells.get(u) || new Map();
+                const total = (d.unitTot.get(u) || ZERO)[mi];
+                let top = 0;
+                const vals = cols.map(c => {
+                    if (c.other) return Math.max(0, total - top);
+                    const v = (row.get(c.key) || ZERO)[mi];
+                    top += v;
+                    return v;
+                });
+                return { vals, total };
+            };
+            const lines = [];
+            if (pv.level === 'district') {
+                [...d.unitTot.keys()].sort().forEach(u => {
+                    const base = (typeof baseDistricts !== 'undefined' && baseDistricts.find(x => x.code === u)) || null;
+                    const any = [...(d.unitHosps.get(u) || [])].map(hospInfo).find(Boolean);
+                    const name = base ? base.name : (any ? any.ampName : u);
+                    lines.push({ kind: 'unit', name: 'อ.' + name, meta: `รหัส ${u} · ${fmtInt((d.unitHosps.get(u) || new Set()).size)} หน่วยบริการ`, ...rowVals(u) });
+                });
+            } else {
+                const groups = new Map();
+                d.unitTot.forEach((_, u) => {
+                    const h = hospInfo(u);
+                    const g = h ? h.ampCode : '~';
+                    if (!groups.has(g)) groups.set(g, { name: h ? 'อ.' + h.ampName : 'ไม่ทราบอำเภอ', units: [] });
+                    groups.get(g).units.push(u);
+                });
+                [...groups.keys()].sort().forEach(g => {
+                    const grp = groups.get(g);
+                    const rows = grp.units.map(u => {
+                        const h = hospInfo(u);
+                        const name = h ? h.name : 'หน่วยบริการ ' + u;
+                        const kind = hospType(u, name);
+                        return { kind: 'unit', name: shortHospName(name), full: name, meta: u + (kind ? ' · ' + kind : ''), ...rowVals(u) };
+                    }).sort((a, b) => b.total - a.total);
+                    lines.push({
+                        kind: 'sub', name: 'รวม ' + grp.name, meta: `${rows.length} หน่วยบริการ`,
+                        vals: cols.map((_, i) => rows.reduce((sum, r) => sum + r.vals[i], 0)),
+                        total: rows.reduce((sum, r) => sum + r.total, 0)
+                    }, ...rows);
+                });
+            }
+
+            const units = lines.filter(l => l.kind === 'unit');
+            // Heat scale: 95th percentile of unit cells, so one outlier month does not flatten every other colour;
+            // the "ยาอื่น ๆ" bucket is left out for the same reason
+            const heatVals = [];
+            units.forEach(l => l.vals.forEach((v, i) => { if (!cols[i].other && v > 0) heatVals.push(v); }));
+            heatVals.sort((a, b) => a - b);
+            const max = heatVals.length ? heatVals[Math.floor((heatVals.length - 1) * (heatVals.length >= 20 ? 0.95 : 1))] : 0;
+            const grand = d.grand[mi];
+            const colTotals = cols.map((_, i) => units.reduce((sum, l) => sum + l.vals[i], 0));
+            const show = v => pv.metric === 'rows' ? fmtInt(v) : compact(v);
+            const exact = v => pv.metric === 'rows' ? fmtInt(v) : fmtNum(v);
+            const share = v => grand ? (v / grand * 100).toFixed(1) + '%' : '–';
+            const cell = (v, heat) => {
+                if (!(v > 0.004)) return '<td class="rx-pv-zero">–</td>';
+                const alpha = heat && max ? (0.06 + 0.5 * Math.sqrt(Math.min(1, v / max))).toFixed(3) : '';
+                return `<td title="${exact(v)}"${alpha ? ` style="background:rgba(var(--rx-heat),${alpha})"` : ''}>${show(v)}</td>`;
+            };
+            const unitHead = pv.level === 'district' ? 'อำเภอ' : 'หน่วยบริการ';
+            const head = `<tr><th scope="col" class="rx-pv-unit">${unitHead}</th>`
+                + cols.map(c => `<th scope="col" title="${esc(c.title || c.label)}">${c.drug ? `<span class="rx-pv-drug">${esc(c.label)}</span>` : esc(c.label)}<span class="rx-pv-col-sub">${esc(c.sub || '')}</span></th>`).join('')
+                + `<th scope="col" class="rx-pv-total">รวม</th><th scope="col">สัดส่วน</th></tr>`;
+            const body = lines.map(l => `<tr${l.kind === 'sub' ? ' class="rx-pv-subtotal"' : ''}>`
+                + `<th scope="row" class="rx-pv-unit"${l.full ? ` title="${esc(l.full)}"` : ''}><div class="rx-pv-nm">${esc(l.name)}</div><div class="rx-pv-mt">${esc(l.meta)}</div></th>`
+                + l.vals.map((v, i) => cell(v, l.kind === 'unit' && !cols[i].other)).join('')
+                + `<td class="rx-pv-total" title="${exact(l.total)}">${show(l.total)}</td><td>${share(l.total)}</td></tr>`).join('');
+            const foot = '<tr><th scope="row" class="rx-pv-unit">รวมทั้งหมด</th>'
+                + colTotals.map(v => `<td title="${exact(v)}">${v > 0.004 ? show(v) : '–'}</td>`).join('')
+                + `<td class="rx-pv-total" title="${exact(grand)}">${show(grand)}</td><td>100%</td></tr>`;
+            pv.body.innerHTML = `<div class="rx-pv-scroll"><table class="rx-pv-table"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
+
+            const round = v => Math.round(v * 100) / 100;
+            pv.table = {
+                file: `RxMuk_สรุป${unitHead}_${PV_BREAKS[pv.brk]}_${metric.label}`.replace(/[\\/:*?"<>|()\s_]+/g, '_').replace(/_+$/, ''),
+                aoa: [
+                    [`สรุปภาพรวมราย${unitHead} — ${PV_BREAKS[pv.brk]} — ${metric.label}`],
+                    [pv.ctx.textContent],
+                    [],
+                    [unitHead, 'รหัส / รายละเอียด', ...cols.map(c => c.label + (c.drug ? ` [${c.key}]` : '') + (c.sub ? ` (${c.sub})` : '')), 'รวม', 'สัดส่วน (%)'],
+                    ...lines.map(l => [l.full || l.name, l.meta, ...l.vals.map(round), round(l.total), grand ? round(l.total / grand * 100) : 0]),
+                    ['รวมทั้งหมด', '', ...colTotals.map(round), round(grand), 100]
+                ]
+            };
+        }
+
+        function exportPivot(pv) {
+            if (!pv.table) { alert('ยังไม่มีข้อมูลสำหรับส่งออก'); return; }
+            if (typeof XLSX === 'undefined') { alert('ไม่พบไลบรารี Excel (SheetJS) กรุณารีเฟรชหน้า'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(pv.table.aoa), 'สรุป');
+            XLSX.writeFile(wb, pv.table.file + '.xlsx');
+        }
+
+        // ---------- init ----------
+        FILTER_PREFIXES.forEach(prefix => FILTER_TYPES.forEach(type => enhance(document.getElementById(`${prefix}-${type}-select`), prefix, type)));
+        enhance(document.getElementById('drug-abc-select'), 'drug', 'abc');
+        enhance(document.getElementById('map-group-select'), 'map', 'group');
+        enhance(document.getElementById('compare-district-1'), 'access-index', 'district');
+        enhance(document.getElementById('compare-district-2'), 'access-index', 'district');
+        initPivot('district');
+        initPivot('hosp');
+        window.renderSummaryPivot = renderSummaryPivot;
+        renderSummaryPivot('district');
+        renderSummaryPivot('hosp');
+    })();
     </script>
 </body>
 </html>
