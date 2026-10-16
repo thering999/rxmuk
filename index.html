@@ -124,6 +124,39 @@
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
         }
 
+        /* Light mode: rules below hard-code white text or dark glass; keep them readable
+           (.badge-class and gradient buttons stay white on their colour) */
+        body.light-mode .panel-title,
+        body.light-mode .chart-title,
+        body.light-mode .tools-title,
+        body.light-mode .tool-name,
+        body.light-mode .stat-info p,
+        body.light-mode .upload-text h3,
+        body.light-mode .login-header h2,
+        body.light-mode .btn-secondary,
+        body.light-mode .search-control,
+        body.light-mode .select-control,
+        body.light-mode .select-control option,
+        body.light-mode .chat-bubble.bot,
+        body.light-mode .chat-input,
+        body.light-mode .key-input,
+        body.light-mode .login-form input { color: var(--text-main); }
+        body.light-mode .search-control,
+        body.light-mode .chat-input,
+        body.light-mode .key-input,
+        body.light-mode .login-form input { background: rgba(255, 255, 255, 0.85); }
+        body.light-mode .btn-secondary,
+        body.light-mode .chat-bubble.bot { background: rgba(0, 0, 0, 0.05); }
+        body.light-mode .chart-wrapper,
+        body.light-mode .chat-messages { background: rgba(255, 255, 255, 0.55); }
+        body.light-mode .panel[style*="rgba(26, 36, 50"] { background: var(--card-bg) !important; }
+        body.light-mode .date-range-container { background: rgba(255, 255, 255, 0.85) !important; }
+        body.light-mode .date-control { color: var(--text-main) !important; color-scheme: light !important; }
+        body.light-mode :is(h1, h2, h3, h4, h5)[style*="color: #fff"],
+        body.light-mode :is(h1, h2, h3, h4, h5)[style*="color:#fff"],
+        body.light-mode :is(h1, h2, h3, h4, h5)[style*="color: white"] { color: var(--text-main) !important; }
+        body.light-mode .hero h1 { background-image: linear-gradient(to right, #1e2d40 30%, #0077cc 60%, #9333ea 90%); }
+
         /* Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -7282,7 +7315,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
 
                 donutSvg.innerHTML += `
                     <circle cx="100" cy="100" r="55" fill="var(--bg-color)" />
-                    <text x="100" y="95" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">ABC-VED</text>
+                    <text x="100" y="95" fill="var(--text-main)" font-size="14" font-weight="bold" text-anchor="middle">ABC-VED</text>
                     <text x="100" y="118" fill="var(--c-primary)" font-size="11" font-weight="bold" text-anchor="middle">ยอดซื้อรวม</text>
                     <text x="100" y="135" fill="var(--text-muted)" font-size="9" text-anchor="middle">หมวดจัดซื้อ</text>
                 `;
