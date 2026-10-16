@@ -29,21 +29,28 @@ jobs:
     steps:
       # Checkout code with minimal depth
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1  # Optimize: minimal fetch for deploy
 
       # Configure Pages with caching
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v6
 
-      # Upload artifact from root folder
+      # Publish only the files the static site loads; PHP sources, SQL dumps and
+      # configs in this repo were being served publicly when the whole repo was uploaded
+      - name: Assemble site
+        run: |
+          mkdir -p _site/public
+          cp index.html _site/
+          cp public/hospitals_db.js public/rxmuk-config.json public/advanced-dashboard.html _site/public/
+
       - name: Upload deployment artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
-          path: .
+          path: _site
 
       # Deploy with OIDC (no token exchange needed)
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
