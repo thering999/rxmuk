@@ -8097,7 +8097,15 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             } else {
                 refreshAllUI();
             }
-            
+
+            // The browser cache is shown first and was never compared with the cloud, so imports from other
+            // machines and cloud clean-ups stayed invisible (and the next push re-uploaded removed rows).
+            // Reload from the cloud when it changed after this browser last synced.
+            if (rawTransactions.length > 0 && sbGetConfig() && await sbCloudIsNewer(sbGetConfig())) {
+                showToast('☁️ ข้อมูลบน Cloud ใหม่กว่าในเครื่องนี้ กำลังโหลดใหม่...', 'info');
+                try { await supabasePullData(true); } catch (e) { console.warn('Cloud refresh failed:', e); }
+            }
+
             updateNavDataStatus();
             populateAllFilterDropdowns();
             renderDrugBreakdown();
@@ -8323,16 +8331,20 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             } catch (e) { console.warn('Cloud cleanup skipped:', e); }
         }
 
-        // Keep months imported on other machines: cloud rows survive unless this machine has the same month+source
-        async function mergeNewerCloudData(cfg, setInfo) {
-            let meta = null;
+        // Cloud meta.json was written after this browser's last push/pull
+        async function sbCloudIsNewer(cfg) {
             try {
                 const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
-                if (m.ok) meta = await m.json();
-            } catch {}
-            if (!meta || !meta.updated) return;
-            const lastSync = Number(localStorage.getItem('rxmuk_sb_last_push') || 0);
-            if (Date.parse(meta.updated) <= lastSync) return;
+                if (!m.ok) return false;
+                const meta = await m.json();
+                const lastSync = Number(localStorage.getItem('rxmuk_sb_last_push') || 0);
+                return !!meta.updated && Date.parse(meta.updated) > lastSync;
+            } catch { return false; }
+        }
+
+        // Keep months imported on other machines: cloud rows survive unless this machine has the same month+source
+        async function mergeNewerCloudData(cfg, setInfo) {
+            if (!(await sbCloudIsNewer(cfg))) return;
             setInfo('⏳ Cloud มีข้อมูลใหม่กว่าเครื่องนี้ กำลังรวมข้อมูลก่อนอัปโหลด...');
             const cloud = await sbDownloadAll(cfg);
             const localMonths = new Set();
