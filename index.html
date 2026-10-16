@@ -1366,11 +1366,13 @@
                         <div id="ov-ved-bar-v" style="height:18px;background:var(--c-red);border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
                         <div id="ov-ved-bar-e" style="height:18px;background:var(--c-yellow);border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
                         <div id="ov-ved-bar-d" style="height:18px;background:var(--c-green);border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
+                        <div id="ov-ved-bar-u" style="height:18px;background:var(--text-muted);opacity:0.35;border-radius:4px;min-width:4px;transition:width 0.5s;"></div>
                     </div>
-                    <div style="display:flex;gap:14px;margin-top:4px;font-size:0.72rem;">
+                    <div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;font-size:0.72rem;">
                         <span><span style="color:var(--c-red);">■</span> V: <span id="ov-ved-v">—</span></span>
                         <span><span style="color:var(--c-yellow);">■</span> E: <span id="ov-ved-e">—</span></span>
                         <span><span style="color:var(--c-green);">■</span> D: <span id="ov-ved-d">—</span></span>
+                        <span title="ยาที่ยังไม่มีหมวด VED ในระบบ"><span style="color:var(--text-muted);">■</span> ยังไม่จัดกลุ่ม: <span id="ov-ved-u">—</span></span>
                     </div>
                 </div>
 
@@ -2193,7 +2195,7 @@
                     <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 8px;">📊 แผงวิเคราะห์งบประมาณและลำดับความสำคัญ ABC-VED Matrix</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
                         <strong>ABC Classification</strong>: จำแนกตามมูลค่ายอดจัดซื้อ (A = มูลค่าสูง 70% แรก, B = มูลค่าปานกลาง 20%, C = มูลค่าต่ำ 10% หลัง)<br>
-                        <strong>VED Classification</strong>: จำแนกตามความสำคัญทางคลินิก (Vital = ยาช่วยชีวิต/ขาดไม่ได้, Essential = ยาจำเป็นพื้นฐาน, Desirable = ยาเสริมประสิทธิภาพ/ทั่วไป)<br>
+                        <strong>VED Classification</strong>: จำแนกตามความสำคัญทางคลินิก (Vital = ยาช่วยชีวิต/ขาดไม่ได้, Essential = ยาจำเป็นพื้นฐาน, Desirable = ยาเสริมประสิทธิภาพ/ทั่วไป) — ตอนนี้ระบบมีหมวด VED <span id="abc-ved-mapped-count">—</span> รายการ ยาอื่นแสดงเป็น "ยังไม่จัดกลุ่ม"<br>
                         <strong>Category I (AV, AE, AD, BV, CV)</strong>: วงกลมสีแดง/ส้ม ควรควบคุมจัดเก็บอย่างเข้มงวดและตรวจสอบราคาซื้อเป็นพิเศษ<br>
                         <strong>Category II (BE, BD, CE)</strong>: วงกลมสีเหลือง ควบคุมจัดเก็บตามเกณฑ์มาตรฐานทั่วไป<br>
                         <strong>Category III (CD)</strong>: วงกลมสีเขียว ควบคุมจัดเก็บตามรอบและผ่อนปรนการจัดหาได้
@@ -2411,6 +2413,18 @@
                                 <div style="text-align: right;">
                                     <div style="font-weight: bold; color: var(--c-green); font-size: 1.15rem;" id="abc-ved-cat3-budget">0 บาท</div>
                                     <div style="font-size: 0.75rem; color: var(--text-muted);" id="abc-ved-cat3-pct">0% ของทั้งหมด</div>
+                                </div>
+                            </div>
+
+                            <div style="background: rgba(148, 184, 212, 0.06); border: 1px dashed rgba(148, 184, 212, 0.35); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: bold; color: var(--text-muted); font-size: 0.9rem;">ยังไม่จัดกลุ่ม VED</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);" id="abc-ved-cat0-count">0 รายการยา</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted);">ไม่นับใน Matrix และ Category ด้านบน</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-weight: bold; color: var(--text-muted); font-size: 1.15rem;" id="abc-ved-cat0-budget">0 บาท</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);" id="abc-ved-cat0-pct">0% ของทั้งหมด</div>
                                 </div>
                             </div>
                         </div>
@@ -3240,22 +3254,21 @@
                 el('drug-overview-status').className = 'badge-status success';
             }
 
-            // VED distribution by price
-            let vPrice = 0, ePrice = 0, dPrice = 0;
+            // VED distribution by price; drugs without a VED class in drugVedMap are shown as unclassified
+            let vPrice = 0, ePrice = 0, dPrice = 0, uPrice = 0;
             drugList.forEach(d => {
                 const ved = getDrugVed(d.didstd);
                 if (ved === 'V') vPrice += d.price;
                 else if (ved === 'E') ePrice += d.price;
-                else dPrice += d.price;
+                else if (ved === 'D') dPrice += d.price;
+                else uPrice += d.price;
             });
-            const vedTotal = vPrice + ePrice + dPrice || 1;
-            const pct = (v) => Math.max(2, Math.round(v / vedTotal * 100));
-            if (el('ov-ved-bar-v')) el('ov-ved-bar-v').style.width = pct(vPrice) + '%';
-            if (el('ov-ved-bar-e')) el('ov-ved-bar-e').style.width = pct(ePrice) + '%';
-            if (el('ov-ved-bar-d')) el('ov-ved-bar-d').style.width = pct(dPrice) + '%';
-            if (el('ov-ved-v')) el('ov-ved-v').textContent = pct(vPrice) + '%';
-            if (el('ov-ved-e')) el('ov-ved-e').textContent = pct(ePrice) + '%';
-            if (el('ov-ved-d')) el('ov-ved-d').textContent = pct(dPrice) + '%';
+            const vedTotal = vPrice + ePrice + dPrice + uPrice || 1;
+            const share = (v) => v / vedTotal * 100;
+            [['v', vPrice], ['e', ePrice], ['d', dPrice], ['u', uPrice]].forEach(([k, v]) => {
+                if (el('ov-ved-bar-' + k)) el('ov-ved-bar-' + k).style.width = Math.max(2, share(v)) + '%';   // keep thin slices visible
+                if (el('ov-ved-' + k)) el('ov-ved-' + k).textContent = share(v).toFixed(1) + '%';
+            });
 
             // Top 5
             const tbody = el('ov-top5-body');
@@ -6726,16 +6739,17 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             header.remove();
         }
 
+        // Only drugs listed in drugVedMap have a clinical VED class. The rest used to get one from a hash
+        // of the drug code (over 99% of drugs), so they are reported as unclassified ('') instead
         function getDrugVed(didstd) {
-            if (drugVedMap[didstd]) return drugVedMap[didstd];
-            let hash = 0;
-            if (didstd) {
-                for (let i = 0; i < didstd.length; i++) {
-                    hash = didstd.charCodeAt(i) + ((hash << 5) - hash);
-                }
-            }
-            const mode = Math.abs(hash) % 3;
-            return mode === 0 ? 'V' : (mode === 1 ? 'E' : 'D');
+            return drugVedMap[didstd] || '';
+        }
+
+        function abcVedCategory(abc, ved) {
+            if (!ved) return 'ยังไม่จัดกลุ่ม VED';
+            const key = abc + ved;
+            if (['AV', 'AE', 'AD', 'BV', 'CV'].includes(key)) return 'Category I (เข้มงวดสูง)';
+            return key === 'CD' ? 'Category III (ผ่อนปรน)' : 'Category II (ปานกลาง)';
         }
 
         function getDrugGroup(didstd) {
@@ -7009,10 +7023,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             });
 
             const headers = ["รหัสยามาตรฐาน 24 หลัก", "ชื่อทางการค้า/ชื่อสามัญ", "ราคาจัดซื้อสะสม (บาท)", "คลาส ABC", "หมวด VED", "ระดับการควบคุม (Category)"];
-            const rows = drugList.map(d => {
-                const cat = ['AV', 'AE', 'AD', 'BV', 'CV'].includes(d.abc + d.ved) ? 'Category I (เข้มงวดสูง)' : (d.abc + d.ved === 'CD' ? 'Category III (ผ่อนปรน)' : 'Category II (ปานกลาง)');
-                return [d.didstd, d.name, d.price, d.abc, d.ved, cat];
-            });
+            const rows = drugList.map(d => [d.didstd, d.name, d.price, d.abc, d.ved || '-', abcVedCategory(d.abc, d.ved)]);
 
             const filename = `abc_ved_matrix_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "ABC-VED Analysis");
@@ -7163,11 +7174,15 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 'CV': { count: 0, budget: 0 }, 'CE': { count: 0, budget: 0 }, 'CD': { count: 0, budget: 0 }
             };
 
+            const unclassified = { count: 0, budget: 0 };
             drugList.forEach(d => {
                 const key = d.abc + d.ved;
                 if (matrix[key]) {
                     matrix[key].count++;
                     matrix[key].budget += d.price;
+                } else {
+                    unclassified.count++;
+                    unclassified.budget += d.price;
                 }
             });
 
@@ -7214,6 +7229,11 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             document.getElementById('abc-ved-cat3-budget').textContent = `${Math.round(cat3.budget).toLocaleString()} บาท`;
             document.getElementById('abc-ved-cat3-pct').textContent = `${((cat3.budget / totalBudget) * 100).toFixed(1)}% ของทั้งหมด`;
 
+            document.getElementById('abc-ved-cat0-count').textContent = `${unclassified.count} รายการยา`;
+            document.getElementById('abc-ved-cat0-budget').textContent = `${Math.round(unclassified.budget).toLocaleString()} บาท`;
+            document.getElementById('abc-ved-cat0-pct').textContent = `${((unclassified.budget / totalBudget) * 100).toFixed(1)}% ของทั้งหมด`;
+            document.getElementById('abc-ved-mapped-count').textContent = Object.keys(drugVedMap).length.toLocaleString();
+
             const donutSvg = document.getElementById('abc-ved-donut-svg');
             if (donutSvg) {
                 donutSvg.innerHTML = '';
@@ -7230,7 +7250,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 const categories = [
                     { pct: pct1, color: 'var(--c-red)', label: 'Cat I' },
                     { pct: pct2, color: 'var(--c-yellow)', label: 'Cat II' },
-                    { pct: pct3, color: 'var(--c-green)', label: 'Cat III' }
+                    { pct: pct3, color: 'var(--c-green)', label: 'Cat III' },
+                    { pct: unclassified.budget / totalBudget, color: 'rgba(148, 184, 212, 0.35)', label: 'ยังไม่จัดกลุ่ม' }
                 ].filter(c => c.pct > 0);
 
                 let startAngle = 0;
@@ -7266,15 +7287,16 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
 
             drugList.forEach(d => {
                 const tr = document.createElement('tr');
-                const cat = ['AV', 'AE', 'AD', 'BV', 'CV'].includes(d.abc + d.ved) ? 'Category I (เข้มงวดสูง)' : (d.abc + d.ved === 'CD' ? 'Category III (ผ่อนปรน)' : 'Category II (ปานกลาง)');
-                const catColor = cat.includes('Category I') ? 'var(--c-red)' : (cat.includes('Category III') ? 'var(--c-green)' : 'var(--c-yellow)');
-                
+                const cat = abcVedCategory(d.abc, d.ved);
+                const catColor = !d.ved ? 'var(--text-muted)' : (cat.startsWith('Category I ') ? 'var(--c-red)' : (cat.startsWith('Category III') ? 'var(--c-green)' : 'var(--c-yellow)'));
+                const vedColor = d.ved === 'V' ? 'var(--c-red)' : (d.ved === 'E' ? 'var(--c-yellow)' : (d.ved === 'D' ? 'var(--c-green)' : 'var(--text-muted)'));
+
                 tr.innerHTML = `
                     <td><code>${d.didstd}</code></td>
                     <td><strong>${d.name}</strong></td>
                     <td style="font-weight:bold; color:var(--text-light);">${d.price.toLocaleString()} บาท</td>
                     <td><span class="badge-class" style="background: ${d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)')}">${d.abc}</span></td>
-                    <td><span class="badge-class" style="background: ${d.ved === 'V' ? 'var(--c-red)' : (d.ved === 'E' ? 'var(--c-yellow)' : 'var(--c-green)')}">${d.ved}</span></td>
+                    <td><span class="badge-class" style="background: ${vedColor}">${d.ved || '—'}</span></td>
                     <td><span style="color: ${catColor}; font-weight: bold;">${cat}</span></td>
                 `;
                 body.appendChild(tr);
