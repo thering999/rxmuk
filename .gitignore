@@ -13,6 +13,8 @@ vendor/
 
 # Database
 *.sql.zip
+# Full dump with user password hashes and per-patient rows: never publish
+sql/rxmuk_db.sql
 *.backup
 *.bak
 
