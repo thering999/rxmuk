@@ -3286,16 +3286,7 @@
                 const searchEl = document.getElementById(`${prefix}-search`) || document.getElementById('drug-breakdown-search');
                 if (searchEl) searchEl.value = '';
             });
-            updateDashboardOverview();
-            renderDrugBreakdown();
-            renderDistrictBreakdown();
-            renderHospBreakdown();
-            renderPriceVarianceReport();
-            renderAbcVedMatrix();
-            renderDataQualityScorecard();
-            renderGeospatialMap();
-            renderAccessIndex();
-            renderRduMonitoring();
+            renderTab(activeTabName());
             alert('ล้างตัวกรองทั้งหมดเรียบร้อยแล้ว');
         }
 
@@ -3685,6 +3676,16 @@
             });
             document.getElementById(`tab-${targetTab}`).classList.add('active');
 
+            renderTab(targetTab);
+
+            if (tabDetails[targetTab]) {
+                heroTitle.textContent = tabDetails[targetTab].title;
+                heroSubtitle.textContent = tabDetails[targetTab].subtitle;
+            }
+        }
+
+        // Draw one tab from the current filters; the others are drawn by switchTab when opened
+        function renderTab(targetTab) {
             if (targetTab === 'dashboard') updateDashboardOverview();
             if (targetTab === 'drugs') renderDrugBreakdown();
             if (targetTab === 'district') renderDistrictBreakdown();
@@ -3695,11 +3696,11 @@
             if (targetTab === 'map') renderGeospatialMap();
             if (targetTab === 'access-index') renderAccessIndex();
             if (targetTab === 'rdu') renderRduMonitoring();
+        }
 
-            if (tabDetails[targetTab]) {
-                heroTitle.textContent = tabDetails[targetTab].title;
-                heroSubtitle.textContent = tabDetails[targetTab].subtitle;
-            }
+        function activeTabName() {
+            const tab = document.querySelector('.tab-content.active');
+            return tab ? tab.id.replace('tab-', '') : 'dashboard';
         }
 
         tabBtns.forEach(btn => {
@@ -3929,10 +3930,20 @@
             return String(y + 543 + (m >= 10 ? 1 : 0));
         }
 
+        // Sorted distinct months in the data; memoised because a scan of 700k+ rows takes ~250 ms
+        let allMonthsMemo = { rows: null, length: -1, months: [] };
+        function getAllMonths() {
+            if (allMonthsMemo.rows !== rawTransactions || allMonthsMemo.length !== rawTransactions.length) {
+                const months = [...new Set(rawTransactions.filter(t => t && t.month).map(t => t.month))].sort();
+                allMonthsMemo = { rows: rawTransactions, length: rawTransactions.length, months };
+            }
+            return allMonthsMemo.months;
+        }
+
         function updateMonthsDropdown(prefix, fiscalYear, allMonths) {
             const mSelect = document.getElementById(`${prefix}-month-select`);
             if (!mSelect) return;
-            const months = (allMonths || [...new Set(rawTransactions.filter(t => t && t.month).map(t => t.month))].sort())
+            const months = (allMonths || getAllMonths())
                 .filter(m => fiscalYear === 'all' || getThaiFiscalYear(m) === fiscalYear);
             const curr = mSelect.value;
             mSelect.innerHTML = '<option value="all">📅 ทุกช่วงเวลา/เดือน</option>';
@@ -5704,17 +5715,9 @@ ORDER BY name;
                 updateHospitalsDropdown(val);
             }
 
-            // 3. Re-render all breakdown tabs and dashboard to reflect the new filter state
-            updateDashboardOverview();
-            renderDrugBreakdown();
-            renderDistrictBreakdown();
-            renderHospBreakdown();
-            renderPriceVarianceReport();
-            renderAbcVedMatrix();
-            renderDataQualityScorecard();
-            renderGeospatialMap();
-            renderAccessIndex();
-            renderRduMonitoring();
+            // 3. Re-render only the visible tab (switchTab redraws the others when opened);
+            //    redrawing all ten tabs over 700k+ rows made each filter change take 3-5 s
+            renderTab(activeTabName());
         }
 
         // Bind change events to all 5 dropdown filters for drug, district, and hosp
