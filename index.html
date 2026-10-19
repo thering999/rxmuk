@@ -1084,6 +1084,20 @@
         .rx-seg button { background: transparent; border: 0; color: var(--text-muted); padding: 6px 12px; font-family: inherit; font-size: 0.78rem; cursor: pointer; }
         .rx-seg button + button { border-left: 1px solid var(--card-border); }
         .rx-seg button[aria-pressed="true"] { background: var(--c-primary-glow); color: var(--c-primary); font-weight: 700; }
+        .yoy-fys { border: 1px solid var(--card-border); border-radius: 10px; padding: 8px 12px; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+        .yoy-fys legend { font-size: 0.75rem; color: var(--text-muted); padding: 0 4px; }
+        .yoy-fys label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; min-height: 32px; }
+        .yoy-fys label small { color: var(--text-muted); }
+        .yoy-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .yoy-kpi { border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 16px; border-left: 4px solid var(--yoy-c); }
+        .yoy-kpi .k { font-size: 0.78rem; color: var(--text-muted); }
+        .yoy-kpi .v { font-size: 1.35rem; font-weight: 800; }
+        .yoy-kpi .d { font-size: 0.78rem; color: var(--text-muted); }
+        .yoy-chart svg { width: 100%; height: auto; display: block; }
+        .yoy-chart text { fill: var(--text-muted); font-size: 11px; }
+        .yoy-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; margin-top: 6px; }
+        .yoy-legend i { display: inline-block; width: 14px; height: 3px; background: var(--yoy-c); vertical-align: middle; margin-right: 6px; }
+        .data-table td.num, .data-table th.num { text-align: right; white-space: nowrap; }
         .rx-pv-export { background: rgba(34, 211, 160, 0.12); border: 1px solid rgba(34, 211, 160, 0.4); color: var(--c-green); border-radius: 10px; padding: 6px 12px; font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
         .rx-pv-scroll { overflow: auto; max-height: 620px; border: 1px solid var(--card-border); border-radius: 10px; }
         .rx-pv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
@@ -1175,6 +1189,7 @@
                 <li><a class="tab-btn" data-tab="map">แผนที่จ่ายยา</a></li>
                 <li><a class="tab-btn" data-tab="access-index">ดัชนีเข้าถึงยา</a></li>
                 <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
+                <li><a class="tab-btn" data-tab="yoy">เทียบปีงบประมาณ</a></li>
                 <li style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding: 4px 12px; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
                     <span id="nav-data-count" style="font-size: 0.75rem; color: var(--c-primary); font-weight: 800;">DATA: 0 rows</span>
                     <button class="btn" onclick="if(!localStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
@@ -2970,6 +2985,66 @@
     </div>
 
     <!-- TAB: RDU Monitoring (Phase 4) -->
+    <div id="tab-yoy" class="tab-content">
+        <section class="container">
+            <div class="secured-content">
+                <div class="panel" style="margin-bottom:20px;">
+                    <div class="rx-pv-head">
+                        <div>
+                            <h3 class="panel-title"><span>📈</span> เปรียบเทียบข้ามปีงบประมาณ</h3>
+                            <div class="rx-pv-sub" id="yoy-sub">ใช้ข้อมูลสรุปรายเดือนจาก Cloud ทุกปีงบ</div>
+                        </div>
+                        <div class="rx-pv-controls">
+                            <div class="rx-seg" role="group" aria-label="ตัวชี้วัด" id="yoy-metric">
+                                <button type="button" data-metric="value">มูลค่า (บาท)</button>
+                                <button type="button" data-metric="amount">จำนวนจ่าย (หน่วย)</button>
+                                <button type="button" data-metric="rows">แถวข้อมูล</button>
+                            </div>
+                            <select id="yoy-district" class="select-control" aria-label="อำเภอ"><option value="all">🗺️ ทุกอำเภอ</option></select>
+                            <button type="button" class="btn btn-secondary" onclick="renderYoy(true)">🔄 โหลดสรุปใหม่</button>
+                            <button type="button" class="rx-pv-export" onclick="exportYoy()">🟢 ส่งออก Excel</button>
+                        </div>
+                    </div>
+                    <fieldset class="yoy-fys">
+                        <legend>ปีงบที่นำมาเทียบ</legend>
+                        <div id="yoy-fy-list"></div>
+                    </fieldset>
+                    <div id="yoy-status" class="rx-pv-note" role="status"></div>
+                </div>
+
+                <div id="yoy-kpis" class="yoy-kpis"></div>
+
+                <div class="panel" style="margin-bottom:20px;">
+                    <h3 class="panel-title"><span>📉</span> แนวโน้มรายเดือน (ต.ค. – ก.ย.)</h3>
+                    <div id="yoy-chart" class="yoy-chart"></div>
+                </div>
+
+                <div class="panel" style="margin-bottom:20px;">
+                    <h3 class="panel-title"><span>📅</span> รายเดือนแยกตามปีงบ</h3>
+                    <div class="table-container"><table class="data-table" id="yoy-month-table"></table></div>
+                </div>
+
+                <div class="workspace-layout" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="panel">
+                        <h3 class="panel-title"><span>🗺️</span> รายอำเภอ</h3>
+                        <div class="table-container"><table class="data-table" id="yoy-amp-table"></table></div>
+                    </div>
+                    <div class="panel">
+                        <h3 class="panel-title"><span>💊</span> ตัวยา 20 อันดับแรก <small id="yoy-drug-scope" style="font-weight:400;color:var(--text-muted);"></small></h3>
+                        <div class="table-container"><table class="data-table" id="yoy-drug-table"></table></div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top:20px;">
+                    <h3 class="panel-title"><span>🗂️</span> ข้อมูลรายละเอียด (ข้อมูลดิบ) ที่เก็บในเครื่องนี้</h3>
+                    <p class="rx-pv-note" style="margin:0 0 10px;">แท็บอื่นแสดงจากข้อมูลดิบของปีงบที่เลือกตรงนี้ เลือกหลายปีได้ แต่ยิ่งมากยิ่งโหลดนาน (ประมาณ 60,000 แถวต่อเดือน)</p>
+                    <div id="yoy-raw-list" class="yoy-fys"></div>
+                    <button type="button" class="btn btn-primary" style="margin-top:10px;" onclick="applyYoyRawFys()">📥 โหลดข้อมูลดิบปีงบที่เลือก</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <div id="tab-rdu" class="tab-content">
         <section class="container">
             <div class="secured-content">
@@ -3197,6 +3272,10 @@
             "rdu": {
                 title: "💊 Rational Drug Use Monitoring (RDU)",
                 subtitle: "ระบบติดตามการใช้ยาอย่างสมเหตุผล ติดตามยาปฏิชีวนะและรายการยาเฝ้าระวังสูง (HAD) ระดับจังหวัด"
+            },
+            "yoy": {
+                title: "📈 เปรียบเทียบข้ามปีงบประมาณ",
+                subtitle: "ดูแนวโน้มรายเดือนย้อนหลังหลายปีงบ เทียบมูลค่า จำนวนจ่าย รายอำเภอ และรายตัวยา"
             }
         };
 
@@ -3760,6 +3839,7 @@
             if (targetTab === 'map') renderGeospatialMap();
             if (targetTab === 'access-index') renderAccessIndex();
             if (targetTab === 'rdu') renderRduMonitoring();
+            if (targetTab === 'yoy') renderYoy();
         }
 
         function activeTabName() {
@@ -8313,25 +8393,107 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             if (!res.ok) throw new Error(`${name} ${res.status}: ${await res.text()}`);
         }
 
-        // One gzip file per month (~3-4MB) stays far below the 50MB free-tier file limit
+        // ---------- Fiscal years held in this browser ----------
+        // The cloud keeps every fiscal year; a browser holds raw rows only for the years picked here
+        // (default: the newest) and reads small per-month summaries for the rest
+        const SB_RAW_FYS_KEY = 'rxmuk_raw_fys';
+        let sbLastMeta = null;
+
+        function chosenRawFys() {
+            try { const v = JSON.parse(localStorage.getItem(SB_RAW_FYS_KEY)); return Array.isArray(v) ? v.map(String) : null; } catch { return null; }
+        }
+        function setChosenRawFys(fys) {
+            try { localStorage.setItem(SB_RAW_FYS_KEY, JSON.stringify(fys)); } catch { /* blocked storage: falls back to the newest year */ }
+        }
+        function metaFiles(meta) {
+            return (meta && Array.isArray(meta.files) ? meta.files : []).map(f => ({ ...f, fy: f.fy || fiscalYearOf(f.month) }));
+        }
+        function metaFys(meta) {
+            return [...new Set(metaFiles(meta).map(f => f.fy))].filter(fy => fy !== 'unknown').sort();
+        }
+        function pickRawFys(meta) {
+            const all = metaFys(meta);
+            const want = (chosenRawFys() || []).filter(fy => all.includes(fy));
+            return want.length ? want : all.slice(-1);
+        }
+        async function sbFetchMeta(cfg) {
+            try {
+                const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                if (m.ok) return (sbLastMeta = await m.json());
+            } catch {}
+            return null;
+        }
+        async function sbFetchGz(cfg, name) {
+            const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+            if (!res.ok) return null;
+            return gunzipJson(await res.arrayBuffer());
+        }
+
+        // Totals of one month by drug, district and hospital: [..keys, rows, value, amount]
+        function buildMonthSummary(month, rows) {
+            const drugs = new Map(), amps = new Map(), hosps = new Map();
+            const tot = [0, 0, 0];
+            const add = (map, key, head, t) => {
+                let a = map.get(key);
+                if (!a) map.set(key, a = [...head, 0, 0, 0]);
+                const n = head.length;
+                a[n]++; a[n + 1] += +t.price || 0; a[n + 2] += +t.amount || 0;
+            };
+            for (const t of rows) {
+                tot[0]++; tot[1] += +t.price || 0; tot[2] += +t.amount || 0;
+                add(drugs, t.didstd || t.dname || '?', [t.didstd || '', t.dname || ''], t);
+                add(amps, t.amphurCode || '?', [t.amphurCode || '', t.amphurName || ''], t);
+                add(hosps, t.hospcode || '?', [t.hospcode || '', t.hospname || '', t.amphurCode || ''], t);
+            }
+            return { month, rows: tot[0], value: tot[1], amount: tot[2], drugs: [...drugs.values()], amps: [...amps.values()], hosps: [...hosps.values()] };
+        }
+
+        // One gzip file per month (~3-4MB) stays far below the 50MB free-tier file limit.
+        // Only fiscal years this browser fully loaded are mirrored (months missing here get deleted);
+        // other years keep their cloud files, and a month imported for such a year keeps the cloud rows of other source files
         async function sbUploadAll(cfg, rows, setInfo) {
+            const meta0 = await sbFetchMeta(cfg);
+            const cloudFiles = metaFiles(meta0);
+            const loaded = new Set(meta0 ? pickRawFys(meta0) : []);
+            if (!meta0 || !cloudFiles.length) rows.forEach(r => loaded.add(fiscalYearOf(r.month)));
+            loaded.add('unknown');
+
             const byMonth = {};
             for (const r of rows) (byMonth[/^\d{4}-\d{2}$/.test(r.month) ? r.month : 'unknown'] ||= []).push(r);
+
+            for (const f of cloudFiles) {
+                const local = byMonth[f.month];
+                if (!local || loaded.has(f.fy)) continue;
+                setInfo(`⏳ รวมข้อมูลเดิมบน Cloud ของเดือน ${f.month}...`);
+                const cloud = await sbFetchGz(cfg, f.name);
+                if (!Array.isArray(cloud)) continue;
+                const srcs = new Set(local.map(r => r.src || ''));
+                byMonth[f.month] = local.concat(cloud.filter(r => r.src && !srcs.has(r.src)));
+            }
+
             const months = Object.keys(byMonth).sort();
+            const at = new Date().toISOString();
             const files = [];
             for (let i = 0; i < months.length; i++) {
                 const month = months[i];
                 const name = `raw_${month}.json.gz`;
+                const sum = `sum_${month}.json.gz`;
                 setInfo(`⏳ กำลังอัปโหลดเดือน ${month} (${i + 1}/${months.length})...`);
                 const buf = await gzipJson(byMonth[month]);
                 const sizeMB = buf.byteLength / 1048576;
                 if (sizeMB > 49) throw new Error(`เดือน ${month} มีขนาด ${sizeMB.toFixed(1)}MB เกินขีดจำกัด 50MB ของ Supabase ฟรี`);
                 await sbUploadFile(cfg, name, buf, 'application/gzip');
-                files.push({ name, month, fy: fiscalYearOf(month), rows: byMonth[month].length, sizeMB: sizeMB.toFixed(2) });
+                await sbUploadFile(cfg, sum, await gzipJson(buildMonthSummary(month, byMonth[month])), 'application/gzip');
+                files.push({ name, sum, at, month, fy: fiscalYearOf(month), rows: byMonth[month].length, sizeMB: sizeMB.toFixed(2) });
             }
-            const meta = { rows: rows.length, updated: new Date().toISOString(), files, sizeMB: files.reduce((s, f) => s + parseFloat(f.sizeMB), 0).toFixed(1) };
+            const uploaded = new Set(months);
+            for (const f of cloudFiles) if (!uploaded.has(f.month) && !loaded.has(f.fy)) files.push(f);
+            files.sort((a, b) => String(a.month).localeCompare(String(b.month)));
+
+            const meta = { rows: files.reduce((s, f) => s + (f.rows || 0), 0), updated: at, files, sizeMB: files.reduce((s, f) => s + parseFloat(f.sizeMB || 0), 0).toFixed(1) };
             await sbUploadFile(cfg, 'meta.json', JSON.stringify(meta), 'application/json');
-            await sbDeleteUnused(cfg, new Set([...files.map(f => f.name), 'meta.json']));
+            sbLastMeta = meta;
+            await sbDeleteUnused(cfg, new Set([...files.map(f => f.name), ...files.map(f => f.sum).filter(Boolean), 'meta.json']));
             return meta;
         }
 
@@ -8382,12 +8544,10 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
 
         async function sbDownloadAll(cfg) {
-            let meta = null;
-            try {
-                const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
-                if (m.ok) meta = await m.json();
-            } catch {}
-            const files = meta && Array.isArray(meta.files) && meta.files.length ? meta.files : [{ name: SB_FILE }];
+            const meta = await sbFetchMeta(cfg);
+            const fys = new Set(pickRawFys(meta));
+            const listed = metaFiles(meta).filter(f => f.fy === 'unknown' || fys.has(f.fy));
+            const files = listed.length ? listed : [{ name: SB_FILE }];
             let all = [];
             for (let i = 0; i < files.length; i++) {
                 const f = files[i];
@@ -8398,6 +8558,31 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 if (Array.isArray(part)) all = all.concat(part);
             }
             return all;
+        }
+
+        // Month summaries of every fiscal year on the cloud, cached in IndexedDB per upload time
+        let cloudMonthSums = new Map();
+        async function sbLoadMonthSums(cfg, setInfo) {
+            const meta = await sbFetchMeta(cfg);
+            let cache = {};
+            try { cache = (await idbGet('rxmuk_month_sums')) || {}; } catch {}
+            const files = metaFiles(meta).filter(f => f.sum);
+            const out = new Map(), keep = {};
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                let hit = cache[f.month];
+                if (!hit || hit.at !== f.at) {
+                    if (setInfo) setInfo(`⏳ โหลดสรุปเดือน ${f.month} (${i + 1}/${files.length})...`);
+                    const s = await sbFetchGz(cfg, f.sum);
+                    if (!s) continue;
+                    hit = { at: f.at, s };
+                }
+                keep[f.month] = hit;
+                out.set(f.month, hit.s);
+            }
+            idbSet('rxmuk_month_sums', keep).catch(e => console.warn('Summary cache save failed:', e));
+            cloudMonthSums = out;
+            return meta;
         }
 
         async function readWithProgress(res, label = '') {
@@ -9321,6 +9506,247 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             s.bottom = down ? 'auto' : (vh - r.top + 6) + 'px';
         }
 
+        // ---------- Fiscal-year comparison: cloud month summaries + rows held in this browser ----------
+        const YOY_COLORS = ['#00a8cc', '#f59e0b', '#10b981', '#a855f7', '#ef4444', '#64748b'];
+        const YOY_METRIC = { rows: 0, value: 1, amount: 2 };
+        const YOY_MONTHS = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+        const yoy = { metric: 'value', amp: 'all', fys: null, sumsLoaded: false, bound: false, view: null };
+        try {
+            const p = JSON.parse(localStorage.getItem('rxmuk_yoy')) || {};
+            if (p.metric in YOY_METRIC) yoy.metric = p.metric;
+            if (Array.isArray(p.fys)) yoy.fys = p.fys.map(String);
+        } catch {}
+        let yoyLive = { ref: null, sums: new Map() };
+
+        const fyLabel = fy => `ปีงบ ${+fy + 543}`;
+        // Gregorian fiscal year as the cloud files store it ('2025-10' -> '2026'); this scope's fiscalYearOf returns Buddhist years
+        const yoyFyOf = month => window.fiscalYearOf(month);
+        // i = 0 is October of the previous calendar year
+        function fyMonth(fy, i) {
+            const m = (i + 9) % 12 + 1;
+            return `${m >= 10 ? +fy - 1 : fy}-${String(m).padStart(2, '0')}`;
+        }
+        function yoyFmt(v) {
+            if (v == null) return '–';
+            return yoy.metric === 'value' ? v.toLocaleString('th-TH', { maximumFractionDigits: 0 }) : Math.round(v).toLocaleString('th-TH');
+        }
+        function yoyShort(v) {
+            const a = Math.abs(v);
+            return a >= 1e6 ? (v / 1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M' : a >= 1e3 ? (v / 1e3).toFixed(a >= 1e4 ? 0 : 1) + 'K' : String(Math.round(v));
+        }
+        function yoyPct(cur, prev) {
+            if (!prev) return '<span>–</span>';
+            const p = (cur - prev) / prev * 100;
+            return `<span title="เทียบเฉพาะเดือนที่มีข้อมูลทั้งสองปี">${p >= 0 ? '▲' : '▼'} ${Math.abs(p).toFixed(1)}%</span>`;
+        }
+        function savePrefYoy() {
+            try { localStorage.setItem('rxmuk_yoy', JSON.stringify({ metric: yoy.metric, fys: yoy.fys })); } catch { /* keep in memory */ }
+        }
+
+        // Cloud summaries, replaced by live totals for months of fiscal years this browser fully holds
+        function yoyMonthSums() {
+            if (yoyLive.ref !== rawTransactions) {
+                const by = new Map();
+                for (const t of rawTransactions) {
+                    if (!t || !/^\d{4}-\d{2}$/.test(t.month || '')) continue;
+                    let a = by.get(t.month);
+                    if (!a) by.set(t.month, a = []);
+                    a.push(t);
+                }
+                const sums = new Map();
+                for (const [m, rows] of by) sums.set(m, buildMonthSummary(m, rows));
+                yoyLive = { ref: rawTransactions, sums };
+            }
+            const held = new Set(sbLastMeta ? pickRawFys(sbLastMeta) : []);
+            const out = new Map(cloudMonthSums);
+            for (const [m, s] of yoyLive.sums) if (!out.has(m) || held.has(yoyFyOf(m))) out.set(m, s);
+            return out;
+        }
+
+        async function renderYoy(force) {
+            const status = document.getElementById('yoy-status');
+            const setInfo = t => { if (status) status.textContent = t; };
+            const cfg = sbGetConfig();
+            if (force) yoyLive.ref = null;
+            if (cfg && (force || !yoy.sumsLoaded)) {
+                yoy.sumsLoaded = true;
+                drawYoy();
+                try { await sbLoadMonthSums(cfg, setInfo); setInfo(''); }
+                catch (e) { setInfo('⚠️ โหลดสรุปจาก Cloud ไม่สำเร็จ: ' + e.message + ' — แสดงเฉพาะข้อมูลในเครื่อง'); }
+            }
+            drawYoy();
+        }
+
+        function bindYoy() {
+            if (yoy.bound) return;
+            yoy.bound = true;
+            document.getElementById('yoy-metric').addEventListener('click', e => {
+                const b = e.target.closest('button[data-metric]');
+                if (!b) return;
+                yoy.metric = b.dataset.metric; savePrefYoy(); drawYoy();
+            });
+            document.getElementById('yoy-district').addEventListener('change', e => { yoy.amp = e.target.value; drawYoy(); });
+            document.getElementById('yoy-fy-list').addEventListener('change', () => {
+                yoy.fys = [...document.querySelectorAll('#yoy-fy-list input:checked')].map(i => i.value);
+                savePrefYoy(); drawYoy();
+            });
+        }
+
+        function yoyAgg(sums, fy, list, idx, common) {
+            const out = new Map();
+            for (let i = 0; i < 12; i++) {
+                const s = sums.get(fyMonth(fy, i));
+                if (!s) continue;
+                for (const a of s[list] || []) {
+                    let o = out.get(a[0]);
+                    if (!o) out.set(a[0], o = { name: a[1], total: 0, common: 0 });
+                    const v = +a[2 + idx] || 0;
+                    o.total += v;
+                    if (common.has(i)) o.common += v;
+                }
+            }
+            return out;
+        }
+
+        function drawYoy() {
+            bindYoy();
+            const sums = yoyMonthSums();
+            const allFys = [...new Set([...sums.keys()].map(yoyFyOf))].filter(f => f !== 'unknown').sort();
+            let fys = (yoy.fys || allFys.slice(-3)).filter(f => allFys.includes(f)).sort();
+            if (!fys.length) fys = allFys.slice(-3);
+            const idx = YOY_METRIC[yoy.metric];
+            const color = fy => YOY_COLORS[allFys.indexOf(fy) % YOY_COLORS.length];
+
+            document.querySelectorAll('#yoy-metric button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.metric === yoy.metric)));
+            document.getElementById('yoy-fy-list').innerHTML = allFys.length
+                ? allFys.map(fy => {
+                    const n = Array.from({ length: 12 }, (_, i) => sums.has(fyMonth(fy, i))).filter(Boolean).length;
+                    return `<label style="--yoy-c:${color(fy)}"><input type="checkbox" value="${fy}" ${fys.includes(fy) ? 'checked' : ''}> ${fyLabel(fy)} <small>(${n} เดือน)</small></label>`;
+                }).join('')
+                : '<span class="rx-pv-note">ยังไม่มีข้อมูล</span>';
+
+            const amps = new Map();
+            for (const s of sums.values()) for (const a of s.amps || []) if (a[0] && !amps.has(a[0])) amps.set(a[0], a[1]);
+            const ampSel = document.getElementById('yoy-district');
+            if (yoy.amp !== 'all' && !amps.has(yoy.amp)) yoy.amp = 'all';
+            ampSel.innerHTML = '<option value="all">🗺️ ทุกอำเภอ</option>' + [...amps].sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([c, n]) => `<option value="${escapeHtml(c)}" ${c === yoy.amp ? 'selected' : ''}>${escapeHtml(n || c)}</option>`).join('');
+
+            drawYoyRawList();
+            const ids = ['yoy-kpis', 'yoy-chart', 'yoy-month-table', 'yoy-amp-table', 'yoy-drug-table'];
+            if (!fys.length) { ids.forEach(id => { document.getElementById(id).innerHTML = ''; }); yoy.view = null; return; }
+
+            const valOf = s => {
+                if (yoy.amp === 'all') return [s.rows, s.value, s.amount][idx];
+                const a = (s.amps || []).find(x => x[0] === yoy.amp);
+                return a ? +a[2 + idx] || 0 : 0;
+            };
+            const series = fys.map(fy => Array.from({ length: 12 }, (_, i) => { const s = sums.get(fyMonth(fy, i)); return s ? valOf(s) : null; }));
+            const last = fys.length - 1;
+            const common = new Set(last > 0 ? series[last].map((v, i) => (v != null && series[last - 1][i] != null) ? i : -1).filter(i => i >= 0) : []);
+            const sumOf = (arr, only) => arr.reduce((s, v, i) => s + (v != null && (!only || only.has(i)) ? v : 0), 0);
+            const metricName = { value: 'มูลค่า', amount: 'จำนวนจ่าย', rows: 'แถวข้อมูล' }[yoy.metric];
+            const ampName = yoy.amp === 'all' ? 'ทั้งจังหวัด' : 'อ.' + (amps.get(yoy.amp) || yoy.amp);
+            document.getElementById('yoy-sub').textContent = `${metricName} · ${ampName} · ${fys.map(fyLabel).join(', ')}`
+                + (last > 0 ? ` · % เปลี่ยนแปลงเทียบ ${fyLabel(fys[last])} กับ ${fyLabel(fys[last - 1])} เฉพาะ ${common.size} เดือนที่มีข้อมูลทั้งสองปี` : '');
+
+            // KPI cards
+            document.getElementById('yoy-kpis').innerHTML = fys.map((fy, k) => {
+                const n = series[k].filter(v => v != null).length;
+                const tot = sumOf(series[k]);
+                let d = '';
+                if (k > 0) {
+                    const both = new Set(series[k].map((v, i) => (v != null && series[k - 1][i] != null) ? i : -1).filter(i => i >= 0));
+                    d = `เทียบ ${fyLabel(fys[k - 1])}: ${yoyPct(sumOf(series[k], both), sumOf(series[k - 1], both))}`;
+                }
+                return `<div class="yoy-kpi" style="--yoy-c:${color(fy)}"><div class="k">${fyLabel(fy)} · ${n} เดือน</div><div class="v">${yoyFmt(tot)}</div><div class="d">เฉลี่ย ${yoyFmt(n ? tot / n : 0)}/เดือน ${d ? '· ' + d : ''}</div></div>`;
+            }).join('');
+
+            // Line chart
+            const W = 820, H = 300, L = 56, R = 12, T = 12, B = 28;
+            const max = Math.max(1, ...series.flat().filter(v => v != null));
+            const x = i => L + i * (W - L - R) / 11, y = v => T + (H - T - B) * (1 - v / max);
+            let svg = '';
+            for (let g = 0; g <= 4; g++) {
+                const v = max * g / 4;
+                svg += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" stroke-opacity="0.12"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${yoyShort(v)}</text>`;
+            }
+            YOY_MONTHS.forEach((m, i) => { svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${m}</text>`; });
+            fys.forEach((fy, k) => {
+                let d = '', pen = 'M';
+                series[k].forEach((v, i) => { if (v == null) { pen = 'M'; return; } d += `${pen}${x(i).toFixed(1)},${y(v).toFixed(1)} `; pen = 'L'; });
+                svg += `<path d="${d}" fill="none" stroke="${color(fy)}" stroke-width="2.5" stroke-linejoin="round"/>`;
+                series[k].forEach((v, i) => { if (v != null) svg += `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${color(fy)}"><title>${fyLabel(fy)} ${YOY_MONTHS[i]}: ${yoyFmt(v)}</title></circle>`; });
+            });
+            document.getElementById('yoy-chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="กราฟ${metricName}รายเดือนแยกตามปีงบ">${svg}</svg>`
+                + `<div class="yoy-legend">${fys.map(fy => `<span style="--yoy-c:${color(fy)}"><i></i>${fyLabel(fy)}</span>`).join('')}</div>`;
+
+            // Month table
+            const head = `<thead><tr><th>เดือน</th>${fys.map(fy => `<th class="num">${fyLabel(fy)}</th>`).join('')}${last > 0 ? '<th class="num">% เปลี่ยน</th>' : ''}</tr></thead>`;
+            const monthAoa = [['เดือน', ...fys.map(fyLabel), ...(last > 0 ? ['% เปลี่ยน'] : [])]];
+            let body = '';
+            for (let i = 0; i < 12; i++) {
+                const cells = series.map(s => s[i]);
+                const pc = last > 0 && cells[last] != null && cells[last - 1] ? (cells[last] - cells[last - 1]) / cells[last - 1] * 100 : null;
+                body += `<tr><td>${YOY_MONTHS[i]}</td>${cells.map(v => `<td class="num">${yoyFmt(v)}</td>`).join('')}${last > 0 ? `<td class="num">${pc == null ? '–' : yoyPct(cells[last], cells[last - 1])}</td>` : ''}</tr>`;
+                monthAoa.push([YOY_MONTHS[i], ...cells, ...(last > 0 ? [pc == null ? null : +pc.toFixed(1)] : [])]);
+            }
+            const foot = `<tfoot><tr><th>รวม</th>${series.map(s => `<th class="num">${yoyFmt(sumOf(s))}</th>`).join('')}${last > 0 ? `<th class="num">${yoyPct(sumOf(series[last], common), sumOf(series[last - 1], common))}</th>` : ''}</tr></tfoot>`;
+            document.getElementById('yoy-month-table').innerHTML = head + `<tbody>${body}</tbody>` + foot;
+
+            // District and drug tables (drug totals are province-wide: summaries do not split drugs by district)
+            const table = (list, limit, label) => {
+                const aggs = fys.map(fy => yoyAgg(sums, fy, list, idx, common));
+                const keys = new Set(aggs.flatMap(a => [...a.keys()]));
+                const rows = [...keys].map(key => ({ key, name: (aggs.find(a => a.has(key)) || new Map()).get(key)?.name || key, vals: aggs.map(a => a.get(key)) }))
+                    .sort((a, b) => (b.vals[last]?.total || 0) - (a.vals[last]?.total || 0) || (b.vals[0]?.total || 0) - (a.vals[0]?.total || 0))
+                    .slice(0, limit);
+                const aoa = [[label, ...fys.map(fyLabel), ...(last > 0 ? ['% เปลี่ยน'] : [])]];
+                const html = `<thead><tr><th>${label}</th>${fys.map(fy => `<th class="num">${fyLabel(fy)}</th>`).join('')}${last > 0 ? '<th class="num">% เปลี่ยน</th>' : ''}</tr></thead><tbody>`
+                    + rows.map(r => {
+                        const c = r.vals[last]?.common || 0, p = r.vals[last - 1]?.common || 0;
+                        aoa.push([r.name, ...r.vals.map(v => v ? v.total : null), ...(last > 0 ? [p ? +((c - p) / p * 100).toFixed(1) : null] : [])]);
+                        return `<tr><td>${escapeHtml(r.name)}</td>${r.vals.map(v => `<td class="num">${v ? yoyFmt(v.total) : '–'}</td>`).join('')}${last > 0 ? `<td class="num">${yoyPct(c, p)}</td>` : ''}</tr>`;
+                    }).join('') + '</tbody>';
+                return { html, aoa };
+            };
+            const ampT = table('amps', 50, 'อำเภอ');
+            const drugT = table('drugs', 20, 'ตัวยา');
+            document.getElementById('yoy-amp-table').innerHTML = ampT.html;
+            document.getElementById('yoy-drug-table').innerHTML = drugT.html;
+            document.getElementById('yoy-drug-scope').textContent = yoy.amp === 'all' ? '' : '(ทั้งจังหวัด — สรุปรายยาไม่แยกอำเภอ)';
+            yoy.view = { title: `${metricName} ${ampName}`, monthAoa, ampAoa: ampT.aoa, drugAoa: drugT.aoa };
+        }
+
+        function drawYoyRawList() {
+            const box = document.getElementById('yoy-raw-list');
+            if (!box) return;
+            if (!sbLastMeta) { box.innerHTML = `<span class="rx-pv-note">${sbGetConfig() ? 'กำลังอ่านรายการปีงบจาก Cloud...' : 'ต้องตั้งค่า Supabase ในแท็บนำเข้ายาก่อน'}</span>`; return; }
+            const held = pickRawFys(sbLastMeta);
+            const files = metaFiles(sbLastMeta);
+            box.innerHTML = metaFys(sbLastMeta).map(fy => {
+                const rows = files.filter(f => f.fy === fy).reduce((s, f) => s + (f.rows || 0), 0);
+                return `<label><input type="checkbox" value="${fy}" ${held.includes(fy) ? 'checked' : ''}> ${fyLabel(fy)} <small>(${rows.toLocaleString()} แถว)</small></label>`;
+            }).join('');
+        }
+
+        async function applyYoyRawFys() {
+            const fys = [...document.querySelectorAll('#yoy-raw-list input:checked')].map(i => i.value);
+            if (!fys.length) { showToast('เลือกอย่างน้อย 1 ปีงบ', 'error'); return; }
+            setChosenRawFys(fys);
+            await supabasePullData();
+            drawYoy();
+        }
+
+        function exportYoy() {
+            if (!yoy.view) { showToast('ไม่มีข้อมูลให้ส่งออก', 'error'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoy.view.monthAoa), 'รายเดือน');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoy.view.ampAoa), 'รายอำเภอ');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoy.view.drugAoa), 'ตัวยา');
+            XLSX.writeFile(wb, `เทียบปีงบ_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
         // ---------- Summary pivot: district / hospital × month / fiscal year / top drugs ----------
         const PV_BREAKS = { month: 'รายเดือน', fy: 'รายปีงบประมาณ', drug: 'รายตัวยา (10 อันดับ)' };
         const PV_METRICS = {
@@ -9575,6 +10001,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         initPivot('district');
         initPivot('hosp');
         window.renderSummaryPivot = renderSummaryPivot;
+        Object.assign(window, { renderYoy, exportYoy, applyYoyRawFys });
         renderSummaryPivot('district');
         renderSummaryPivot('hosp');
     })();
