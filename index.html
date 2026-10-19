@@ -3442,7 +3442,7 @@
                     const abcColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)');
                     return `<tr>
                         <td>${i+1}</td>
-                        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</td>
+                        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(d.name)}">${drillBtn('drug', d.didstd, d.name)}</td>
                         <td><span class="badge-class" style="background:${abcColor}">${d.abc}</span></td>
                         <td>${d.price.toLocaleString()}</td>
                     </tr>`;
@@ -3843,9 +3843,44 @@
         // Open another tab already filtered to one district / hospital (filters are shared by every tab)
         function drillTo(targetTab, filterType, value) {
             switchTab(targetTab, true);
+            if (filterType === 'district') handleFilterChange('hosp', 'all', true);
+            if (filterType === 'hosp') {
+                // the unit list only offers units of the selected district, so pick its district first
+                const h = typeof getHospitalInfo === 'function' ? getHospitalInfo(value) : null;
+                handleFilterChange('district', h && h.amp_code ? h.amp_code : 'all', true);
+            }
+            if (filterType === 'item') ensureItemOption(value);
             handleFilterChange(filterType, value);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+        function ensureItemOption(didstd) {
+            const name = (rawTransactions.find(t => t.didstd === didstd) || {}).dname || didstd;
+            document.querySelectorAll('select[id$="-item-select"]').forEach(sel => {
+                if (![...sel.options].some(o => o.value === didstd)) sel.add(new Option(name, didstd));
+            });
+        }
+
+        // Shared link for every report: district -> its units, drug -> units dispensing it, unit -> its drugs
+        const DRILL = {
+            district: { tab: 'hosp', filter: 'district', title: 'ดูหน่วยบริการในอำเภอนี้' },
+            drug: { tab: 'hosp', filter: 'item', title: 'ดูหน่วยบริการที่จ่ายยานี้' },
+            hosp: { tab: 'drugs', filter: 'hosp', title: 'ดูรายการยาของหน่วยบริการนี้' }
+        };
+        function drillBtn(kind, key, label) {
+            if (!key || !DRILL[kind]) return `<strong>${escapeHtml(label)}</strong>`;
+            return `<button type="button" class="link-btn" data-drill="${kind}" data-key="${escapeHtml(key)}" title="${DRILL[kind].title}"><strong>${escapeHtml(label)}</strong> ›</button>`;
+        }
+        // Capture phase so row click handlers (row selection) do not also run
+        document.addEventListener('click', e => {
+            const b = e.target.closest && e.target.closest('[data-drill]');
+            if (!b) return;
+            e.stopPropagation();
+            e.preventDefault();
+            const d = DRILL[b.dataset.drill];
+            const dlg = b.closest('dialog');
+            if (dlg && dlg.open) dlg.close();
+            drillTo(d.tab, d.filter, b.dataset.key);
+        }, true);
 
         function switchTab(targetTab, skipRender) {
             tabBtns.forEach(btn => {
@@ -4482,7 +4517,7 @@ ORDER BY name;
                 <h4 style="margin:14px 0 4px;font-size:0.9rem;">หน่วยบริการที่จ่ายมากที่สุด</h4>
                 <div class="table-container"><table class="data-table">
                     <thead><tr><th>หน่วยบริการ</th><th class="num">จำนวน</th><th class="num">มูลค่า (บาท)</th><th class="num">ราคา/หน่วย</th></tr></thead>
-                    <tbody>${top.map(([code, h]) => `<tr><td>${escapeHtml(h.name || code)}</td><td class="num">${fmt(h.amount)}</td><td class="num">${fmt(h.value)}</td><td class="num">${unit(h.amount ? h.value / h.amount : NaN)}</td></tr>`).join('')}</tbody>
+                    <tbody>${top.map(([code, h]) => `<tr><td>${drillBtn('hosp', code, h.name || code)}</td><td class="num">${fmt(h.amount)}</td><td class="num">${fmt(h.value)}</td><td class="num">${unit(h.amount ? h.value / h.amount : NaN)}</td></tr>`).join('')}</tbody>
                 </table></div>` : '<p style="color:var(--text-muted)">ไม่มีข้อมูลยานี้ในช่วงที่กรอง</p>';
             if (!dlg.open) dlg.showModal();
         }
@@ -4537,14 +4572,13 @@ ORDER BY name;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><code>${escapeHtml(d.code)}</code></td>
-                    <td><button type="button" class="link-btn" title="ดูหน่วยบริการในอำเภอนี้"><strong>${escapeHtml(d.name)}</strong> ›</button></td>
+                    <td>${drillBtn('district', d.code, d.name)}</td>
                     <td>${d.count.toLocaleString()} ครั้ง</td>
                     <td>${Math.round(d.budget).toLocaleString()} บาท</td>
                     <td>${pop ? Math.round(d.budget / pop * 1000).toLocaleString() + ' บาท' : '–'}</td>
                     <td><span style="color: var(--c-primary); font-weight: bold;">${percent}%</span></td>
                     <td>${yoyCol ? yoyCol.cell(d.code) : '–'}</td>
                 `;
-                tr.querySelector('.link-btn').onclick = () => drillTo('hosp', 'district', d.code);
                 body.appendChild(tr);
             });
 
@@ -4634,9 +4668,8 @@ ORDER BY name;
                     <td>${Math.round(h.budget).toLocaleString()} บาท</td>
                     <td>${h.drugs.toLocaleString()}</td>
                     <td>${yoyCol ? yoyCol.cell(h.hospcode) : '–'}</td>
-                    <td><button type="button" class="link-btn" title="ดูรายการยาของหน่วยนี้">💊 ดูยา ›</button></td>
+                    <td><button type="button" class="link-btn" data-drill="hosp" data-key="${escapeHtml(h.hospcode)}" title="ดูรายการยาของหน่วยนี้">💊 ดูยา ›</button></td>
                 `;
-                tr.querySelector('.link-btn').onclick = e => { e.stopPropagation(); drillTo('drugs', 'hosp', h.hospcode); };
                 tr.onclick = () => {
                     qualitySelectedHosp = h.hospcode;
                     renderHospBreakdown();
@@ -5598,7 +5631,7 @@ ORDER BY name;
             const hospAgg = {};
             txs.forEach(t => {
                 if (!hospAgg[t.hospcode]) {
-                    hospAgg[t.hospcode] = { name: t.hospname, budget: 0, total: 0, errors: 0 };
+                    hospAgg[t.hospcode] = { code: t.hospcode, name: t.hospname, budget: 0, total: 0, errors: 0 };
                 }
                 hospAgg[t.hospcode].budget += t.price;
                 hospAgg[t.hospcode].total++;
@@ -5617,7 +5650,7 @@ ORDER BY name;
                 const topBudget = [...hospList].sort((a,b) => b.budget - a.budget).slice(0, 5);
                 budgetLeaderboard.innerHTML = topBudget.length ? topBudget.map(h => `
                     <tr>
-                        <td><strong>${escapeHtml(h.name)}</strong></td>
+                        <td>${drillBtn('hosp', h.code, h.name)}</td>
                         <td style="text-align: right; color: var(--c-green); font-weight: bold;">${Math.round(h.budget).toLocaleString()} ฿</td>
                     </tr>
                 `).join('') : '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูล</td></tr>';
@@ -5629,7 +5662,7 @@ ORDER BY name;
                 const topQuality = [...hospList].sort((a,b) => b.score - a.score || b.total - a.total).slice(0, 5);
                 qualityLeaderboard.innerHTML = topQuality.length ? topQuality.map(h => `
                     <tr>
-                        <td><strong>${escapeHtml(h.name)}</strong></td>
+                        <td>${drillBtn('hosp', h.code, h.name)}</td>
                         <td style="text-align: right; color: var(--c-primary); font-weight: bold;">${h.score.toFixed(1)}%</td>
                     </tr>
                 `).join('') : '<tr><td colspan="2" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูล</td></tr>';
@@ -6031,7 +6064,7 @@ ORDER BY name;
         }
 
         // Centralized Filter Synchronization & Cascading Logic
-        function handleFilterChange(selectorType, val) {
+        function handleFilterChange(selectorType, val, noRender) {
             const suffixList = ['drug', 'district', 'hosp', 'variance', 'abc-ved', 'quality', 'map', 'access-index', 'rdu'];
 
             // 1. Synchronize the primary value across all prefixes
@@ -6069,7 +6102,7 @@ ORDER BY name;
 
             // 3. Re-render only the visible tab (switchTab redraws the others when opened);
             //    redrawing all ten tabs over 700k+ rows made each filter change take 3-5 s
-            renderTab(activeTabName());
+            if (!noRender) renderTab(activeTabName());
         }
 
         // Bind change events to all 5 dropdown filters for drug, district, and hosp
@@ -6990,13 +7023,15 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         const antiBody = document.getElementById('rdu-antibiotic-body');
         if (antiBody) {
             const antiAgg = {};
+            const antiName = {};
             antiTxs.forEach(t => {
-                antiAgg[t.dname] = (antiAgg[t.dname] || 0) + 1;
+                antiAgg[t.didstd] = (antiAgg[t.didstd] || 0) + 1;
+                antiName[t.didstd] = t.dname;
             });
             const sortedAnti = Object.entries(antiAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([name, count]) => `
+            antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([did, count]) => `
                 <tr>
-                    <td><strong>${escapeHtml(name)}</strong></td>
+                    <td>${drillBtn('drug', did, antiName[did] || did)}</td>
                     <td>${count.toLocaleString()}</td>
                     <td>${((count/antiCount)*100).toFixed(1)}%</td>
                 </tr>
@@ -7007,13 +7042,15 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         const hadBody = document.getElementById('rdu-had-body');
         if (hadBody) {
             const hadAgg = {};
+            const hadName = {};
             hadTxs.forEach(t => {
-                hadAgg[t.dname] = (hadAgg[t.dname] || 0) + t.price;
+                hadAgg[t.didstd] = (hadAgg[t.didstd] || 0) + t.price;
+                hadName[t.didstd] = t.dname;
             });
             const sortedHad = Object.entries(hadAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            hadBody.innerHTML = sortedHad.length ? sortedHad.map(([name, budget]) => `
+            hadBody.innerHTML = sortedHad.length ? sortedHad.map(([did, budget]) => `
                 <tr>
-                    <td><strong>${escapeHtml(name)}</strong></td>
+                    <td>${drillBtn('drug', did, hadName[did] || did)}</td>
                     <td>${Math.round(budget).toLocaleString()} ฿</td>
                     <td><span class="badge-status danger">High Alert</span></td>
                 </tr>
@@ -7198,7 +7235,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 tr.innerHTML = `
                     <td><code>${escapeHtml(d.didstd.substring(0, 10))}...</code></td>
                     <td>
-                        <strong>${escapeHtml(d.name)}</strong>
+                        ${drillBtn('drug', d.didstd, d.name)}
                         ${isAnomaly ? '<span class="badge-status danger" style="padding: 2px 6px; font-size: 0.65rem; margin-left: 8px;">Anomaly</span>' : ''}
                     </td>
                     <td>${d.minPrice.toFixed(2)} บาท</td>
@@ -7237,7 +7274,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                     const dTr = document.createElement('tr');
                     dTr.innerHTML = `
                         <td><code>${escapeHtml(p.hospcode)}</code></td>
-                        <td><strong>${escapeHtml(p.hospname)}</strong></td>
+                        <td>${drillBtn('hosp', p.hospcode, p.hospname)}</td>
                         <td style="color: var(--c-primary); font-weight: bold;">${p.avgUnitPrice.toFixed(2)} บาท</td>
                         <td>${p.amount.toLocaleString()}</td>
                         <td>${p.budget.toLocaleString()} บาท</td>
@@ -7603,7 +7640,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
 
                 tr.innerHTML = `
                     <td><code>${escapeHtml(d.didstd)}</code></td>
-                    <td><strong>${escapeHtml(d.name)}</strong></td>
+                    <td>${drillBtn('drug', d.didstd, d.name)}</td>
                     <td style="font-weight:bold; color:var(--text-light);">${d.price.toLocaleString()} บาท</td>
                     <td><span class="badge-class" style="background: ${d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : 'var(--c-green)')}">${d.abc}</span></td>
                     <td><span class="badge-class" style="background: ${vedColor}">${d.ved || '—'}</span></td>
@@ -7751,7 +7788,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
 
                 tr.innerHTML = `
                     <td><code>${escapeHtml(h.hospcode)}</code></td>
-                    <td><strong>${escapeHtml(h.hospname)}</strong></td>
+                    <td>${drillBtn('hosp', h.hospcode, h.hospname)}</td>
                     <td>${h.totalRows.toLocaleString()}</td>
                     <td style="color: ${h.missingDid > 0 ? 'var(--c-red)' : 'var(--text-muted)'};">${h.missingDid.toLocaleString()}</td>
                     <td style="color: ${h.invalidDid > 0 ? 'var(--c-red)' : 'var(--text-muted)'};">${h.invalidDid.toLocaleString()}</td>
@@ -8022,11 +8059,11 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 } else {
                     sortedDrugs.slice(0, 5).forEach(d => {
                         const tr = document.createElement('tr');
-                        const dAmount = txs.filter(t => t.dname === d.name && (t.amphurCode || '4901') === mapSelectedDistrict)
-                            .reduce((acc, curr) => acc + curr.amount, 0);
+                        const dTxs = txs.filter(t => t.dname === d.name && (t.amphurCode || '4901') === mapSelectedDistrict);
+                        const dAmount = dTxs.reduce((acc, curr) => acc + curr.amount, 0);
 
                         tr.innerHTML = `
-                            <td><strong>${escapeHtml(d.name)}</strong></td>
+                            <td>${drillBtn('drug', dTxs[0] && dTxs[0].didstd, d.name)}</td>
                             <td>${dAmount.toLocaleString()}</td>
                             <td style="color: var(--c-green); font-weight:bold;">${Math.round(d.price).toLocaleString()} บาท</td>
                         `;
@@ -8060,10 +8097,11 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 } else {
                     sortedDrugs.slice(0, 5).forEach(d => {
                         const tr = document.createElement('tr');
-                        const dAmount = txs.filter(t => t.dname === d.name).reduce((acc, curr) => acc + curr.amount, 0);
+                        const dTxs = txs.filter(t => t.dname === d.name);
+                        const dAmount = dTxs.reduce((acc, curr) => acc + curr.amount, 0);
 
                         tr.innerHTML = `
-                            <td><strong>${escapeHtml(d.name)}</strong></td>
+                            <td>${drillBtn('drug', dTxs[0] && dTxs[0].didstd, d.name)}</td>
                             <td>${dAmount.toLocaleString()}</td>
                             <td style="color: var(--c-green); font-weight:bold;">${Math.round(d.price).toLocaleString()} บาท</td>
                         `;
@@ -8135,7 +8173,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             list.forEach(d => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${escapeHtml(d.name)}</strong></td>
+                    <td>${drillBtn('district', d.code, d.name)}</td>
                     <td>${d.pop.toLocaleString()}</td>
                     <td>${Math.round(d.budget).toLocaleString()} บาท</td>
                     <td style="color: var(--c-primary); font-weight:bold;">${d.perCapita.toFixed(2)}</td>
@@ -9879,7 +9917,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     + rows.map(r => {
                         const c = r.vals[last]?.common || 0, p = r.vals[last - 1]?.common || 0;
                         aoa.push([r.name, ...r.vals.map(v => v ? v.total : null), ...(last > 0 ? [p ? +((c - p) / p * 100).toFixed(1) : null] : [])]);
-                        return `<tr><td>${escapeHtml(r.name)}</td>${r.vals.map(v => `<td class="num">${v ? yoyFmt(v.total) : '–'}</td>`).join('')}${last > 0 ? `<td class="num">${yoyPct(c, p)}</td>` : ''}</tr>`;
+                        return `<tr><td>${drillBtn(list === 'amps' ? 'district' : 'drug', r.key, r.name)}</td>${r.vals.map(v => `<td class="num">${v ? yoyFmt(v.total) : '–'}</td>`).join('')}${last > 0 ? `<td class="num">${yoyPct(c, p)}</td>` : ''}</tr>`;
                     }).join('') + '</tbody>';
                 return { html, aoa };
             };
@@ -10087,7 +10125,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     const base = (typeof baseDistricts !== 'undefined' && baseDistricts.find(x => x.code === u)) || null;
                     const any = [...(d.unitHosps.get(u) || [])].map(hospInfo).find(Boolean);
                     const name = base ? base.name : (any ? any.ampName : u);
-                    lines.push({ kind: 'unit', name: 'อ.' + name, meta: `รหัส ${u} · ${fmtInt((d.unitHosps.get(u) || new Set()).size)} หน่วยบริการ`, ...rowVals(u) });
+                    lines.push({ kind: 'unit', drill: ['district', u], name: 'อ.' + name, meta: `รหัส ${u} · ${fmtInt((d.unitHosps.get(u) || new Set()).size)} หน่วยบริการ`, ...rowVals(u) });
                 });
             } else {
                 const groups = new Map();
@@ -10103,7 +10141,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                         const h = hospInfo(u);
                         const name = h ? h.name : 'หน่วยบริการ ' + u;
                         const kind = hospType(u, name);
-                        return { kind: 'unit', name: shortHospName(name), full: name, meta: u + (kind ? ' · ' + kind : ''), ...rowVals(u) };
+                        return { kind: 'unit', drill: ['hosp', u], name: shortHospName(name), full: name, meta: u + (kind ? ' · ' + kind : ''), ...rowVals(u) };
                     }).sort((a, b) => b.total - a.total);
                     lines.push({
                         kind: 'sub', name: 'รวม ' + grp.name, meta: `${rows.length} หน่วยบริการ`,
@@ -10135,7 +10173,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 + cols.map(c => `<th scope="col" title="${esc(c.title || c.label)}">${c.drug ? `<span class="rx-pv-drug">${esc(c.label)}</span>` : esc(c.label)}<span class="rx-pv-col-sub">${esc(c.sub || '')}</span></th>`).join('')
                 + `<th scope="col" class="rx-pv-total">รวม</th><th scope="col">สัดส่วน</th></tr>`;
             const body = lines.map(l => `<tr${l.kind === 'sub' ? ' class="rx-pv-subtotal"' : ''}>`
-                + `<th scope="row" class="rx-pv-unit"${l.full ? ` title="${esc(l.full)}"` : ''}><div class="rx-pv-nm">${esc(l.name)}</div><div class="rx-pv-mt">${esc(l.meta)}</div></th>`
+                + `<th scope="row" class="rx-pv-unit"${l.full ? ` title="${esc(l.full)}"` : ''}><div class="rx-pv-nm">${l.drill ? `<button type="button" class="link-btn" data-drill="${l.drill[0]}" data-key="${esc(l.drill[1])}" title="${l.drill[0] === 'district' ? 'ดูหน่วยบริการในอำเภอนี้' : 'ดูรายการยาของหน่วยบริการนี้'}">${esc(l.name)} ›</button>` : esc(l.name)}</div><div class="rx-pv-mt">${esc(l.meta)}</div></th>`
                 + l.vals.map((v, i) => cell(v, l.kind === 'unit' && !cols[i].other)).join('')
                 + `<td class="rx-pv-total" title="${exact(l.total)}">${show(l.total)}</td><td>${share(l.total)}</td></tr>`).join('');
             const foot = '<tr><th scope="row" class="rx-pv-unit">รวมทั้งหมด</th>'
