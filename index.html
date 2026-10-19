@@ -198,7 +198,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 72px;
+            min-height: 72px;
+            padding: 8px 0;
+            gap: 16px;
         }
 
         .logo {
@@ -232,10 +234,13 @@
 
         .nav-links {
             display: flex;
-            gap: 20px;
+            gap: 6px 18px;
             list-style: none;
             align-items: center;
             flex-wrap: wrap;
+            justify-content: center;
+            flex: 1;
+            min-width: 0;
         }
 
         .nav-links a {
