@@ -1103,6 +1103,13 @@
         .yoy-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; margin-top: 6px; }
         .yoy-legend i { display: inline-block; width: 14px; height: 3px; background: var(--yoy-c); vertical-align: middle; margin-right: 6px; }
         .data-table td.num, .data-table th.num { text-align: right; white-space: nowrap; }
+        /* Row numbers 1, 2, 3 ... on every data table (tables with their own # column use .no-num) */
+        .data-table:not(.no-num) tbody { counter-reset: rxrow; }
+        .data-table:not(.no-num) tbody tr { counter-increment: rxrow; }
+        .data-table:not(.no-num) tr::before { display: table-cell; padding: 12px 6px 12px 14px; font-size: 0.8rem; border-bottom: 1px solid var(--card-border); color: var(--text-muted); text-align: right; white-space: nowrap; width: 1%; vertical-align: middle; }
+        .data-table:not(.no-num) thead tr::before { content: 'ลำดับ'; font-weight: 600; background: rgba(0, 0, 0, 0.2); }
+        .data-table:not(.no-num) tbody tr::before { content: counter(rxrow); }
+        .data-table:not(.no-num) tfoot tr::before, .data-table:not(.no-num) tbody tr:has(> td[colspan])::before { content: ''; }
         .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         .link-btn { background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
         .link-btn:hover { color: var(--c-primary); text-decoration: underline; }
@@ -1455,7 +1462,7 @@
                 <!-- Top 5 Drugs -->
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px;">🏆 5 รายการยามูลค่าสูงสุด</div>
                 <div class="table-container" style="max-height:180px;overflow-y:auto;">
-                    <table class="data-table" style="font-size:0.8rem;">
+                    <table class="data-table no-num" style="font-size:0.8rem;">
                         <thead><tr><th>#</th><th>ชื่อยา</th><th>ABC</th><th>มูลค่า (บาท)</th></tr></thead>
                         <tbody id="ov-top5-body">
                             <tr><td colspan="4" style="text-align:center;color:var(--text-muted);">ยังไม่มีข้อมูล — กรุณา Login และ Upload ไฟล์</td></tr>
@@ -3047,7 +3054,7 @@
 
                 <div class="panel" style="margin-bottom:20px;">
                     <h3 class="panel-title"><span>📅</span> รายเดือนแยกตามปีงบ</h3>
-                    <div class="table-container"><table class="data-table" id="yoy-month-table"></table></div>
+                    <div class="table-container"><table class="data-table no-num" id="yoy-month-table"></table></div>
                 </div>
 
                 <div class="workspace-layout" style="grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -4668,7 +4675,7 @@ ORDER BY name;
                     <td>${Math.round(h.budget).toLocaleString()} บาท</td>
                     <td>${h.drugs.toLocaleString()}</td>
                     <td>${yoyCol ? yoyCol.cell(h.hospcode) : '–'}</td>
-                    <td><button type="button" class="link-btn" data-drill="hosp" data-key="${escapeHtml(h.hospcode)}" title="ดูรายการยาของหน่วยนี้">💊 ดูยา ›</button></td>
+                    <td><button type="button" class="link-btn" style="white-space:nowrap" data-drill="hosp" data-key="${escapeHtml(h.hospcode)}" title="ดูรายการยาของหน่วยนี้">💊 ดูยา ›</button></td>
                 `;
                 tr.onclick = () => {
                     qualitySelectedHosp = h.hospcode;
@@ -6280,7 +6287,23 @@ ORDER BY name;
         }
 
         // CSV Export Helper with UTF-8 BOM for Thai encoding
+        // "\u0E25\u0E33\u0E14\u0E31\u0E1A" 1, 2, 3 ... as the first column of every exported table (header row gets the label).
+        // `skipLast` leaves trailing total rows unnumbered
+        function withRowNumbers(aoa, skipLast = 0) {
+            return aoa.map((row, i) => [i === 0 ? '\u0E25\u0E33\u0E14\u0E31\u0E1A' : (i < aoa.length - skipLast ? i : ''), ...row]);
+        }
+
         function downloadCSV(filename, csvContent) {
+            // Split on line breaks outside quotes (a drug name from Excel may hold one inside its quoted field)
+            const lines = [];
+            let start = 0, quoted = false;
+            for (let i = 0; i < csvContent.length; i++) {
+                const c = csvContent[i];
+                if (c === '"') quoted = !quoted;
+                else if (c === '\n' && !quoted) { lines.push(csvContent.slice(start, i)); start = i + 1; }
+            }
+            if (start < csvContent.length) lines.push(csvContent.slice(start));
+            csvContent = lines.map((l, i) => (i === 0 ? '\u0E25\u0E33\u0E14\u0E31\u0E1A' : i) + ',' + l).join('\n') + '\n';
             const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             if (link.download !== undefined) {
@@ -6297,14 +6320,16 @@ ORDER BY name;
         // SheetJS Excel (.xlsx) Export Helper
         function downloadExcel(filename, headers, rows, sheetName = 'RxMuk Data') {
             try {
-                const worksheetData = [headers, ...rows];
+                // round float noise such as 34372007.85799975 to 2 decimals
+                const tidy = rows.map(r => Array.isArray(r) ? r.map(v => typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 100) / 100 : v) : r);
+                const worksheetData = withRowNumbers([headers, ...tidy]);
                 const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-                
+
                 // Add basic column widths to make it readable
                 const maxCols = headers.length;
-                const colsSetting = [];
+                const colsSetting = [{ wch: 7 }];
                 for(let i=0; i<maxCols; i++) {
                     colsSetting.push({ wch: 22 });
                 }
@@ -9953,8 +9978,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             if (!yoy.view) { showToast('ไม่มีข้อมูลให้ส่งออก', 'error'); return; }
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoy.view.monthAoa), 'รายเดือน');
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoy.view.ampAoa), 'รายอำเภอ');
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoy.view.drugAoa), 'ตัวยา');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(withRowNumbers(yoy.view.ampAoa)), 'รายอำเภอ');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(withRowNumbers(yoy.view.drugAoa)), 'ตัวยา');
             XLSX.writeFile(wb, `เทียบปีงบ_${new Date().toISOString().slice(0, 10)}.xlsx`);
         }
 
@@ -10182,15 +10207,16 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             pv.body.innerHTML = `<div class="rx-pv-scroll"><table class="rx-pv-table"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
 
             const round = v => Math.round(v * 100) / 100;
+            let seq = 0;   // number unit rows only; district subtotal rows stay blank
             pv.table = {
                 file: `RxMuk_สรุป${unitHead}_${PV_BREAKS[pv.brk]}_${metric.label}`.replace(/[\\/:*?"<>|()\s_]+/g, '_').replace(/_+$/, ''),
                 aoa: [
                     [`สรุปภาพรวมราย${unitHead} — ${PV_BREAKS[pv.brk]} — ${metric.label}`],
                     [pv.ctx.textContent],
                     [],
-                    [unitHead, 'รหัส / รายละเอียด', ...cols.map(c => c.label + (c.drug ? ` [${c.key}]` : '') + (c.sub ? ` (${c.sub})` : '')), 'รวม', 'สัดส่วน (%)'],
-                    ...lines.map(l => [l.full || l.name, l.meta, ...l.vals.map(round), round(l.total), grand ? round(l.total / grand * 100) : 0]),
-                    ['รวมทั้งหมด', '', ...colTotals.map(round), round(grand), 100]
+                    ['ลำดับ', unitHead, 'รหัส / รายละเอียด', ...cols.map(c => c.label + (c.drug ? ` [${c.key}]` : '') + (c.sub ? ` (${c.sub})` : '')), 'รวม', 'สัดส่วน (%)'],
+                    ...lines.map(l => [l.kind === 'unit' ? ++seq : '', l.full || l.name, l.meta, ...l.vals.map(round), round(l.total), grand ? round(l.total / grand * 100) : 0]),
+                    ['', 'รวมทั้งหมด', '', ...colTotals.map(round), round(grand), 100]
                 ]
             };
         }
