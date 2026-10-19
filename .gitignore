@@ -58,3 +58,9 @@ session/
 full_diagnostic.php
 *.xlsx
 
+
+# Local secrets notes and tool scratch: never commit
+โทken
+.playwright-mcp/
+.claude/settings.local.json
+.claude/skills/

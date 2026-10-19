@@ -1361,9 +1361,17 @@
                                 <div style="flex: 1 1 140px; display: flex; flex-direction: column; gap: 6px;">
                                     <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ปีปฏิทิน (ค.ศ.)</label>
                                     <select id="import-default-year" class="select-control" style="background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;">
-                                        <option value="2025">ปี 2568 (2025 AD)</option>
-                                        <option value="2026" selected>ปี 2569 (2026 AD)</option>
                                     </select>
+                                    <script>
+                                        // Years relative to today so new fiscal years (2570+) need no edit
+                                        (function () {
+                                            const sel = document.getElementById('import-default-year');
+                                            const now = new Date().getFullYear();
+                                            for (let y = now - 2; y <= now + 1; y++) {
+                                                sel.add(new Option(`ปี ${y + 543} (${y} AD)`, String(y), false, y === now));
+                                            }
+                                        })();
+                                    </script>
                                 </div>
                                 <div style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px;">
                                     <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">เดือน</label>
@@ -4249,7 +4257,7 @@ ORDER BY name;
                 }
             }
             // Fallback default date from settings
-            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : '2026';
+            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : String(new Date().getFullYear());
             const defMonth = document.getElementById('import-default-month') ? document.getElementById('import-default-month').value : '06';
             return `${defYear}-${defMonth}-01`;
         }
@@ -4545,7 +4553,7 @@ ORDER BY name;
                 h.toLowerCase() === 'hdc_date'
             );
 
-            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : '2026';
+            const defYear = document.getElementById('import-default-year') ? document.getElementById('import-default-year').value : String(new Date().getFullYear());
             const defMonth = document.getElementById('import-default-month') ? document.getElementById('import-default-month').value : '06';
             const fallbackDate = `${defYear}-${defMonth}-01`;
 
