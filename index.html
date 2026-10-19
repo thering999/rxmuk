@@ -1103,6 +1103,22 @@
         .yoy-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; margin-top: 6px; }
         .yoy-legend i { display: inline-block; width: 14px; height: 3px; background: var(--yoy-c); vertical-align: middle; margin-right: 6px; }
         .data-table td.num, .data-table th.num { text-align: right; white-space: nowrap; }
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .link-btn { background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+        .link-btn:hover { color: var(--c-primary); text-decoration: underline; }
+        .link-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; border-radius: 4px; }
+        .drug-dialog { margin: auto; width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; background: var(--bg-dark, #0d1b2e); color: var(--text-light, #e2e8f0); }
+        body.light-mode .drug-dialog { background: #fff; color: #1e293b; }
+        .drug-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+        .drug-dialog header { position: static; display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; border: 0; background: none; backdrop-filter: none; margin-bottom: 12px; }
+        .drug-dialog h3 { margin: 0; font-size: 1.05rem; }
+        .drug-dialog .dd-close { background: none; border: 1px solid var(--card-border); color: inherit; border-radius: 8px; min-width: 36px; min-height: 36px; cursor: pointer; font-size: 1rem; }
+        .drug-dialog .dd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+        .drug-dialog .dd-stats div { border: 1px solid var(--card-border); border-radius: 10px; padding: 8px 12px; font-size: 0.78rem; color: var(--text-muted); }
+        .drug-dialog .dd-stats strong { display: block; font-size: 1.05rem; color: var(--text-light, inherit); }
+        body.light-mode .drug-dialog .dd-stats strong { color: #1e293b; }
+        .drug-dialog svg { width: 100%; height: auto; display: block; }
+        .drug-dialog svg text { fill: var(--text-muted); font-size: 11px; }
         .rx-pv-export { background: rgba(34, 211, 160, 0.12); border: 1px solid rgba(34, 211, 160, 0.4); color: var(--c-green); border-radius: 10px; padding: 6px 12px; font-family: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
         .rx-pv-scroll { overflow: auto; max-height: 620px; border: 1px solid var(--card-border); border-radius: 10px; }
         .rx-pv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
@@ -1828,13 +1844,14 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th id="th-drug-didstd" onclick="changeDrugSort('didstd')" style="cursor: pointer; user-select: none;">รหัสยามาตรฐาน (DID/STD 24 หลัก)</th>
-                                        <th id="th-drug-name" onclick="changeDrugSort('name')" style="cursor: pointer; user-select: none;">ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)</th>
-                                        <th id="th-drug-amount" onclick="changeDrugSort('amount')" style="cursor: pointer; user-select: none;">จำนวนจ่ายสะสม (Amount)</th>
-                                        <th id="th-drug-adc" onclick="changeDrugSort('adc')" style="cursor: pointer; user-select: none;">จ่ายเฉลี่ยรายวัน (ADC)</th>
-                                        <th id="th-drug-price" onclick="changeDrugSort('price')" style="cursor: pointer; user-select: none;">ราคารวมสะสม (SumPrice)</th>
-                                        <th id="th-drug-cost" onclick="changeDrugSort('cost')" style="cursor: pointer; user-select: none;">ต้นทุนสะสม (SumCost)</th>
-                                        <th id="th-drug-abc" onclick="changeDrugSort('abc')" style="cursor: pointer; user-select: none;" title="A มูลค่ารวมเกิน 100,000 บาท, B เกิน 25,000 บาท, C ไม่เกิน 25,000 บาท (ตามช่วงที่กรอง)">ระดับผลกระทบมูลค่า (ABC Class)</th>
+                                        <th id="th-drug-didstd" onclick="changeDrugSort('didstd')" style="cursor: pointer; user-select: none;">รหัสยา 24 หลัก</th>
+                                        <th id="th-drug-name" onclick="changeDrugSort('name')" style="cursor: pointer; user-select: none;" title="คลิกชื่อยาเพื่อดูแนวโน้มรายเดือน">ชื่อยา</th>
+                                        <th id="th-drug-amount" onclick="changeDrugSort('amount')" style="cursor: pointer; user-select: none;">จำนวนจ่าย</th>
+                                        <th id="th-drug-adc" onclick="changeDrugSort('adc')" style="cursor: pointer; user-select: none;" title="จำนวนจ่ายหารด้วยจำนวนวันของเดือนที่อยู่ในช่วงที่กรอง">จ่ายเฉลี่ย/วัน</th>
+                                        <th id="th-drug-price" onclick="changeDrugSort('price')" style="cursor: pointer; user-select: none;">มูลค่า</th>
+                                        <th id="th-drug-cost" onclick="changeDrugSort('cost')" style="cursor: pointer; user-select: none;">ต้นทุน</th>
+                                        <th id="th-drug-abc" onclick="changeDrugSort('abc')" style="cursor: pointer; user-select: none;" title="A มูลค่ารวมเกิน 100,000 บาท, B เกิน 25,000 บาท, C ไม่เกิน 25,000 บาท (ตามช่วงที่กรอง)">ABC</th>
+                                        <th id="th-drug-yoy">% เทียบปีก่อน</th>
                                     </tr>
                                 </thead>
                                 <tbody id="drug-breakdown-body">
@@ -1947,8 +1964,10 @@
                                     <th>รหัสอำเภอ</th>
                                     <th>ชื่ออำเภอ</th>
                                     <th>จำนวนบริการ (ครั้ง)</th>
-                                    <th>มูลค่าราคารวมจ่าย (บาท)</th>
-                                    <th>สัดส่วนเปอร์เซ็นต์</th>
+                                    <th>มูลค่ารวม (บาท)</th>
+                                    <th title="มูลค่ารวมหารด้วยประชากรอำเภอ คูณ 1,000 ใช้เทียบอำเภอขนาดต่างกันได้">มูลค่า/ประชากร 1,000 คน</th>
+                                    <th>สัดส่วน</th>
+                                    <th id="th-district-yoy">% เทียบปีก่อน</th>
                                 </thead>
                                 <tbody id="district-breakdown-body">
                                     <!-- Populated by JS -->
@@ -2070,12 +2089,14 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>รหัสหน่วยบริการ (Hospcode)</th>
-                                        <th>ชื่อสถานบริการสาธารณสุข</th>
-                                        <th>จำนวนยอดสแกนจ่ายยา (ครั้ง)</th>
-                                        <th>ปริมาณยาสะสม (Amount)</th>
-                                        <th>มูลค่าราคารวมสะสม (บาท)</th>
-                                        <th>คุณภาพข้อมูลผ่านเกณฑ์</th>
+                                        <th>รหัสหน่วย</th>
+                                        <th>หน่วยบริการ</th>
+                                        <th>จำนวนจ่าย (ครั้ง)</th>
+                                        <th>จำนวนยา (หน่วย)</th>
+                                        <th>มูลค่ารวม (บาท)</th>
+                                        <th title="จำนวนรายการยาที่ต่างกันที่หน่วยนี้จ่าย">รายการยา</th>
+                                        <th id="th-hosp-yoy">% เทียบปีก่อน</th>
+                                        <th><span class="sr-only">ดูรายการยา</span></th>
                                     </tr>
                                 </thead>
                                 <tbody id="hosp-breakdown-body">
@@ -3050,6 +3071,17 @@
         </section>
     </div>
 
+    <dialog id="drug-detail-dialog" class="drug-dialog" aria-labelledby="dd-title">
+        <header>
+            <div>
+                <h3 id="dd-title">รายละเอียดยา</h3>
+                <div id="dd-sub" style="font-size:0.78rem;color:var(--text-muted);"></div>
+            </div>
+            <button type="button" class="dd-close" onclick="document.getElementById('drug-detail-dialog').close()" aria-label="ปิด">✕</button>
+        </header>
+        <div id="dd-body"></div>
+    </dialog>
+
     <div id="tab-rdu" class="tab-content">
         <section class="container">
             <div class="secured-content">
@@ -3808,7 +3840,14 @@
             return false;
         }
 
-        function switchTab(targetTab) {
+        // Open another tab already filtered to one district / hospital (filters are shared by every tab)
+        function drillTo(targetTab, filterType, value) {
+            switchTab(targetTab, true);
+            handleFilterChange(filterType, value);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function switchTab(targetTab, skipRender) {
             tabBtns.forEach(btn => {
                 if(btn.dataset.tab === targetTab) {
                     btn.classList.add('active');
@@ -3824,7 +3863,7 @@
             });
             document.getElementById(`tab-${targetTab}`).classList.add('active');
 
-            renderTab(targetTab);
+            if (!skipRender) renderTab(targetTab);
 
             if (tabDetails[targetTab]) {
                 heroTitle.textContent = tabDetails[targetTab].title;
@@ -4215,6 +4254,38 @@ ORDER BY name;
             }
         }
 
+        // Filters the per-month cloud summaries cannot reproduce (they hold no drug × district split or day ranges)
+        function yoyBlocked(prefix, types) {
+            const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+            return types.some(t => { const v = val(`${prefix}-${t}-select`); return v && v !== 'all'; })
+                || !!val(`${prefix}-start-date`) || !!val(`${prefix}-end-date`);
+        }
+
+        // "% vs the same months last year" for one table, or null when it cannot be compared fairly
+        function yoyColumn(txs, list, blocked) {
+            if (blocked || typeof window.prevYearValues !== 'function') return null;
+            const months = new Set();
+            for (const t of txs) months.add(t.month);
+            const { out, have } = window.prevYearValues(list, [...months]);
+            if (!have.size) return null;
+            const keyOf = list === 'drugs' ? (t => t.didstd) : list === 'amps' ? (t => t.amphurCode || '4901') : (t => t.hospcode);
+            const cur = new Map();
+            for (const t of txs) if (have.has(t.month)) { const k = keyOf(t); cur.set(k, (cur.get(k) || 0) + (+t.price || 0)); }
+            return { cell: key => yoyDeltaCell(cur.get(key) || 0, out.get(key) || 0), months: have.size };
+        }
+        function yoyDeltaCell(cur, prev) {
+            if (!prev) return cur > 0 ? '<span style="color:var(--text-muted)" title="ปีก่อนไม่มีการจ่าย">ใหม่</span>' : '–';
+            const p = (cur - prev) / prev * 100;
+            const color = Math.abs(p) >= 30 ? 'var(--c-yellow)' : 'var(--text-muted)';
+            return `<span style="color:${color};white-space:nowrap" title="ปีก่อน ${Math.round(prev).toLocaleString()} บาท">${p >= 0 ? '▲' : '▼'} ${Math.abs(p).toFixed(1)}%</span>`;
+        }
+        function yoyHeader(id, col, reason) {
+            const th = document.getElementById(id);
+            if (!th) return;
+            th.title = col ? `เทียบมูลค่ากับเดือนเดียวกันของปีก่อน (${col.months} เดือนที่มีข้อมูลทั้งสองปี) — เหลือง = เปลี่ยนเกิน 30%` : reason;
+        }
+        const YOY_NA = 'เทียบไม่ได้: ยังไม่มีข้อมูลปีก่อนของเดือนที่เลือก หรือใช้ตัวกรองที่ข้อมูลสรุปไม่รองรับ';
+
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
             if(!body) return;
@@ -4223,6 +4294,8 @@ ORDER BY name;
 
             // Filter transactions
             let txs = getFilteredTransactions('drug');
+            // Average daily use over the months in the filtered period (was a fixed 30 days whatever the period)
+            const periodDays = Math.max(1, new Set(txs.map(t => t.month)).size) * 30.4;
 
             // Aggregate by Drug
             const drugAgg = {};
@@ -4238,11 +4311,12 @@ ORDER BY name;
 
             let list = Object.values(drugAgg).map(d => {
                 d.abc = d.price > 100000 ? "A" : (d.price > 25000 ? "B" : "C");
-                
+                d.adc = d.amount / periodDays;
+
                 // Anomaly Detection: Price Outliers
                 const avgPrice = d.unitPrices.length > 0 ? d.unitPrices.reduce((a,b)=>a+b,0)/d.unitPrices.length : 0;
                 d.isAnomaly = d.unitPrices.some(p => Math.abs(p - avgPrice) > avgPrice * 1.5); // > 150% deviation
-                
+
                 return d;
             });
 
@@ -4282,35 +4356,39 @@ ORDER BY name;
                 return;
             }
 
+            const yoyCol = yoyColumn(txs, 'drugs', yoyBlocked('drug', ['district', 'hosp']));
+            yoyHeader('th-drug-yoy', yoyCol, YOY_NA + ' (สรุปรายยาเป็นยอดทั้งจังหวัด จึงเทียบไม่ได้เมื่อกรองอำเภอ/หน่วยบริการ)');
+
             list.forEach(d => {
                 const tr = document.createElement('tr');
                 const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : (d.abc === 'C' ? 'var(--c-green)' : 'var(--text-muted)'));
-                const anomalyBadge = d.isAnomaly ? `<span class="badge-status danger" style="font-size:0.65rem; margin-left:8px;" title="ตรวจพบความผิดปกติของราคาต่อหน่วย">⚠️ Anomaly</span>` : '';
-                
-                // Inventory Logic: ADC (Assume 30 days for the period)
-                const adc = (d.amount / 30).toFixed(1);
-                
+                const anomalyBadge = d.isAnomaly ? `<span class="badge-status danger" style="font-size:0.65rem; margin-left:8px;" title="ราคาต่อหน่วยบางรายการต่างจากค่าเฉลี่ยเกิน 150%">⚠️ ราคาผิดปกติ</span>` : '';
+                const adc = d.adc.toFixed(1);
+
                 tr.innerHTML = `
                     <td><code>${escapeHtml(d.didstd)}</code></td>
-                    <td><strong>${escapeHtml(d.name)}</strong> ${anomalyBadge}</td>
+                    <td><button type="button" class="link-btn" title="ดูแนวโน้มรายเดือนและหน่วยบริการที่จ่าย"><strong>${escapeHtml(d.name)}</strong></button> ${anomalyBadge}</td>
                     <td>${d.amount.toLocaleString()}</td>
                     <td style="color:var(--c-primary); font-weight:bold;">${adc}</td>
-                    <td>${d.price.toLocaleString()} บาท</td>
-                    <td>${d.cost.toLocaleString()} บาท</td>
+                    <td>${Math.round(d.price).toLocaleString()} บาท</td>
+                    <td>${Math.round(d.cost).toLocaleString()} บาท</td>
                     <td><span class="badge-class" style="background: ${badgeColor}">${d.abc}</span></td>
+                    <td>${yoyCol ? yoyCol.cell(d.didstd) : '–'}</td>
                 `;
+                tr.querySelector('.link-btn').onclick = () => showDrugDetail(d.didstd, d.name);
                 body.appendChild(tr);
             });
             updateDrugStats(list);
 
             // Update sort indicators in headers
             const cols = {
-                didstd: { id: 'th-drug-didstd', label: 'รหัสยามาตรฐาน (DID/STD 24 หลัก)' },
-                name: { id: 'th-drug-name', label: 'ชื่อทางการค้า / ชื่อสามัญทางยา (Drug Name)' },
-                amount: { id: 'th-drug-amount', label: 'จำนวนจ่ายสะสม (Amount)' },
-                price: { id: 'th-drug-price', label: 'ราคารวมสะสม (SumPrice)' },
-                cost: { id: 'th-drug-cost', label: 'ต้นทุนสะสม (SumCost)' },
-                abc: { id: 'th-drug-abc', label: 'ระดับผลกระทบมูลค่า (ABC Class)' }
+                didstd: { id: 'th-drug-didstd', label: 'รหัสยา 24 หลัก' },
+                name: { id: 'th-drug-name', label: 'ชื่อยา' },
+                amount: { id: 'th-drug-amount', label: 'จำนวนจ่าย' },
+                adc: { id: 'th-drug-adc', label: 'จ่ายเฉลี่ย/วัน' },
+                price: { id: 'th-drug-price', label: 'มูลค่า' },
+                cost: { id: 'th-drug-cost', label: 'ต้นทุน' },
+                abc: { id: 'th-drug-abc', label: 'ABC' }
             };
             
             Object.keys(cols).forEach(colKey => {
@@ -4356,6 +4434,59 @@ ORDER BY name;
             }
         }
 
+        // One drug under the current filters: monthly trend, unit price spread and the units dispensing it most
+        function showDrugDetail(didstd, name) {
+            const dlg = document.getElementById('drug-detail-dialog');
+            if (!dlg) return;
+            const txs = getFilteredTransactions('drug', ['item']).filter(t => t.didstd === didstd);
+            const byMonth = new Map(), byHosp = new Map();
+            let value = 0, amount = 0, minP = Infinity, maxP = 0;
+            for (const t of txs) {
+                const p = +t.price || 0, a = +t.amount || 0;
+                value += p; amount += a;
+                if (a > 0) { minP = Math.min(minP, p / a); maxP = Math.max(maxP, p / a); }
+                const m = byMonth.get(t.month) || byMonth.set(t.month, { value: 0, amount: 0 }).get(t.month);
+                m.value += p; m.amount += a;
+                const h = byHosp.get(t.hospcode) || byHosp.set(t.hospcode, { name: t.hospname, value: 0, amount: 0 }).get(t.hospcode);
+                h.value += p; h.amount += a;
+            }
+            const fmt = v => Math.round(v).toLocaleString();
+            const unit = v => isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '–';
+            document.getElementById('dd-title').textContent = name || didstd;
+            document.getElementById('dd-sub').textContent = `รหัส ${didstd} · ตามตัวกรองปัจจุบัน (ยกเว้นตัวกรองรายการยา)`;
+
+            const months = [...byMonth.keys()].sort();
+            const W = 700, H = 200, L = 10, B = 26, T = 18;
+            const max = Math.max(1, ...months.map(m => byMonth.get(m).value));
+            const bw = months.length ? (W - 2 * L) / months.length : 0;
+            const bars = months.map((m, i) => {
+                const v = byMonth.get(m).value, h = (H - T - B) * v / max;
+                const label = typeof getThaiMonthYearName === 'function' ? getThaiMonthYearName(m) : m;
+                const [yy, mm] = String(m).split('-').map(Number);
+                const short = mm ? `${['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][mm - 1]} ${String(yy + 543).slice(-2)}` : m;
+                return `<rect x="${L + i * bw + bw * 0.15}" y="${H - B - h}" width="${bw * 0.7}" height="${h}" rx="3" fill="var(--c-primary)"><title>${escapeHtml(label)}: ${fmt(v)} บาท · ${fmt(byMonth.get(m).amount)} หน่วย</title></rect>`
+                    + (i % Math.ceil(months.length / 12) === 0 ? `<text x="${L + i * bw + bw / 2}" y="${H - 8}" text-anchor="middle">${escapeHtml(short)}</text>` : '');
+            }).join('');
+
+            const top = [...byHosp.entries()].sort((a, b) => b[1].value - a[1].value).slice(0, 10);
+            document.getElementById('dd-body').innerHTML = txs.length ? `
+                <div class="dd-stats">
+                    <div>มูลค่ารวม<strong>${fmt(value)} บาท</strong></div>
+                    <div>จำนวนจ่าย<strong>${fmt(amount)} หน่วย</strong></div>
+                    <div>ราคาเฉลี่ย/หน่วย<strong>${unit(amount ? value / amount : NaN)}</strong></div>
+                    <div>ราคาต่ำสุด–สูงสุด<strong>${unit(minP)} – ${unit(maxP)}</strong></div>
+                    <div>หน่วยบริการที่จ่าย<strong>${byHosp.size.toLocaleString()} แห่ง</strong></div>
+                </div>
+                <h4 style="margin:8px 0 4px;font-size:0.9rem;">มูลค่ารายเดือน</h4>
+                <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="กราฟมูลค่ารายเดือนของ ${escapeHtml(name || didstd)}">${bars}</svg>
+                <h4 style="margin:14px 0 4px;font-size:0.9rem;">หน่วยบริการที่จ่ายมากที่สุด</h4>
+                <div class="table-container"><table class="data-table">
+                    <thead><tr><th>หน่วยบริการ</th><th class="num">จำนวน</th><th class="num">มูลค่า (บาท)</th><th class="num">ราคา/หน่วย</th></tr></thead>
+                    <tbody>${top.map(([code, h]) => `<tr><td>${escapeHtml(h.name || code)}</td><td class="num">${fmt(h.amount)}</td><td class="num">${fmt(h.value)}</td><td class="num">${unit(h.amount ? h.value / h.amount : NaN)}</td></tr>`).join('')}</tbody>
+                </table></div>` : '<p style="color:var(--text-muted)">ไม่มีข้อมูลยานี้ในช่วงที่กรอง</p>';
+            if (!dlg.open) dlg.showModal();
+        }
+
         function resetDrugTable() {
             document.getElementById('drug-breakdown-search').value = '';
             document.getElementById('drug-year-select').value = 'all'; updateMonthsDropdown('drug', 'all');
@@ -4395,18 +4526,25 @@ ORDER BY name;
             const list = Object.values(districtAgg).sort((a,b) => b.budget - a.budget);
             const totalBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
 
+            const yoyCol = yoyColumn(txs, 'amps', yoyBlocked('district', ['hosp', 'item']));
+            yoyHeader('th-district-yoy', yoyCol, YOY_NA);
+
             // Render table
             body.innerHTML = '';
             list.forEach(d => {
                 const percent = ((d.budget / totalBudget) * 100).toFixed(1);
+                const pop = MUKDAHAN_POPULATION[d.code] && MUKDAHAN_POPULATION[d.code].pop;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><code>${escapeHtml(d.code)}</code></td>
-                    <td><strong>${escapeHtml(d.name)}</strong></td>
+                    <td><button type="button" class="link-btn" title="ดูหน่วยบริการในอำเภอนี้"><strong>${escapeHtml(d.name)}</strong> ›</button></td>
                     <td>${d.count.toLocaleString()} ครั้ง</td>
-                    <td>${d.budget.toLocaleString()} บาท</td>
+                    <td>${Math.round(d.budget).toLocaleString()} บาท</td>
+                    <td>${pop ? Math.round(d.budget / pop * 1000).toLocaleString() + ' บาท' : '–'}</td>
                     <td><span style="color: var(--c-primary); font-weight: bold;">${percent}%</span></td>
+                    <td>${yoyCol ? yoyCol.cell(d.code) : '–'}</td>
                 `;
+                tr.querySelector('.link-btn').onclick = () => drillTo('hosp', 'district', d.code);
                 body.appendChild(tr);
             });
 
@@ -4452,14 +4590,18 @@ ORDER BY name;
             const hospAgg = {};
             txs.forEach(t => {
                 if (!hospAgg[t.hospcode]) {
-                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, drugSet: new Set() };
                 }
                 hospAgg[t.hospcode].count++;
                 hospAgg[t.hospcode].amount += t.amount;
                 hospAgg[t.hospcode].budget += t.price;
+                hospAgg[t.hospcode].drugSet.add(t.didstd);
             });
 
-            let list = Object.values(hospAgg);
+            // Distinct drugs replaces a "100% ผ่าน" quality badge that was hard-coded for every unit
+            let list = Object.values(hospAgg).map(h => { h.drugs = h.drugSet.size; delete h.drugSet; return h; });
+            const yoyCol = yoyColumn(txs, 'hosps', yoyBlocked('hosp', ['item']));
+            yoyHeader('th-hosp-yoy', yoyCol, YOY_NA);
 
             // Filter by search
             if (searchVal) {
@@ -4489,9 +4631,12 @@ ORDER BY name;
                     <td><strong>${escapeHtml(h.name)}</strong></td>
                     <td>${h.count.toLocaleString()}</td>
                     <td>${h.amount.toLocaleString()}</td>
-                    <td>${h.budget.toLocaleString()} บาท</td>
-                    <td><span class="badge-status success">${escapeHtml(h.qc)}</span></td>
+                    <td>${Math.round(h.budget).toLocaleString()} บาท</td>
+                    <td>${h.drugs.toLocaleString()}</td>
+                    <td>${yoyCol ? yoyCol.cell(h.hospcode) : '–'}</td>
+                    <td><button type="button" class="link-btn" title="ดูรายการยาของหน่วยนี้">💊 ดูยา ›</button></td>
                 `;
+                tr.querySelector('.link-btn').onclick = e => { e.stopPropagation(); drillTo('drugs', 'hosp', h.hospcode); };
                 tr.onclick = () => {
                     qualitySelectedHosp = h.hospcode;
                     renderHospBreakdown();
@@ -4520,7 +4665,7 @@ ORDER BY name;
             // Calculate Metrics (0-100 scale)
             const maxBudget = Math.max(...allHosps.map(h => h.budget)) || 1;
             const maxAmount = Math.max(...allHosps.map(h => h.amount)) || 1;
-            const maxVariety = 1000; // Assuming 1000 drugs is max
+            const maxVariety = Math.max(...allHosps.map(h => h.drugs || 0)) || 1;
 
             // Quality score calculation based on error rows
             const txs = getFilteredTransactions('hosp');
@@ -4531,7 +4676,7 @@ ORDER BY name;
             const metrics = [
                 { name: 'Budget', val: (selected.budget / maxBudget) * 100 },
                 { name: 'Volume', val: (selected.amount / maxAmount) * 100 },
-                { name: 'Variety', val: Math.min(100, (selected.count / maxVariety) * 100) },
+                { name: 'Variety', val: Math.min(100, ((selected.drugs || 0) / maxVariety) * 100) },
                 { name: 'Quality', val: qScore }
             ];
 
@@ -6216,21 +6361,22 @@ ORDER BY name;
             const hospAgg = {};
             txs.forEach(t => {
                 if (!hospAgg[t.hospcode]) {
-                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, drugSet: new Set() };
                 }
                 hospAgg[t.hospcode].count++;
                 hospAgg[t.hospcode].amount += t.amount;
                 hospAgg[t.hospcode].budget += t.price;
+                hospAgg[t.hospcode].drugSet.add(t.didstd);
             });
 
-            let list = Object.values(hospAgg);
+            let list = Object.values(hospAgg).map(h => ({ ...h, drugs: h.drugSet.size }));
             if (searchVal) {
                 list = list.filter(h => h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal));
             }
             list.sort((a,b) => b.budget - a.budget);
 
-            const headers = ["รหัสหน่วยบริการ (Hospcode)", "ชื่อสถานบริการสาธารณสุข", "จำนวนยอดสแกนจ่ายยา (ครั้ง)", "ปริมาณยาสะสม", "มูลค่าราคารวมสะสม (บาท)", "คุณภาพข้อมูลผ่านเกณฑ์"];
-            const rows = list.map(h => [h.hospcode, h.name, h.count, h.amount, h.budget, h.qc]);
+            const headers = ["รหัสหน่วย", "หน่วยบริการ", "จำนวนจ่าย (ครั้ง)", "จำนวนยา (หน่วย)", "มูลค่ารวม (บาท)", "รายการยา"];
+            const rows = list.map(h => [h.hospcode, h.name, h.count, h.amount, h.budget, h.drugs]);
 
             const filename = `hospital_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             downloadExcel(filename, headers, rows, "Hospital Breakdown");
@@ -6325,22 +6471,23 @@ ORDER BY name;
             const hospAgg = {};
             txs.forEach(t => {
                 if (!hospAgg[t.hospcode]) {
-                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, qc: "100% ผ่าน" };
+                    hospAgg[t.hospcode] = { hospcode: t.hospcode, name: t.hospname, count: 0, amount: 0, budget: 0, drugSet: new Set() };
                 }
                 hospAgg[t.hospcode].count++;
                 hospAgg[t.hospcode].amount += t.amount;
                 hospAgg[t.hospcode].budget += t.price;
+                hospAgg[t.hospcode].drugSet.add(t.didstd);
             });
 
-            let list = Object.values(hospAgg);
+            let list = Object.values(hospAgg).map(h => ({ ...h, drugs: h.drugSet.size }));
             if (searchVal) {
                 list = list.filter(h => h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal));
             }
             list.sort((a,b) => b.budget - a.budget);
 
-            let csv = "รหัสหน่วยบริการ (Hospcode),ชื่อสถานบริการสาธารณสุข,จำนวนยอดสแกนจ่ายยา (ครั้ง),ปริมาณยาสะสม,มูลค่าราคารวมสะสม (บาท),คุณภาพข้อมูลผ่านเกณฑ์\n";
+            let csv = "รหัสหน่วย,หน่วยบริการ,จำนวนจ่าย (ครั้ง),จำนวนยา (หน่วย),มูลค่ารวม (บาท),รายการยา\n";
             list.forEach(h => {
-                csv += `"${h.hospcode}","${h.name.replace(/"/g, '""')}",${h.count},${h.amount},${h.budget},"${h.qc}"\n`;
+                csv += `"${h.hospcode}","${h.name.replace(/"/g, '""')}",${h.count},${h.amount},${h.budget},${h.drugs}\n`;
             });
 
             const filename = `hospital_breakdown_Y${yearVal}_M${monthVal}_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -9568,6 +9715,27 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             return out;
         }
 
+        // Value (baht) per key in the same months one year earlier: list = 'drugs' | 'amps' | 'hosps'.
+        // `have` holds this period's months whose prior-year month exists, so callers compare like for like
+        function prevYearValues(list, months) {
+            const cfg = sbGetConfig();
+            if (cfg && !yoy.sumsLoaded) {
+                yoy.sumsLoaded = true;
+                sbLoadMonthSums(cfg).then(() => renderTab(activeTabName())).catch(e => console.warn('Summary load failed:', e));
+            }
+            const sums = yoyMonthSums();
+            const at = list === 'hosps' ? 4 : 3;
+            const out = new Map(), have = new Set();
+            for (const m of months) {
+                const [y, mo] = String(m).split('-');
+                const s = sums.get(`${+y - 1}-${mo}`);
+                if (!s) continue;
+                have.add(m);
+                for (const a of s[list] || []) out.set(a[0], (out.get(a[0]) || 0) + (+a[at] || 0));
+            }
+            return { out, have };
+        }
+
         async function renderYoy(force) {
             const status = document.getElementById('yoy-status');
             const setInfo = t => { if (status) status.textContent = t; };
@@ -10006,7 +10174,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         initPivot('district');
         initPivot('hosp');
         window.renderSummaryPivot = renderSummaryPivot;
-        Object.assign(window, { renderYoy, exportYoy, applyYoyRawFys });
+        Object.assign(window, { renderYoy, exportYoy, applyYoyRawFys, prevYearValues });
         renderSummaryPivot('district');
         renderSummaryPivot('hosp');
     })();
