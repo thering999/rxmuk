@@ -6273,6 +6273,8 @@ ORDER BY name;
         if (globalSearchEl) {
             globalSearchEl.addEventListener('input', debounce(e => {
                 rxSearch = e.target.value.trim().toLowerCase();
+                // When cleared, remove stale badges from all tabs immediately
+                if (!rxSearch) document.querySelectorAll('.search-badge').forEach(b => b.remove());
                 renderTab(activeTabName());
             }, 300));
         }
