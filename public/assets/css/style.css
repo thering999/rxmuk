@@ -464,4 +464,5 @@ h1, h2, h3, h4, h5, h6 {
   body { background: white; color: black; }
   .card { border: 1px solid #ccc; box-shadow: none; }
   canvas { max-width: 100%; }
+  .print-keep { display: none !important; }
 }
