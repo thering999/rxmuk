@@ -1223,6 +1223,12 @@
                     <button class="btn" onclick="if(!localStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding: 2px 8px; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: var(--c-red); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; cursor: pointer;">🔄 รีเซ็ตตัวกรอง</button>
                 </li>
             </ul>
+            <div style="position:relative; margin-left:8px;">
+              <input id="global-search" type="search" placeholder="🔍 ค้นหายา / หน่วย..."
+                style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+                  border-radius:20px; padding:5px 12px; color:var(--text-main); font-size:0.8rem; width:180px;"
+                autocomplete="off">
+            </div>
             <div class="user-status-area" style="display:flex; align-items:center; gap:10px;">
                 <button id="theme-toggle" onclick="toggleTheme()" title="สลับ Light/Dark Mode"
                     style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:1rem; color:var(--text-main); transition:all 0.2s;">
@@ -4005,6 +4011,15 @@
             { code: "4907", name: "หนองสูง" }
         ];
 
+        // Debounce utility
+        function debounce(fn, ms) {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+        }
+
+        // Global search state
+        let rxSearch = '';
+
         // Global Transaction Log
         let rawTransactions = [];
         let hasUnsavedChanges = false;
@@ -4413,6 +4428,10 @@ ORDER BY name;
                 list = list.filter(d => d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal));
             }
 
+            // Global search (augments local search above)
+            if (rxSearch) list = applyGlobalSearch(list, ['didstd', 'name']);
+            updateSearchBadge('drugs', rxSearch ? list.length : -1);
+
             // Sort list based on current sort column and direction
             list.sort((a, b) => {
                 let valA = a[drugSortColumn];
@@ -4606,7 +4625,12 @@ ORDER BY name;
                 districtAgg[code].budget += t.price;
             });
 
-            const list = Object.values(districtAgg).sort((a,b) => b.budget - a.budget);
+            let list = Object.values(districtAgg).sort((a,b) => b.budget - a.budget);
+
+            // Global search matches district code and name only (hospcode not present in aggregated rows — by design)
+            if (rxSearch) list = applyGlobalSearch(list, ['code', 'name']);
+            updateSearchBadge('district', rxSearch ? list.length : -1);
+
             const totalBudget = list.reduce((acc, curr) => acc + curr.budget, 0) || 1;
 
             const yoyCol = yoyColumn(txs, 'amps', yoyBlocked('district', ['hosp', 'item']));
@@ -4689,6 +4713,10 @@ ORDER BY name;
             if (searchVal) {
                 list = list.filter(h => h.hospcode.includes(searchVal) || h.name.toLowerCase().includes(searchVal));
             }
+
+            // Global search (augments local search above)
+            if (rxSearch) list = applyGlobalSearch(list, ['hospcode', 'name']);
+            updateSearchBadge('hosp', rxSearch ? list.length : -1);
 
             // Sort by budget descending
             list.sort((a,b) => b.budget - a.budget);
@@ -6216,6 +6244,39 @@ ORDER BY name;
             });
         });
 
+        // Global search helpers
+        // Filters rows by rxSearch against specified fields. Returns rows unchanged if rxSearch is empty.
+        // Note: district rows have no hospcode — searching a hospcode on the district tab returns nothing by design.
+        function applyGlobalSearch(rows, fields) {
+            if (!rxSearch) return rows;
+            return rows.filter(row =>
+                fields.some(f => row[f] && String(row[f]).toLowerCase().includes(rxSearch))
+            );
+        }
+
+        function updateSearchBadge(tabName, count) {
+            const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (!btn) return;
+            const existing = btn.querySelector('.search-badge');
+            if (existing) existing.remove();
+            if (rxSearch && count >= 0) {
+                const badge = document.createElement('small');
+                badge.className = 'search-badge';
+                badge.style.cssText = 'background:var(--c-primary);color:#000;border-radius:10px;padding:1px 5px;font-size:0.65rem;margin-left:4px;';
+                badge.textContent = count;
+                btn.appendChild(badge);
+            }
+        }
+
+        // Wire up global search input
+        const globalSearchEl = document.getElementById('global-search');
+        if (globalSearchEl) {
+            globalSearchEl.addEventListener('input', debounce(e => {
+                rxSearch = e.target.value.trim().toLowerCase();
+                renderTab(activeTabName());
+            }, 300));
+        }
+
         // Bind input searches and extra selections
         document.getElementById('drug-breakdown-search').addEventListener('input', renderDrugBreakdown);
         const drugAbcSelect = document.getElementById('drug-abc-select');
@@ -7301,6 +7362,10 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             if (searchVal) {
                 list = list.filter(d => d.didstd.includes(searchVal) || d.name.toLowerCase().includes(searchVal));
             }
+
+            // Global search (augments local search above)
+            if (rxSearch) list = applyGlobalSearch(list, ['didstd', 'name']);
+            updateSearchBadge('variance', rxSearch ? list.length : -1);
 
             list.sort((a, b) => b.variancePercent - a.variancePercent);
 
