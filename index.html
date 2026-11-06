@@ -5634,13 +5634,14 @@ ORDER BY name;
             return months.length ? `${months[months.length - 1]}_${months.length}` : 'empty';
         }
 
-        function checkBurnRateAlert(spent, annual, fiscalMonthsPassed) {
+        function checkBurnRateAlert(spent, annual, fiscalMonthsPassed, dismissKey) {
             const banner = document.getElementById('burn-alert-banner');
             const msg    = document.getElementById('burn-alert-msg');
             if (!banner || !msg) return;
 
             const ratio = annual > 0 ? spent / annual : 0;
-            const dismissed = localStorage.getItem(`rxmuk_burn_alert_dismissed_${_burnAlertKey()}`) === '1';
+            const key = dismissKey !== undefined ? dismissKey : _burnAlertKey();
+            const dismissed = localStorage.getItem(`rxmuk_burn_alert_dismissed_${key}`) === '1';
 
             if (ratio > BURN_RATE_THRESHOLD && fiscalMonthsPassed < 10 && !dismissed) {
                 msg.textContent = `⚠️ แจ้งเตือน: อัตราเบิกจ่ายงบประมาณ ${(ratio * 100).toFixed(1)}% แล้ว (ผ่านมา ${fiscalMonthsPassed} เดือน) — เกินเกณฑ์ ${(BURN_RATE_THRESHOLD * 100).toFixed(0)}%`;
@@ -5681,10 +5682,13 @@ ORDER BY name;
                     + (!yearSel || yearSel.value === 'all' ? ' · ยอดนี้รวมทุกปีงบ เลือกปีงบเพื่อดูรายปี' : '');
             }
             const burnPct = Math.min(100, (totalBudget / annualBudget) * 100);
-            // derive fiscalMonthsPassed from distinct months in rawTransactions
-            const loadedMonths = [...new Set((rawTransactions || []).filter(t => t?.month).map(t => t.month))].sort();
-            const fiscalMonthsPassed = loadedMonths.length;
-            checkBurnRateAlert(totalBudget, annualBudget, fiscalMonthsPassed);
+            // fiscalMonthsPassed: distinct months in the year-filtered view (txs) so it aligns with totalBudget
+            const filteredMonths = [...new Set(txs.filter(t => t?.month).map(t => t.month))].sort();
+            const fiscalMonthsPassed = filteredMonths.length;
+            // dismissKey derived from all loaded data so a new import resets the dismissal
+            const allLoadedMonths = [...new Set((rawTransactions || []).filter(t => t?.month).map(t => t.month))].sort();
+            const dismissKey = allLoadedMonths.length ? `${allLoadedMonths[allLoadedMonths.length - 1]}_${allLoadedMonths.length}` : 'empty';
+            checkBurnRateAlert(totalBudget, annualBudget, fiscalMonthsPassed, dismissKey);
             const burnPctEl = document.getElementById('dash-burn-pct');
             const burnBarEl = document.getElementById('dash-burn-bar');
             const burnStatusEl = document.getElementById('dash-burn-status');
