@@ -1248,6 +1248,10 @@
 
     <!-- TAB 1: DASHBOARD (PUBLICLY VIEWABLE) -->
     <div id="tab-dashboard" class="tab-content active">
+        <div id="burn-alert-banner" style="display:none; background:rgba(239,68,68,0.15); border:1px solid var(--c-red); border-radius:8px; padding:12px 16px; margin:0 0 12px; justify-content:space-between; align-items:center;">
+          <span id="burn-alert-msg" style="color:var(--c-red); font-weight:600;"></span>
+          <button onclick="dismissBurnAlert()" style="background:none; border:1px solid var(--c-red); color:var(--c-red); border-radius:6px; padding:4px 10px; cursor:pointer; font-size:0.85rem;">✕ ปิด</button>
+        </div>
         <!-- Stats Grid -->
         <section class="container grid-stats">
             <div class="stat-card">
@@ -5613,6 +5617,40 @@ ORDER BY name;
             }
         }
 
+        // --- BURN RATE ALERT ---
+        const BURN_RATE_THRESHOLD = 0.9;
+
+        function dismissBurnAlert() {
+            // key includes year+month of currently loaded data so dismissal resets on new import
+            const key = `rxmuk_burn_alert_dismissed_${_burnAlertKey()}`;
+            localStorage.setItem(key, '1');
+            const el = document.getElementById('burn-alert-banner');
+            if (el) el.style.display = 'none';
+        }
+
+        function _burnAlertKey() {
+            // key = fiscal year + count of loaded months, so a new month's data resets the dismissal
+            const months = [...new Set((rawTransactions || []).filter(t => t?.month).map(t => t.month))].sort();
+            return months.length ? `${months[months.length - 1]}_${months.length}` : 'empty';
+        }
+
+        function checkBurnRateAlert(spent, annual, fiscalMonthsPassed) {
+            const banner = document.getElementById('burn-alert-banner');
+            const msg    = document.getElementById('burn-alert-msg');
+            if (!banner || !msg) return;
+
+            const ratio = annual > 0 ? spent / annual : 0;
+            const dismissed = localStorage.getItem(`rxmuk_burn_alert_dismissed_${_burnAlertKey()}`) === '1';
+
+            if (ratio > BURN_RATE_THRESHOLD && fiscalMonthsPassed < 10 && !dismissed) {
+                msg.textContent = `⚠️ แจ้งเตือน: อัตราเบิกจ่ายงบประมาณ ${(ratio * 100).toFixed(1)}% แล้ว (ผ่านมา ${fiscalMonthsPassed} เดือน) — เกินเกณฑ์ ${(BURN_RATE_THRESHOLD * 100).toFixed(0)}%`;
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+        // ----------------------------------------
+
         // Dashboard overview stats & SVG Trend graph updater
         function updateDashboardOverview() {
             // Use filtered transactions for the dashboard (synced across all tabs)
@@ -5643,6 +5681,10 @@ ORDER BY name;
                     + (!yearSel || yearSel.value === 'all' ? ' · ยอดนี้รวมทุกปีงบ เลือกปีงบเพื่อดูรายปี' : '');
             }
             const burnPct = Math.min(100, (totalBudget / annualBudget) * 100);
+            // derive fiscalMonthsPassed from distinct months in rawTransactions
+            const loadedMonths = [...new Set((rawTransactions || []).filter(t => t?.month).map(t => t.month))].sort();
+            const fiscalMonthsPassed = loadedMonths.length;
+            checkBurnRateAlert(totalBudget, annualBudget, fiscalMonthsPassed);
             const burnPctEl = document.getElementById('dash-burn-pct');
             const burnBarEl = document.getElementById('dash-burn-bar');
             const burnStatusEl = document.getElementById('dash-burn-status');
