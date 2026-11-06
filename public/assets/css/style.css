@@ -455,3 +455,13 @@ h1, h2, h3, h4, h5, h6 {
 .page-header p {
     color: var(--text-muted) !important;
 }
+
+@media print {
+  header, .hero, .tab-btn, .filter-row, .btn:not(.print-keep),
+  #raw-data-modal, .toast-container { display: none !important; }
+  .tab-content { display: none !important; }
+  .tab-content.active { display: block !important; }
+  body { background: white; color: black; }
+  .card { border: 1px solid #ccc; box-shadow: none; }
+  canvas { max-width: 100%; }
+}
