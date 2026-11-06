@@ -2702,6 +2702,10 @@
                         </div>
                     </div>
                 </div>
+                <div class="card" style="margin-top:16px;">
+                  <h3 style="margin:0 0 12px;font-size:1rem;">🗓️ Missing Data Heatmap — ความครบถ้วนรายหน่วย × เดือน</h3>
+                  <div id="missing-heatmap-container" style="overflow-x:auto;"></div>
+                </div>
             </div>
             <div class="secured-lock" style="display: none;"></div>
         </section>
@@ -6821,6 +6825,36 @@ ORDER BY name;
             modal.style.display = 'flex';
         }
 
+        function showRawModalForCell(hospcode, month) {
+            const txs = (rawTransactions || []).filter(t => t.hospcode === hospcode && t.month === month);
+            _rawModalData = txs;
+            const modal = document.getElementById('raw-data-modal');
+            const info  = document.getElementById('raw-modal-info');
+            const tbl   = document.getElementById('raw-modal-table');
+            if (!modal || !info || !tbl) return;
+            info.textContent = `แสดง ${txs.length.toLocaleString()} รายการ — หน่วยบริการ ${escapeHtml(hospcode)} เดือน ${escapeHtml(month)}`;
+            const cols = ['ปี-เดือน','อำเภอ','หน่วยบริการ (Hospcode)','ชื่อสถานบริการ','รหัสยา (DID)','ชื่อยา','จำนวน','ราคา (฿)','ต้นทุน (฿)','เวลาที่นำเข้า'];
+            let html = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+            txs.slice(0, 2000).forEach(t => {
+                html += `<tr>
+                    <td>${escapeHtml(t.month)}</td>
+                    <td>${escapeHtml(t.amphurName || t.amphurCode)}</td>
+                    <td><code>${escapeHtml(t.hospcode)}</code></td>
+                    <td>${escapeHtml(t.hospname)}</td>
+                    <td><code>${escapeHtml(t.didstd)}</code></td>
+                    <td>${escapeHtml(t.dname)}</td>
+                    <td>${(t.amount || 0).toLocaleString()}</td>
+                    <td>${(t.price || 0).toLocaleString()}</td>
+                    <td>${(t.cost || 0).toLocaleString()}</td>
+                    <td style="font-size:0.78rem;color:var(--text-muted);">${escapeHtml(t.uploadTime || 'System (Auto)')}</td>
+                </tr>`;
+            });
+            if (txs.length > 2000) html += `<tr><td colspan="10" style="text-align:center;color:var(--c-yellow);padding:12px;">⚠️ แสดงเฉพาะ 2,000 แถวแรก</td></tr>`;
+            html += '</tbody>';
+            tbl.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
         function exportRawModalCSV() {
             const txs = _rawModalData;
             if (!txs.length) return;
@@ -7884,6 +7918,89 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             renderAbcVedMatrix();
         }
 
+        function renderMissingDataHeatmap() {
+            const container = document.getElementById('missing-heatmap-container');
+            if (!container) return;
+
+            const txs = getFilteredTransactions('quality');
+            if (!txs.length) { container.innerHTML = '<p style="color:var(--text-muted);padding:12px;">ไม่มีข้อมูล</p>'; return; }
+
+            // Build counts[hospcode][month] = rowCount
+            const counts = {};
+            const hospMeta = {}; // hospcode -> { hospname, amphurCode, amphurName }
+            txs.forEach(t => {
+                if (!counts[t.hospcode]) counts[t.hospcode] = {};
+                counts[t.hospcode][t.month] = (counts[t.hospcode][t.month] || 0) + 1;
+                if (!hospMeta[t.hospcode]) hospMeta[t.hospcode] = { hospname: t.hospname, amphurCode: t.amphurCode, amphurName: t.amphurName };
+            });
+
+            const months = [...new Set(txs.map(t => t.month))].sort();
+            const hospcodes = Object.keys(counts).sort((a, b) => {
+                const aA = hospMeta[a].amphurCode || '', bA = hospMeta[b].amphurCode || '';
+                return aA.localeCompare(bA) || hospMeta[a].hospname.localeCompare(hospMeta[b].hospname);
+            });
+
+            // Single-month note
+            if (months.length === 1) {
+                let html = '<p style="color:var(--text-muted);font-size:0.8rem;padding:4px 0 8px;">ข้อมูลเดือนเดียว ไม่สามารถเปรียบเทียบได้</p>';
+                html += buildHeatmapTable(hospcodes, months, counts, hospMeta, null);
+                container.innerHTML = html;
+                return;
+            }
+
+            // Compute median row count per month
+            const medianByMonth = {};
+            months.forEach(m => {
+                const vals = hospcodes.map(h => counts[h][m] || 0).filter(v => v > 0).sort((a, b) => a - b);
+                if (!vals.length) { medianByMonth[m] = 1; return; }
+                const mid = Math.floor(vals.length / 2);
+                medianByMonth[m] = vals.length % 2 === 0 ? (vals[mid - 1] + vals[mid]) / 2 : vals[mid];
+            });
+
+            container.innerHTML = buildHeatmapTable(hospcodes, months, counts, hospMeta, medianByMonth);
+        }
+
+        function buildHeatmapTable(hospcodes, months, counts, hospMeta, medianByMonth) {
+            // medianByMonth null means single-month mode (no ratio coloring)
+            const thStyle = 'padding:4px 8px;font-size:0.72rem;color:var(--text-muted);text-align:center;white-space:nowrap;position:sticky;top:0;background:var(--card-bg);';
+            const tdNameStyle = 'padding:4px 8px;font-size:0.75rem;white-space:nowrap;position:sticky;left:0;background:var(--card-bg);max-width:160px;overflow:hidden;text-overflow:ellipsis;';
+
+            let html = '<table style="border-collapse:collapse;min-width:100%;font-size:0.75rem;">';
+            html += '<thead><tr>';
+            html += `<th style="${thStyle}text-align:left;">หน่วยบริการ</th>`;
+            months.forEach(m => { html += `<th style="${thStyle}">${escapeHtml(m)}</th>`; });
+            html += '</tr></thead><tbody>';
+
+            hospcodes.forEach(h => {
+                html += '<tr>';
+                html += `<td style="${tdNameStyle}" title="${escapeHtml(hospMeta[h].hospname)}">[${escapeHtml(h)}] ${escapeHtml(hospMeta[h].hospname)}</td>`;
+                months.forEach(m => {
+                    const cnt = counts[h][m] || 0;
+                    let bg, title;
+                    if (!cnt) {
+                        bg = 'rgba(239,68,68,0.3)';
+                        title = 'ไม่มีข้อมูล';
+                    } else if (!medianByMonth) {
+                        bg = 'var(--c-green)';
+                        title = `${cnt} แถว`;
+                    } else {
+                        const median = medianByMonth[m] || 1;
+                        const ratio = Math.min(1, cnt / median);
+                        if (ratio >= 0.8) bg = 'var(--c-green)';
+                        else if (ratio >= 0.4) bg = 'var(--c-yellow)';
+                        else bg = 'var(--c-red)';
+                        title = `${cnt} แถว (${(ratio * 100).toFixed(0)}% ของ median ${median})`;
+                    }
+                    const cellStyle = `padding:3px 6px;text-align:center;background:${bg};cursor:pointer;border:1px solid rgba(0,0,0,0.15);`;
+                    html += `<td style="${cellStyle}" title="${escapeHtml(title)}" onclick="showRawModalForCell('${escapeHtml(h)}','${escapeHtml(m)}')">${cnt || '—'}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            return html;
+        }
+
         function renderDataQualityScorecard() {
             const body = document.getElementById('quality-breakdown-body');
             if(!body) return;
@@ -8120,6 +8237,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     }
                 }
             }
+            renderMissingDataHeatmap();
         }
 
         function resetQualityTable() {
