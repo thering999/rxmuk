@@ -4003,12 +4003,16 @@
                 if (!raw) return;
                 const s = JSON.parse(raw);
 
-                // Validate year exists in populated dropdown before restoring
-                const yearEl = document.getElementById('drug-year-select');
-                if (s.year && s.year !== 'all' && yearEl) {
-                    const validYears = [...yearEl.options].map(o => o.value);
-                    if (!validYears.includes(s.year)) s.year = 'all';
-                }
+                // Validate each filter value against its select's available options before restoring
+                const validOpts = (elId) => {
+                    const el = document.getElementById(elId);
+                    return el ? [...el.options].map(o => o.value) : ['all'];
+                };
+                const validate = (val, elId) => (val && val !== 'all' && !validOpts(elId).includes(val)) ? 'all' : val;
+                s.year  = validate(s.year,  'drug-year-select');
+                s.month = validate(s.month, 'drug-month-select');
+                s.dist  = validate(s.dist,  'drug-district-select');
+                s.hosp  = validate(s.hosp,  'drug-hosp-select');
 
                 // Restore filters using the centralized handler (noRender=true to skip re-render)
                 if (s.year)  handleFilterChange('year',     s.year,  true);
