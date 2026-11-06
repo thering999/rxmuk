@@ -3958,6 +3958,7 @@
                 heroTitle.textContent = tabDetails[targetTab].title;
                 heroSubtitle.textContent = tabDetails[targetTab].subtitle;
             }
+            saveUiState();
         }
 
         // Draw one tab from the current filters; the others are drawn by switchTab when opened
@@ -3978,6 +3979,47 @@
         function activeTabName() {
             const tab = document.querySelector('.tab-content.active');
             return tab ? tab.id.replace('tab-', '') : 'dashboard';
+        }
+
+        function saveUiState() {
+            try {
+                const yearEl = document.getElementById('drug-year-select');
+                const monthEl = document.getElementById('drug-month-select');
+                const hospEl  = document.getElementById('drug-hosp-select');
+                const distEl  = document.getElementById('drug-district-select');
+                localStorage.setItem('rxmuk_ui_state', JSON.stringify({
+                    tab:   activeTabName(),
+                    year:  yearEl  ? yearEl.value  : 'all',
+                    month: monthEl ? monthEl.value : 'all',
+                    hosp:  hospEl  ? hospEl.value  : 'all',
+                    dist:  distEl  ? distEl.value  : 'all'
+                }));
+            } catch(e) {}
+        }
+
+        function restoreUiState() {
+            try {
+                const raw = localStorage.getItem('rxmuk_ui_state');
+                if (!raw) return;
+                const s = JSON.parse(raw);
+
+                // Validate year exists in populated dropdown before restoring
+                const yearEl = document.getElementById('drug-year-select');
+                if (s.year && s.year !== 'all' && yearEl) {
+                    const validYears = [...yearEl.options].map(o => o.value);
+                    if (!validYears.includes(s.year)) s.year = 'all';
+                }
+
+                // Restore filters using the centralized handler (noRender=true to skip re-render)
+                if (s.year)  handleFilterChange('year',     s.year,  true);
+                if (s.month) handleFilterChange('month',    s.month, true);
+                if (s.dist)  handleFilterChange('district', s.dist,  true);
+                if (s.hosp)  handleFilterChange('hosp',     s.hosp,  true);
+
+                // Restore active tab (skipRender=true; DOMContentLoaded renders below)
+                const validTabs = ['dashboard','import','drugs','district','hosp','variance','abc-ved','quality','map','access-index','rdu','yoy'];
+                if (s.tab && validTabs.includes(s.tab)) switchTab(s.tab, true);
+            } catch(e) {}
         }
 
         tabBtns.forEach(btn => {
@@ -6220,7 +6262,10 @@ ORDER BY name;
 
             // 3. Re-render only the visible tab (switchTab redraws the others when opened);
             //    redrawing all ten tabs over 700k+ rows made each filter change take 3-5 s
-            if (!noRender) renderTab(activeTabName());
+            if (!noRender) {
+                renderTab(activeTabName());
+                saveUiState();
+            }
         }
 
         // Bind change events to all 5 dropdown filters for drug, district, and hosp
@@ -8576,6 +8621,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
             updateNavDataStatus();
             populateAllFilterDropdowns();
+            restoreUiState();
             renderDrugBreakdown();
             renderDistrictBreakdown();
             renderHospBreakdown();
