@@ -5968,7 +5968,7 @@ ORDER BY name;
                     date: uploadTime,
                     filename: filename,
                     rows: rawTransactions.length,
-                    user: localStorage.getItem('rxmuk_auth_user') || '-'
+                    user: rxUserName()
                 }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
             }
 
@@ -6093,7 +6093,7 @@ ORDER BY name;
                     months,
                     rowCount: rows.length,
                     hospCount: hosps.size,
-                    importedBy: localStorage.getItem('rxmuk_auth_user') || '-',
+                    importedBy: rxUserName(),
                     at: new Date().toISOString()
                 };
                 postN8nWebhook(url, payload).catch(e => {
@@ -6123,7 +6123,7 @@ ORDER BY name;
                 if (!isAllowedWebhookUrl(v)) { status.textContent = 'URL ต้องเป็น https:// (หรือ http:// เฉพาะ localhost / 127.0.0.1 / n8n)'; return; }
                 status.textContent = 'กำลังส่ง...';
                 try {
-                    await postN8nWebhook(v, { event: 'rxmuk.test', importedBy: localStorage.getItem('rxmuk_auth_user') || '-', at: new Date().toISOString() });
+                    await postN8nWebhook(v, { event: 'rxmuk.test', importedBy: rxUserName(), at: new Date().toISOString() });
                     status.textContent = 'ส่งทดสอบสำเร็จ';
                 } catch (e) {
                     status.textContent = 'ส่งทดสอบไม่สำเร็จ: ' + (e && e.name === 'AbortError' ? 'หมดเวลา 10 วินาที' : (e && e.message) || e);
@@ -6210,7 +6210,7 @@ ORDER BY name;
                 date: uploadTime,
                 filename: filename,
                 rows: rawTransactions.length,
-                user: localStorage.getItem('rxmuk_auth_user') || '-'
+                user: rxUserName()
             }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
 
             // Update nav status
@@ -7073,7 +7073,12 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
             });
         }
         if (btnLogout) {
-            btnLogout.addEventListener('click', () => {
+            btnLogout.addEventListener('click', async () => {
+                // opt-in: local copy may hold imports not yet uploaded
+                if (confirm('ล้างข้อมูลยาที่เก็บไว้ในเครื่องนี้ด้วยหรือไม่?\n(แนะนำสำหรับเครื่องที่ใช้ร่วมกัน — ข้อมูลที่ยังไม่อัปโหลดขึ้น Cloud จะหายไป)')) {
+                    try { await idbSet('rxmuk_raw_data', []); await idbSet('rxmuk_raw_files_cache', {}); }
+                    catch (e) { console.warn('Local wipe failed:', e); }
+                }
                 sbSignOut();
                 rawTransactions = [];
                 hasUnsavedChanges = false;
@@ -11030,6 +11035,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             return null;
         }
         function sbIsSignedIn() { return !!sbReadSession(); }
+        function rxUserName() { const s = sbReadSession(); return (s && s.email) || '-'; }
         function sbSessionRemembered() {
             try { return !!localStorage.getItem(SB_SESSION_KEY); } catch { return false; }
         }
@@ -11118,7 +11124,10 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         // Every Supabase REST/storage call: the user's token when signed in, else the publishable key
         // (works while the bucket still accepts the key; fails cleanly once it requires a user)
         async function sbAuthHeaders(cfg, extra = {}) {
+            const hadSession = sbIsSignedIn();
             const s = await sbGetSession(cfg);
+            // signed in but token unavailable (e.g. offline refresh): fail rather than silently downgrade to the publishable key
+            if (hadSession && !s && sbIsSignedIn()) throw new Error('session refresh failed');
             return { ...extra, 'apikey': cfg.key, 'Authorization': `Bearer ${s ? s.access_token : cfg.key}` };
         }
         // fetch with auth headers; on 401/403 refresh once and retry, or ask the guest to sign in
@@ -11126,7 +11135,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const { headers, ...rest } = opts;
             let res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers) });
             if (res.status !== 401 && res.status !== 403) return res;
-            if (sbReadSession() && await sbRefreshSession(cfg)) {
+            // 403 is usually an RLS denial; refresh only on 401 to avoid burning single-use refresh tokens
+            if (res.status === 401 && sbReadSession() && await sbRefreshSession(cfg)) {
                 res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers) });
             }
             if ((res.status === 401 || res.status === 403) && !sbReadSession() && !_sbLoginToastShown) {

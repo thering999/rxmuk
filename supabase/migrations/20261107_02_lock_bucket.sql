@@ -4,8 +4,31 @@
 
 update storage.buckets set public = false where id = 'rxmuk';
 
--- Remove any older permissive policies on this bucket before running. List them with:
--- select policyname, cmd, roles, qual from pg_policies where schemaname = 'storage' and tablename = 'objects';
+-- Back up, then drop, every older storage.objects policy that mentions bucket rxmuk
+-- (a leftover anon/public policy would keep the bucket readable).
+create table if not exists public.rxmuk_policy_backup as
+  select now() as saved_at, policyname, cmd, roles, qual, with_check
+  from pg_policies where false;
+insert into public.rxmuk_policy_backup
+  select now(), policyname, cmd, roles, qual, with_check
+  from pg_policies
+  where schemaname = 'storage' and tablename = 'objects'
+    and (coalesce(qual, '') || coalesce(with_check, '')) like '%rxmuk%'
+    and policyname not like 'rxmuk_obj_%';
+alter table public.rxmuk_policy_backup enable row level security;
+
+do $$
+declare p record;
+begin
+  for p in
+    select policyname from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and (coalesce(qual, '') || coalesce(with_check, '')) like '%rxmuk%'
+      and policyname not like 'rxmuk_obj_%'
+  loop
+    execute format('drop policy %I on storage.objects', p.policyname);
+  end loop;
+end $$;
 
 drop policy if exists rxmuk_obj_select on storage.objects;
 create policy rxmuk_obj_select on storage.objects
@@ -33,4 +56,4 @@ create policy rxmuk_obj_delete on storage.objects
 -- drop policy if exists rxmuk_obj_insert on storage.objects;
 -- drop policy if exists rxmuk_obj_update on storage.objects;
 -- drop policy if exists rxmuk_obj_delete on storage.objects;
--- then re-create the previous policies saved from the pg_policies listing above.
+-- then re-create the previous policies from: select * from public.rxmuk_policy_backup;
