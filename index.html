@@ -535,6 +535,50 @@
             .nav-scroll-wrap::before, .nav-scroll-wrap::after { width: 20px; }
         }
 
+        /* Mobile: compact header + hamburger dropdown menu */
+        .nav-toggle { display: none; }
+        @media (max-width: 768px) {
+            .container.navbar { padding: 0 12px; }
+            .navbar { padding: 6px 0; }
+            .navbar-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+            .navbar-controls { display: contents; }
+            .logo { order: 1; margin-right: auto; font-size: 0.82rem; gap: 6px; }
+            .logo-icon { width: 28px; height: 28px; font-size: 0.95rem; }
+            #offline-badge { order: 2; }
+            #theme-toggle { order: 3; padding: 6px 9px !important; }
+            #login-status-pill { order: 4; max-width: 26vw; padding: 4px 8px; font-size: 0.72rem; }
+            #user-display-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 100%; vertical-align: middle; }
+            .nav-toggle {
+                order: 5; display: inline-flex; align-items: center; justify-content: center;
+                width: 40px; height: 36px; border-radius: 8px; cursor: pointer; font-size: 1.2rem;
+                background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: var(--text-main);
+            }
+            #global-search, #sheets-copy-btn { display: none; }
+            header.nav-open #global-search { display: block; order: 6; flex: 1 0 100%; width: 100% !important; padding: 9px 14px !important; font-size: 0.95rem !important; }
+            header.nav-open #sheets-copy-btn { display: block; order: 7; flex: 1 0 100%; padding: 9px 10px !important; font-size: 0.85rem !important; }
+            .nav-scroll-wrap { display: none; }
+            header.nav-open .nav-scroll-wrap { display: block; max-height: calc(100vh - 170px); overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.07); }
+            .nav-scroll-wrap::before, .nav-scroll-wrap::after { display: none; }
+            header.nav-open .nav-links { flex-direction: column; align-items: stretch; overflow: visible; gap: 2px; padding: 6px 0 10px; }
+            header.nav-open .nav-links a { display: block; white-space: normal; font-size: 0.95rem; padding: 11px 14px; border-radius: 10px; }
+        }
+
+        body:has(header.nav-open) #cloud-load-overlay { display: none; }
+        @media (max-width: 430px) {
+            #login-status-pill { max-width: none; padding: 8px; }
+            #login-status-pill #user-display-name { display: none; }
+            header.nav-open #login-status-pill { order: 8; flex: 1 0 100%; justify-content: center; }
+            header.nav-open #login-status-pill #user-display-name { display: inline-block; }
+        }
+
+        #cloud-load-overlay {
+            position: fixed; left: 50%; top: 68px; transform: translateX(-50%);
+            width: min(440px, calc(100% - 32px)); z-index: 9999;
+            background: rgba(13,27,46,0.96); color: #fff; border: 1px solid rgba(0,212,255,0.25);
+            border-radius: 12px; padding: 10px 14px; font-size: 0.85rem; line-height: 1.4;
+            box-shadow: 0 8px 24px rgba(0,0,0,.45);
+        }
+
         /* Panel Wrapper */
         .panel {
             background: var(--card-bg);
@@ -1267,6 +1311,7 @@
                         <span class="status-indicator" style="background: var(--c-red); box-shadow: 0 0 8px var(--c-red);"></span>
                         <span id="user-display-name">ยังไม่ได้เข้าระบบ</span>
                     </div>
+                    <button id="nav-toggle" class="nav-toggle no-print" type="button" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="main-tabs">☰</button>
                 </div>
             </div>
             <div class="nav-scroll-wrap">
@@ -3781,7 +3826,13 @@
             });
         }
 
+        // Large row arrays are stored as one gzip blob: IndexedDB clones a single
+        // ArrayBuffer far faster than ~700k objects (big win on mobile Safari).
+        const IDB_GZ_KEYS = new Set(['rxmuk_raw_data']);
         async function idbSet(key, value) {
+            if (IDB_GZ_KEYS.has(key) && Array.isArray(value) && value.length > 0) {
+                value = { __gz: await gzipJson(value) };
+            }
             const db = await openRxmukDB();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(RXMUK_DB_STORE, 'readwrite');
@@ -3794,12 +3845,13 @@
 
         async function idbGet(key) {
             const db = await openRxmukDB();
-            return new Promise((resolve, reject) => {
+            const v = await new Promise((resolve, reject) => {
                 const tx = db.transaction(RXMUK_DB_STORE, 'readonly');
                 const req = tx.objectStore(RXMUK_DB_STORE).get(key);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
+            return v && v.__gz instanceof ArrayBuffer ? gunzipJson(v.__gz) : v;
         }
 
         // Client-side import history log; IndexedDB is the local cache, Supabase (below) is the shared source of truth
@@ -4233,7 +4285,21 @@
             drillTo(d.tab, d.filter, b.dataset.key);
         }, true);
 
+        function setNavOpen(open) {
+            const hdr = document.querySelector('header');
+            const btn = document.getElementById('nav-toggle');
+            if (!hdr || !btn) return;
+            hdr.classList.toggle('nav-open', open);
+            btn.setAttribute('aria-expanded', String(open));
+            btn.setAttribute('aria-label', open ? 'ปิดเมนู' : 'เปิดเมนู');
+            btn.textContent = open ? '✕' : '☰';
+        }
+        document.getElementById('nav-toggle')?.addEventListener('click', () =>
+            setNavOpen(!document.querySelector('header').classList.contains('nav-open')));
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') setNavOpen(false); });
+
         function switchTab(targetTab, skipRender) {
+            setNavOpen(false);
             tabBtns.forEach(btn => {
                 if(btn.dataset.tab === targetTab) {
                     btn.classList.add('active');
@@ -11389,14 +11455,16 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 box = document.createElement('div');
                 box.id = 'cloud-load-overlay';
                 box.setAttribute('role', 'status');
-                box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#0d1b2e;color:#fff;padding:12px 16px;font-size:0.95rem;box-shadow:0 2px 12px rgba(0,0,0,.5);';
                 box.innerHTML = '<div id="cloud-load-text">☁️ กำลังเชื่อมต่อ Cloud...</div><div style="height:8px;background:rgba(255,255,255,.15);border-radius:4px;margin-top:8px;overflow:hidden;"><div id="cloud-load-bar" style="height:100%;width:0;background:linear-gradient(90deg,#3ecf8e,#00d4ff);transition:width .15s;"></div></div>';
                 document.body.appendChild(box);
             }
 
             const parts = await Promise.all(files.map(async (f, i) => {
                 const hit = f.at && cache[f.name];
-                if (hit && hit.at === f.at) { prog.done++; return hit.rows; }
+                if (hit && hit.at === f.at && (hit.gz || hit.rows)) {
+                    prog.done++;
+                    return hit.gz ? gunzipJson(hit.gz) : hit.rows;
+                }
                 const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
                 const contentLen = parseInt(res.headers.get('content-length') || '0');
@@ -11418,7 +11486,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 let pos = 0;
                 for (const c of chunks) { out.set(c, pos); pos += c.length; }
                 const rows = await gunzipJson(out.buffer);
-                if (f.at && Array.isArray(rows)) cache[f.name] = { at: f.at, rows };
+                if (f.at && Array.isArray(rows)) cache[f.name] = { at: f.at, gz: out.buffer };
                 return rows;
             }));
 
@@ -11465,7 +11533,6 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 box = document.createElement('div');
                 box.id = 'cloud-load-overlay';
                 box.setAttribute('role', 'status');
-                box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#0d1b2e;color:#fff;padding:12px 16px;font-size:0.95rem;box-shadow:0 2px 12px rgba(0,0,0,.5);';
                 box.innerHTML = '<div id="cloud-load-text">☁️ กำลังโหลดข้อมูลจาก Cloud ครั้งแรก กรุณารอสักครู่ ห้ามปิดหน้านี้</div><div style="height:8px;background:rgba(255,255,255,.15);border-radius:4px;margin-top:8px;overflow:hidden;"><div id="cloud-load-bar" style="height:100%;width:0;background:linear-gradient(90deg,#3ecf8e,#00d4ff);transition:width .3s;"></div></div>';
                 document.body.appendChild(box);
             }
