@@ -1904,6 +1904,19 @@
                             </table>
                         </div>
                     </div>
+
+                    <div class="panel" id="cloud-import-log-box" style="margin-top:16px;">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><span>☁️</span> บันทึกการนำเข้าร่วม (ทุกบัญชี)</h3>
+                            <button class="btn" onclick="renderCloudImportLog()" style="padding:4px 10px; font-size:0.75rem;">โหลดใหม่</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead><tr><th>วันที่</th><th>ไฟล์</th><th>จำนวนแถว</th><th>เดือน</th></tr></thead>
+                                <tbody id="cloud-import-log-body"><tr><td colspan="4" style="text-align:center;">เข้าสู่ระบบเพื่อดูบันทึก</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -3565,7 +3578,27 @@
             }
         }
 
+        async function renderCloudImportLog() {
+            const body = document.getElementById('cloud-import-log-body');
+            if (!body) return;
+            const cfg = sbGetConfig();
+            const msg = t => { body.innerHTML = `<tr><td colspan="4" style="text-align:center;">${escapeHtml(t)}</td></tr>`; };
+            if (!cfg || !cfg.url || !sbIsSignedIn()) return msg('เข้าสู่ระบบเพื่อดูบันทึก');
+            try {
+                const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_import_log?select=created_at,filename,row_count,months&order=created_at.desc&limit=50`);
+                if (!res.ok) return msg(`โหลดไม่สำเร็จ (${res.status})`);
+                const rows = await res.json();
+                if (!rows.length) return msg('ยังไม่มีบันทึก');
+                body.innerHTML = rows.map(r => `<tr>
+                    <td>${escapeHtml(new Date(r.created_at).toLocaleString('th-TH'))}</td>
+                    <td>${escapeHtml(r.filename)}</td>
+                    <td>${Number(r.row_count).toLocaleString()}</td>
+                    <td>${escapeHtml((r.months || []).join(', '))}</td></tr>`).join('');
+            } catch (e) { msg('โหลดไม่สำเร็จ'); }
+        }
+
         async function renderImportHistory() {
+            renderCloudImportLog();
             const body = document.getElementById('import-history-body');
             if (!body) return;
 
@@ -5989,7 +6022,24 @@ ORDER BY name;
             }
         }
 
+        // E3: shared import log in Supabase; RLS rejects the insert unless the user is approved
+        async function sbLogImport(info) {
+            const cfg = sbGetConfig();
+            if (!cfg || !cfg.url || !cfg.key || !sbIsSignedIn()) return;
+            const rows = info.rows || [];
+            const months = [...new Set(rows.map(r => r.month || ''))].filter(Boolean).sort();
+            try {
+                const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_import_log`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({ filename: String(info.filename || '-').slice(0, 255), row_count: rows.length, months })
+                });
+                if (!res.ok) console.warn('Import log rejected:', res.status);
+            } catch (e) { console.warn('Import log failed:', e); }
+        }
+
         function sendImportWebhook(info) {
+            sbLogImport(info);
             try {
                 const url = (localStorage.getItem('rxmuk_n8n_url') || '').trim();
                 if (!url) return;
