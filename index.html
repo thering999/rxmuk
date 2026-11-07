@@ -11026,17 +11026,65 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             let cache = {};
             try { cache = (await idbGet('rxmuk_raw_files_cache')) || {}; } catch {}
 
+            // Shared aggregate progress state across all parallel downloads
+            const prog = { got: new Array(files.length).fill(0), total: new Array(files.length).fill(0), done: 0 };
+            const updateProg = () => {
+                const totalGot = prog.got.reduce((a, b) => a + b, 0);
+                const totalBytes = prog.total.reduce((a, b) => a + b, 0);
+                const pct = totalBytes > 0 ? Math.min(100, Math.round(totalGot / totalBytes * 100)) : 0;
+                const mb = (totalGot / 1048576).toFixed(1);
+                const totalMb = totalBytes > 0 ? (totalBytes / 1048576).toFixed(1) : '?';
+                const bar = document.getElementById('cloud-load-bar');
+                const text = document.getElementById('cloud-load-text');
+                if (bar) bar.style.width = pct + '%';
+                if (text) text.textContent = `☁️ โหลดจาก Cloud ${prog.done}/${files.length} ไฟล์ · ${pct}% (${mb}/${totalMb} MB) ห้ามปิดหน้านี้`;
+            };
+
+            // Ensure overlay exists
+            let box = document.getElementById('cloud-load-overlay');
+            if (box && box._removeTimer) clearTimeout(box._removeTimer);
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'cloud-load-overlay';
+                box.setAttribute('role', 'status');
+                box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#0d1b2e;color:#fff;padding:12px 16px;font-size:0.95rem;box-shadow:0 2px 12px rgba(0,0,0,.5);';
+                box.innerHTML = '<div id="cloud-load-text">☁️ กำลังเชื่อมต่อ Cloud...</div><div style="height:8px;background:rgba(255,255,255,.15);border-radius:4px;margin-top:8px;overflow:hidden;"><div id="cloud-load-bar" style="height:100%;width:0;background:linear-gradient(90deg,#3ecf8e,#00d4ff);transition:width .15s;"></div></div>';
+                document.body.appendChild(box);
+            }
+
             const parts = await Promise.all(files.map(async (f, i) => {
                 const hit = f.at && cache[f.name];
-                if (hit && hit.at === f.at) return hit.rows;
+                if (hit && hit.at === f.at) { prog.done++; return hit.rows; }
                 const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
-                const label = files.length > 1 ? `ไฟล์ ${i + 1}/${files.length}${f.month ? ` เดือน ${f.month}` : ''} ` : '';
-                const bytes = await readWithProgress(res, label);
-                const rows = await gunzipJson(bytes);
+                const contentLen = parseInt(res.headers.get('content-length') || '0');
+                prog.total[i] = contentLen;
+                const reader = res.body.getReader();
+                const chunks = [];
+                let got = 0;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    got += value.length;
+                    prog.got[i] = got;
+                    updateProg();
+                }
+                prog.done++;
+                updateProg();
+                const out = new Uint8Array(got);
+                let pos = 0;
+                for (const c of chunks) { out.set(c, pos); pos += c.length; }
+                const rows = await gunzipJson(out.buffer);
                 if (f.at && Array.isArray(rows)) cache[f.name] = { at: f.at, rows };
                 return rows;
             }));
+
+            const bar = document.getElementById('cloud-load-bar');
+            const text = document.getElementById('cloud-load-text');
+            if (bar) bar.style.width = '100%';
+            if (text) text.textContent = '⚙️ ดาวน์โหลดเสร็จ กำลังเตรียมข้อมูล อีกไม่กี่วินาที...';
+            if (box) box._removeTimer = setTimeout(() => box.remove(), 4000);
 
             idbSet('rxmuk_raw_files_cache', cache).catch(() => {});
             return parts.filter(Array.isArray).flat();
