@@ -1,6 +1,6 @@
 /* RxMuk service worker: offline app shell.
  * Navigation/index.html: network-first (new deploys arrive, reloadIfStale keeps working).
- * hospitals_db.js, icon, manifest, versioned cdnjs scripts: cache-first.
+ * hospitals_db.js, icon, manifest: stale-while-revalidate. Versioned cdnjs scripts: cache-first.
  * Everything else (PHP, /api/, Supabase, uploads/, config json, Authorization, non-GET): untouched. */
 const CACHE = 'rxmuk-v1';
 const CDN_XLSX = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
@@ -59,6 +59,18 @@ async function cacheFirst(req) {
     return res;
 }
 
+// Same-origin static files change without a URL version, so serve cache but refresh it in the background
+async function staleWhileRevalidate(req) {
+    const cache = await caches.open(CACHE);
+    const hit = await cache.match(req);
+    const update = fetch(req).then(res => {
+        if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
+        return res;
+    });
+    if (hit) { update.catch(() => {}); return hit; }
+    return update;
+}
+
 self.addEventListener('fetch', event => {
     const req = event.request;
     let url;
@@ -71,7 +83,7 @@ self.addEventListener('fetch', event => {
         return;
     }
     if (sameOrigin && STATIC_FILES.some(f => url.pathname.endsWith(f))) {
-        event.respondWith(cacheFirst(req));
+        event.respondWith(staleWhileRevalidate(req));
         return;
     }
     if (url.hostname === 'cdnjs.cloudflare.com' && url.pathname.startsWith('/ajax/libs/')) {
