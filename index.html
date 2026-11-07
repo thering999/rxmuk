@@ -3146,6 +3146,10 @@
                         <div style="font-size:0.75rem;color:var(--text-muted);">📊 Polypharmacy Risk Score</div>
                         <div id="rdu-stat-poly" style="font-size:1.4rem;font-weight:800;color:var(--c-yellow);">—</div>
                     </div>
+                    <div style="flex:1 1 180px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);">💊 สัดส่วน Generic (ประมาณการ)</div>
+                        <div id="rdu-stat-generic" style="font-size:1.4rem;font-weight:800;color:var(--c-blue, #3b82f6);">—</div>
+                    </div>
                     <button class="btn print-keep" onclick="printActiveTab()" title="พิมพ์ / บันทึก PDF" style="margin-left:auto;">🖨️ พิมพ์ PDF</button>
                 </div>
 
@@ -3207,6 +3211,29 @@
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- Generic Ratio per Unit -->
+                <div class="panel" style="margin-top: 20px;">
+                    <div class="panel-header">
+                        <h3 class="panel-title"><span>💊</span> สัดส่วนยา Generic รายหน่วยบริการ (ประมาณการ)</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัส</th>
+                                    <th>หน่วยบริการ</th>
+                                    <th>จำนวนรายการยา</th>
+                                    <th>Generic %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rdu-generic-body">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ยังไม่มีข้อมูล</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">แสดง 10 หน่วยที่สัดส่วน Generic ต่ำสุด · จำแนกจากรูปแบบชื่อยา · ประมาณการ</div>
                 </div>
             </div>
         </section>
@@ -7497,6 +7524,35 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         document.getElementById('rdu-stat-had').textContent = `${hadCount.toLocaleString()} รายการ`;
         document.getElementById('rdu-stat-poly').textContent = polyCount.toLocaleString();
 
+        // Generic ratio (name heuristic): distinct didstd per unit and province
+        const genUnits = {};
+        const genSeen = new Map();
+        txs.forEach(t => {
+            if (!genSeen.has(t.didstd)) genSeen.set(t.didstd, !isLikelyBrandName(t.dname));
+            const u = genUnits[t.hospcode] || (genUnits[t.hospcode] = { code: t.hospcode, name: t.hospname, drugs: new Set() });
+            u.drugs.add(t.didstd);
+        });
+        let genAll = 0;
+        genSeen.forEach(g => { if (g) genAll++; });
+        const genStat = document.getElementById('rdu-stat-generic');
+        if (genStat) genStat.textContent = genSeen.size ? `${((genAll / genSeen.size) * 100).toFixed(1)}%` : '—';
+        const genBody = document.getElementById('rdu-generic-body');
+        if (genBody) {
+            const genRows = Object.values(genUnits).map(u => {
+                let g = 0;
+                u.drugs.forEach(d => { if (genSeen.get(d)) g++; });
+                return { code: u.code, name: u.name, n: u.drugs.size, pct: u.drugs.size ? (g / u.drugs.size) * 100 : 0 };
+            }).sort((a, b) => a.pct - b.pct).slice(0, 10);
+            genBody.innerHTML = genRows.length ? genRows.map(r => `
+                <tr>
+                    <td>${escapeHtml(String(r.code))}</td>
+                    <td>${escapeHtml(String(r.name || r.code))}</td>
+                    <td>${r.n.toLocaleString()}</td>
+                    <td>${r.pct.toFixed(1)}%</td>
+                </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบข้อมูล</td></tr>';
+        }
+
         // Antibiotic Table
         const antiBody = document.getElementById('rdu-antibiotic-body');
         if (antiBody) {
@@ -7587,6 +7643,17 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             // Hypertension / Cardiovascular (Amlodipine, Enalapril, Losartan, Atenolol)
             if (d.startsWith("124846") || d.startsWith("103859") || d.startsWith("100600") || d.startsWith("100245")) return "ht";
             return "other";
+        }
+
+        // Name heuristic for brand-name drugs; Thai-only names (no Latin letters) count as generic
+        function isLikelyBrandName(dname) {
+            if (typeof dname !== 'string' || !dname) return false;
+            if (/[®™]/.test(dname)) return true;
+            if (/\(\s*[A-Z][A-Za-z]*[^)]*\)/.test(dname)) return true;
+            const m = dname.match(/[A-Za-z]+/);
+            if (!m) return false;
+            const w = m[0];
+            return w.length >= 4 && w === w.toUpperCase() && !['TAB', 'CAP', 'INJ', 'SYR', 'SUSP', 'CREAM', 'OINT', 'DROP', 'SOLN', 'AMP', 'VIAL'].includes(w);
         }
 
         function isAntibiotic(didstd) {
