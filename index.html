@@ -5108,7 +5108,9 @@ ORDER BY name;
                     const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
                     const ok = processParsedExcelData(rows, file.name, dateStr);
                     if (ok === false) {
-                        showToast('⚠️ ทุกแถวซ้ำกับข้อมูลเดิม — ไม่ได้นำเข้า', 'warn');
+                        resultMsg.className = "badge-status warning";
+                        resultMsg.textContent = `⚠️ ทุกแถวใน "${file.name}" ซ้ำกับข้อมูลเดิม — ไม่ได้นำเข้า (กด "เขียนทับแถวซ้ำ" หากต้องการแทนที่)`;
+                        resultMsg.style.display = 'block';
                         return;
                     }
                     const newTr = document.createElement('tr');
