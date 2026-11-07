@@ -1,9 +1,11 @@
 /* RxMuk service worker: offline app shell.
  * Navigation/index.html: network-first (new deploys arrive, reloadIfStale keeps working).
- * hospitals_db.js, icon, manifest: stale-while-revalidate. Versioned cdnjs scripts: cache-first.
+ * hospitals_db.js, icon, manifest: stale-while-revalidate. Versioned cdnjs / cdn.sheetjs.com scripts: cache-first.
  * Everything else (PHP, /api/, Supabase, uploads/, config json, Authorization, non-GET): untouched. */
-const CACHE = 'rxmuk-v2';
-const CDN_XLSX = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const CACHE = 'rxmuk-v3';
+// keep in step with the <script> tag in index.html (same URL and SRI hash)
+const CDN_XLSX = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+const CDN_XLSX_SRI = 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT';
 // index.html loads hospitals_db.js as 'public/hospitals_db.js' when served from the root.
 const PRECACHE = [
     './', './index.html', './public/hospitals_db.js', './hospitals_db.js',
@@ -14,7 +16,7 @@ const STATIC_FILES = ['/hospitals_db.js', '/icon.svg', '/manifest.webmanifest'];
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE);
-        await Promise.allSettled(PRECACHE.map(u => cache.add(u === CDN_XLSX ? new Request(u, { mode: 'cors' }) : u)));
+        await Promise.allSettled(PRECACHE.map(u => cache.add(u === CDN_XLSX ? new Request(u, { mode: 'cors', integrity: CDN_XLSX_SRI }) : u)));
         await self.skipWaiting();
     })());
 });
@@ -91,7 +93,8 @@ self.addEventListener('fetch', event => {
         event.respondWith(staleWhileRevalidate(req));
         return;
     }
-    if (url.hostname === 'cdnjs.cloudflare.com' && url.pathname.startsWith('/ajax/libs/')) {
+    if ((url.hostname === 'cdnjs.cloudflare.com' && url.pathname.startsWith('/ajax/libs/'))
+        || (url.hostname === 'cdn.sheetjs.com' && /^\/xlsx-\d+\.\d+\.\d+\//.test(url.pathname))) {
         event.respondWith(cacheFirst(req));
     }
 });
