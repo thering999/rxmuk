@@ -1290,6 +1290,16 @@
             </div>
         </section>
 
+        <!-- C1: Budget forecast -->
+        <section class="container" style="margin-bottom: 25px;">
+            <div class="panel" style="border-radius: 12px; padding: 20px;">
+                <h3 class="panel-title" style="font-size: 1.05rem; margin: 0 0 10px;">📈 คาดการณ์งบสิ้นปีงบประมาณ</h3>
+                <p id="dash-forecast-text" style="margin: 0 0 4px; font-weight: 600;">ข้อมูลไม่พอสำหรับคาดการณ์</p>
+                <p id="dash-forecast-compare" style="margin: 0 0 10px; color: var(--text-muted); font-size: 0.85rem;"></p>
+                <svg id="dash-forecast-svg" viewBox="0 0 600 150" style="width: 100%; height: 150px;" role="img" aria-label="กราฟคาดการณ์งบรายเดือน"></svg>
+            </div>
+        </section>
+
         <!-- Dynamic Overview Analytics Trend Panel -->
         <section class="container" style="margin-bottom: 25px;">
             <div class="panel" style="background: linear-gradient(135deg, rgba(26, 36, 50, 0.4), rgba(16, 23, 33, 0.6)); border: 1px solid rgba(0, 242, 254, 0.12); border-radius: 12px; padding: 20px;">
@@ -5986,6 +5996,80 @@ ORDER BY name;
         // ----------------------------------------
 
         // Dashboard overview stats & SVG Trend graph updater
+        // --- C1: BUDGET FORECAST ---
+        // monthTotals[i] = total for fiscal month i (Oct=0..Sep=11) or null if not loaded
+        function forecastFiscalYear(monthTotals) {
+            const pts = [];
+            let lastActual = -1;
+            for (let i = 0; i < 12; i++) {
+                const v = monthTotals[i];
+                if (v != null && isFinite(v)) { pts.push([i, v]); lastActual = i; }
+            }
+            const n = pts.length;
+            if (n < 3) return null;
+            const used = pts.reduce((s, p) => s + p[1], 0);
+            const mx = pts.reduce((s, p) => s + p[0], 0) / n;
+            const my = used / n;
+            let sxx = 0, sxy = 0;
+            pts.forEach(p => { sxx += (p[0] - mx) ** 2; sxy += (p[0] - mx) * (p[1] - my); });
+            const b = sxx > 0 ? sxy / sxx : 0;
+            const a = my - b * mx;
+            const residualSD = Math.sqrt(pts.reduce((s, p) => s + (p[1] - (a + b * p[0])) ** 2, 0) / n);
+            let projected = used, projMonths = 0;
+            for (let i = lastActual + 1; i < 12; i++) {
+                if (monthTotals[i] == null) { projected += Math.max(0, a + b * i); projMonths++; }
+            }
+            return { projected, band: residualSD * projMonths, used, monthsUsed: n, a, b, residualSD, lastActual };
+        }
+
+        function renderBudgetForecast(txs, annual) {
+            const textEl = document.getElementById('dash-forecast-text');
+            if (!textEl) return;
+            const cmpEl = document.getElementById('dash-forecast-compare');
+            const svgEl = document.getElementById('dash-forecast-svg');
+            const noData = msg => { textEl.textContent = msg; cmpEl.textContent = ''; svgEl.innerHTML = ''; };
+            // Latest fiscal year present (the year filter, if set, already limits txs to one year)
+            let fy = '';
+            txs.forEach(t => { const f = t && t.month ? getThaiFiscalYear(t.month) : ''; if (f > fy) fy = f; });
+            if (!fy) return noData('ข้อมูลไม่พอสำหรับคาดการณ์');
+            const totals = new Array(12).fill(null);
+            txs.forEach(t => {
+                if (!t || !t.month || getThaiFiscalYear(t.month) !== fy) return;
+                const m = parseInt(String(t.month).split('-')[1], 10);
+                if (!m) return;
+                const idx = (m + 2) % 12;
+                totals[idx] = (totals[idx] || 0) + (Number(t.price) || 0);
+            });
+            const f = forecastFiscalYear(totals);
+            if (!f) return noData('ข้อมูลไม่พอสำหรับคาดการณ์');
+            const pctBand = f.projected > 0 ? f.band / f.projected * 100 : 0;
+            textEl.textContent = `คาดว่าจะใช้งบ ${Math.round(f.projected).toLocaleString()} ฿ ณ สิ้นปีงบประมาณ (±${pctBand.toFixed(1)}%) · ปีงบ ${fy}`;
+            cmpEl.textContent = `เทียบงบประมาณที่ตั้งไว้ ${Math.round(annual).toLocaleString()} ฿: ${(f.projected / annual * 100).toFixed(1)}%`;
+            // SVG: x by fiscal month, y by monthly total
+            const W = 600, H = 150, L = 30, R = 10, T = 10, B = 24;
+            const fit = i => Math.max(0, f.a + f.b * i);
+            const projIdx = [];
+            for (let i = f.lastActual + 1; i < 12; i++) if (totals[i] == null) projIdx.push(i);
+            const ymax = Math.max(1, ...totals.map(v => v || 0), ...projIdx.map(i => fit(i) + f.residualSD));
+            const X = i => L + i * (W - L - R) / 11;
+            const Y = v => T + (H - T - B) * (1 - v / ymax);
+            const actual = totals.map((v, i) => v == null ? null : [i, v]).filter(Boolean);
+            let s = `<line x1="${L}" y1="${Y(0)}" x2="${W - R}" y2="${Y(0)}" stroke="rgba(255,255,255,0.15)"/>`;
+            if (projIdx.length) {
+                const top = projIdx.map(i => `${X(i)},${Y(fit(i) + f.residualSD)}`);
+                const bot = projIdx.slice().reverse().map(i => `${X(i)},${Y(Math.max(0, fit(i) - f.residualSD))}`);
+                s += `<polygon points="${top.concat(bot).join(' ')}" fill="#c084fc" fill-opacity="0.2" stroke="none"/>`;
+                const start = actual.length ? actual[actual.length - 1] : null;
+                const pp = (start ? [`${X(start[0])},${Y(start[1])}`] : []).concat(projIdx.map(i => `${X(i)},${Y(fit(i))}`));
+                s += `<polyline points="${pp.join(' ')}" fill="none" stroke="#c084fc" stroke-width="2" stroke-dasharray="5 3"/>`;
+            }
+            s += `<polyline points="${actual.map(p => `${X(p[0])},${Y(p[1])}`).join(' ')}" fill="none" stroke="#00f2fe" stroke-width="2.5"/>`;
+            actual.forEach(p => { s += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3" fill="#00f2fe"/>`; });
+            const lbl = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+            lbl.forEach((l, i) => { s += `<text x="${X(i)}" y="${H - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${l}</text>`; });
+            svgEl.innerHTML = s;
+        }
+
         function updateDashboardOverview() {
             // Use filtered transactions for the dashboard (synced across all tabs)
             const txs = getFilteredTransactions('drug');
@@ -6022,6 +6106,7 @@ ORDER BY name;
             const allLoadedMonths = _getLoadedMonths();
             const dismissKey = allLoadedMonths.length ? `${allLoadedMonths[allLoadedMonths.length - 1]}_${allLoadedMonths.length}` : 'empty';
             checkBurnRateAlert(totalBudget, annualBudget, fiscalMonthsPassed, dismissKey);
+            renderBudgetForecast(txs, annualBudget);
             const burnPctEl = document.getElementById('dash-burn-pct');
             const burnBarEl = document.getElementById('dash-burn-bar');
             const burnStatusEl = document.getElementById('dash-burn-status');
