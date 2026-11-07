@@ -4610,24 +4610,27 @@
 
         // Shared dynamic filter resolver; `exclude` lists filter types to ignore (filter pickers use it to count what each choice would give)
         // E2 phase 1: role scope is a UI convenience only; the full province file is still downloaded
-        let rxProfile = null;
+        // rxProfile: undefined = not loaded yet / no cloud config (local-only use), null = signed in but not approved
+        let rxProfile;
         async function sbLoadProfile() {
             const cfg = sbGetConfig();
             const s = sbReadSession();
-            if (!cfg || !cfg.url || !s || !s.user_id) { rxProfile = null; return; }
+            if (!cfg || !cfg.url || !s || !s.user_id) { rxProfile = undefined; return; }
             try {
                 const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_users?select=role,amp_code,hospcode,display_name&user_id=eq.${encodeURIComponent(s.user_id)}`);
-                const rows = res.ok ? await res.json() : [];
+                if (!res.ok) return; // network/table missing: keep previous state
+                const rows = await res.json();
                 const prev = JSON.stringify(rxProfile);
                 rxProfile = rows[0] || null;
+                if (rxProfile === null && prev !== 'null') showToast('บัญชีนี้ยังไม่ได้รับอนุมัติ — ติดต่อผู้ดูแลระบบ', 'error');
                 if (JSON.stringify(rxProfile) !== prev && rawTransactions.length) refreshAllUI();
             } catch (e) { console.warn('Profile load failed:', e); }
         }
         function applyRoleScope(txs) {
-            if (!rxProfile || rxProfile.role === 'province') return txs;
-            if (rxProfile.role === 'district' && rxProfile.amp_code) return txs.filter(t => t && t.amphurCode === rxProfile.amp_code);
-            if (rxProfile.role === 'unit' && rxProfile.hospcode) return txs.filter(t => t && t.hospcode === rxProfile.hospcode);
-            return txs;
+            if (rxProfile === undefined || (rxProfile && rxProfile.role === 'province')) return txs;
+            if (rxProfile && rxProfile.role === 'district' && rxProfile.amp_code) return txs.filter(t => t && t.amphurCode === rxProfile.amp_code);
+            if (rxProfile && rxProfile.role === 'unit' && rxProfile.hospcode) return txs.filter(t => t && t.hospcode === rxProfile.hospcode);
+            return [];
         }
 
         function getFilteredTransactions(prefix, exclude) {
@@ -7005,7 +7008,7 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
         // Signed in = a Supabase session is stored; rxmuk_auth_user is only the display name and unlocks nothing
         function checkAuthState() {
             const session = sbReadSession();
-            if (!session) { try { localStorage.removeItem('rxmuk_auth_user'); } catch {} rxProfile = null; }
+            if (!session) { try { localStorage.removeItem('rxmuk_auth_user'); } catch {} rxProfile = undefined; }
             else {
                 sbLoadProfile();
                 if (!window._rxSnapOpened) { window._rxSnapOpened = true; openShareSnapshotFromUrl(); }
@@ -10329,7 +10332,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
             const cfg = sbGetConfig();
             if (!cfg || !cfg.url || !sbIsSignedIn()) { showToast('เข้าสู่ระบบเพื่อเปิดลิงก์แชร์', 'error'); return; }
-            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_snapshots?select=title,data,created_at,expires_at&id=eq.${id}`).catch(() => null);
+            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rpc/rxmuk_get_snapshot`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ snap_id: id })
+            }).catch(() => null);
             const rows = res && res.ok ? await res.json() : [];
             if (!rows.length) { showToast('ลิงก์หมดอายุหรือไม่มีสิทธิ์เปิด', 'error'); return; }
             const { title, data, expires_at } = rows[0];
@@ -10361,11 +10366,10 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             if (!/^\w{1,10}$/.test(hospcode) || !/^\d{4}-\d{2}$/.test(month) || !note) {
                 showToast('กรอกรหัสหน่วย เดือน และหมายเหตุให้ครบ', 'error'); return;
             }
-            const author = (sbReadSession() || {}).email || '';
             const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_annotations`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ hospcode, month, note: note.slice(0, 2000), author })
+                body: JSON.stringify({ hospcode, month, note: note.slice(0, 2000) })
             }).catch(() => null);
             if (!res || !res.ok) { showToast('บันทึกไม่สำเร็จ (บัญชีอาจยังไม่ได้รับอนุมัติ)', 'error'); return; }
             document.getElementById('anno-note').value = '';
@@ -11084,6 +11088,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     if (e.status >= 400 && e.status < 500) {
                         sbClearSession();
                         try { localStorage.removeItem('rxmuk_auth_user'); } catch {}
+                        try { checkAuthState(); } catch {}
                     }
                     return null;
                 } finally {

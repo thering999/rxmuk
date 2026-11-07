@@ -63,6 +63,21 @@ create table if not exists public.rxmuk_annotations (
 create index if not exists rxmuk_annotations_hosp_month on public.rxmuk_annotations (hospcode, month);
 alter table public.rxmuk_annotations enable row level security;
 
+-- author comes from the JWT, never from the client
+create or replace function public.rxmuk_set_author()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  new.user_id := auth.uid();
+  new.author := coalesce(
+    (select display_name from public.rxmuk_users where user_id = auth.uid()),
+    auth.jwt() ->> 'email');
+  return new;
+end;
+$$;
+drop trigger if exists rxmuk_annotations_author on public.rxmuk_annotations;
+create trigger rxmuk_annotations_author before insert on public.rxmuk_annotations
+  for each row execute function public.rxmuk_set_author();
+
 drop policy if exists rxmuk_annotations_select on public.rxmuk_annotations;
 create policy rxmuk_annotations_select on public.rxmuk_annotations
   for select to authenticated using (public.rxmuk_is_approved());
@@ -86,9 +101,20 @@ create table if not exists public.rxmuk_snapshots (
 );
 alter table public.rxmuk_snapshots enable row level security;
 
+-- Direct select = own snapshots only; others are opened by id through rxmuk_get_snapshot
 drop policy if exists rxmuk_snapshots_select on public.rxmuk_snapshots;
 create policy rxmuk_snapshots_select on public.rxmuk_snapshots
-  for select to authenticated using (public.rxmuk_is_approved() and expires_at > now());
+  for select to authenticated using (created_by = auth.uid());
+
+create or replace function public.rxmuk_get_snapshot(snap_id uuid)
+returns table (title text, data jsonb, created_at timestamptz, expires_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select s.title, s.data, s.created_at, s.expires_at
+  from public.rxmuk_snapshots s
+  where s.id = snap_id and s.expires_at > now() and public.rxmuk_is_approved();
+$$;
+revoke all on function public.rxmuk_get_snapshot(uuid) from public, anon;
+grant execute on function public.rxmuk_get_snapshot(uuid) to authenticated;
 
 drop policy if exists rxmuk_snapshots_insert on public.rxmuk_snapshots;
 create policy rxmuk_snapshots_insert on public.rxmuk_snapshots
