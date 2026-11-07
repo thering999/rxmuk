@@ -1757,6 +1757,22 @@
                         </div>
                     </div>
 
+                    <!-- D2: n8n webhook after import (counts only, no patient data) -->
+                    <div class="panel no-print" id="n8n-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><span>🔔</span> แจ้งเตือน n8n หลังนำเข้าข้อมูล</h3>
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+                            ส่งเฉพาะจำนวน (ชื่อไฟล์ เดือน จำนวนแถว จำนวนหน่วยบริการ) ไม่มีข้อมูลผู้ป่วย
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <input type="url" class="no-print" id="n8n-url" placeholder="https://n8n.example.com/webhook/rxmuk" aria-label="Webhook URL" style="flex:1; min-width:240px;">
+                            <button class="btn btn-primary no-print" id="n8n-btn-save" type="button">บันทึก</button>
+                            <button class="btn no-print" id="n8n-btn-test" type="button">ทดสอบ</button>
+                        </div>
+                        <div id="n8n-status" style="margin-top:8px; font-size:0.8rem;" role="status"></div>
+                    </div>
+
                     <!-- C3: stock import + stock-days estimation (browser-only, IndexedDB) -->
                     <div class="panel" id="stock-panel">
                         <div class="panel-header">
@@ -5730,7 +5746,87 @@ ORDER BY name;
 
             if (dupCount > 0 && !_importOverwrite) showDupWarning(dupCount);
             if (!dupCount) _lastImportRows = null;
+            sendImportWebhook({ filename, rows: newTxs });
             return true;
+        }
+
+        // D2: webhook URL must be https, or http on localhost / 127.0.0.1 / the n8n docker host
+        function isAllowedWebhookUrl(u) {
+            let url;
+            try { url = new URL(String(u || '').trim()); } catch (e) { return false; }
+            if (url.protocol === 'https:') return !!url.hostname;
+            if (url.protocol === 'http:') return ['localhost', '127.0.0.1', 'n8n'].includes(url.hostname);
+            return false;
+        }
+
+        // D2: POST aggregate counts only (no patient-level data) with a 10s timeout; never throws, never blocks import
+        async function postN8nWebhook(url, payload) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 10000);
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: ctrl.signal
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return true;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function sendImportWebhook(info) {
+            try {
+                const url = (localStorage.getItem('rxmuk_n8n_url') || '').trim();
+                if (!url) return;
+                if (!isAllowedWebhookUrl(url)) { showToast('URL Webhook ไม่ปลอดภัย — ไม่ส่ง', 'warn'); return; }
+                const rows = info.rows || [];
+                const months = [...new Set(rows.map(r => r.month || ''))].filter(Boolean).sort();
+                const hosps = new Set(rows.map(r => r.hospcode));
+                const payload = {
+                    event: 'rxmuk.import',
+                    filename: info.filename,
+                    months,
+                    rowCount: rows.length,
+                    hospCount: hosps.size,
+                    importedBy: localStorage.getItem('rxmuk_auth_user') || '-',
+                    at: new Date().toISOString()
+                };
+                postN8nWebhook(url, payload).catch(e => {
+                    console.warn('n8n webhook failed:', e);
+                    showToast('ส่ง Webhook ไป n8n ไม่สำเร็จ', 'warn');
+                });
+            } catch (e) {
+                console.warn('n8n webhook error:', e);
+            }
+        }
+
+        function bindN8nSection() {
+            const input = document.getElementById('n8n-url');
+            if (!input || input.dataset.bound) return;
+            input.dataset.bound = '1';
+            const status = document.getElementById('n8n-status');
+            input.value = localStorage.getItem('rxmuk_n8n_url') || '';
+            document.getElementById('n8n-btn-save').addEventListener('click', () => {
+                const v = input.value.trim();
+                if (!v) { localStorage.removeItem('rxmuk_n8n_url'); status.textContent = 'ลบ URL แล้ว'; return; }
+                if (!isAllowedWebhookUrl(v)) { status.textContent = 'URL ต้องเป็น https:// (หรือ http:// เฉพาะ localhost / 127.0.0.1 / n8n)'; return; }
+                localStorage.setItem('rxmuk_n8n_url', v);
+                status.textContent = 'บันทึกแล้ว';
+            });
+            document.getElementById('n8n-btn-test').addEventListener('click', async () => {
+                const v = input.value.trim();
+                if (!isAllowedWebhookUrl(v)) { status.textContent = 'URL ต้องเป็น https:// (หรือ http:// เฉพาะ localhost / 127.0.0.1 / n8n)'; return; }
+                status.textContent = 'กำลังส่ง...';
+                try {
+                    await postN8nWebhook(v, { event: 'rxmuk.test', importedBy: localStorage.getItem('rxmuk_auth_user') || '-', at: new Date().toISOString() });
+                    status.textContent = 'ส่งทดสอบสำเร็จ';
+                } catch (e) {
+                    status.textContent = 'ส่งทดสอบไม่สำเร็จ: ' + (e && e.name === 'AbortError' ? 'หมดเวลา 10 วินาที' : (e && e.message) || e);
+                }
+            });
         }
 
         // Process pre-aggregated data (specifically for large CSV streaming)
@@ -5818,6 +5914,7 @@ ORDER BY name;
             // Update nav status
             refreshAllUI();
             renderImportHistory();
+            sendImportWebhook({ filename, rows });
         }
 
         // Chunk-by-chunk streaming parser for large CSVs (handles OOM prevention)
@@ -8338,6 +8435,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
 
         // Called only when the Import tab is shown (renderTab); nothing here runs at cold load
         async function renderStockSection() {
+            bindN8nSection();
             if (!document.getElementById('stock-panel')) return;
             bindStockSection();
             if (!_stockLoaded) {
