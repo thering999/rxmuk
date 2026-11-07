@@ -1285,7 +1285,7 @@
                 <li><a class="tab-btn" data-tab="yoy">เทียบปีงบประมาณ</a></li>
                 <li style="display:flex; align-items:center; gap:8px; margin-left:12px; padding:3px 10px; background:rgba(255,255,255,0.05); border-radius:16px; border:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
                     <span id="nav-data-count" style="font-size:0.72rem; color:var(--c-primary); font-weight:800; white-space:nowrap;">DATA: 0 rows</span>
-                    <button class="btn" onclick="if(!localStorage.getItem('rxmuk_auth_user')){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding:2px 8px; font-size:0.62rem; background:rgba(239,68,68,0.2); color:var(--c-red); border:1px solid rgba(239,68,68,0.3); border-radius:4px; cursor:pointer; white-space:nowrap;">🔄 รีเซ็ตตัวกรอง</button>
+                    <button class="btn" onclick="if(!sbIsSignedIn()){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding:2px 8px; font-size:0.62rem; background:rgba(239,68,68,0.2); color:var(--c-red); border:1px solid rgba(239,68,68,0.3); border-radius:4px; cursor:pointer; white-space:nowrap;">🔄 รีเซ็ตตัวกรอง</button>
                 </li>
             </ul>
             </div>
@@ -1621,17 +1621,20 @@
                 <div class="login-card">
                     <div class="login-header">
                         <h2>🔐 เข้าสู่ระบบควบคุมข้อมูล</h2>
-                        <p style="font-size: 0.85rem; color: var(--text-muted);">กรุณากรอก Username จากระบบควบคุมของ SQL</p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">กรุณากรอกอีเมลและรหัสผ่านที่ผู้ดูแลระบบสร้างให้</p>
                     </div>
                     <div class="login-form">
                         <div class="form-group" style="margin-bottom: 15px;">
-                            <label for="input-username">Username</label>
-                            <input type="text" id="input-username" placeholder="ระบุ Username" value="">
+                            <label for="input-username">อีเมล</label>
+                            <input type="email" id="input-username" placeholder="อีเมล" value="" autocomplete="username">
                         </div>
                         <div class="form-group" style="margin-bottom: 15px;">
                             <label for="input-password">Password</label>
-                            <input type="password" id="input-password" placeholder="••••••" value="">
+                            <input type="password" id="input-password" placeholder="••••••" value="" autocomplete="current-password">
                         </div>
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                            <input type="checkbox" id="input-remember-login"> จดจำการเข้าสู่ระบบ
+                        </label>
                         <button class="btn btn-primary" id="btn-login-submit" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบ ⚡</button>
                     </div>
                 </div>
@@ -1642,7 +1645,7 @@
                 <div class="alert-box">
                     <span>🔓</span>
                     <div>
-                        <strong>เข้าสู่ระบบสำเร็จในฐานะ: <span id="auth-full-name">System Administrator</span></strong> (สิทธิ์: จัดการข้อมูลคลังเวชภัณฑ์ / ตารางนำเข้า)
+                        <strong>เข้าสู่ระบบสำเร็จในฐานะ: <span id="auth-full-name"></span></strong> (สิทธิ์: จัดการข้อมูลคลังเวชภัณฑ์ / ตารางนำเข้า)
                         <button class="btn btn-danger" id="btn-logout" style="padding: 4px 12px; font-size: 0.75rem; margin-left: 15px; border-radius: 4px;">ออกจากระบบ</button>
                     </div>
                 </div>
@@ -4044,7 +4047,7 @@
 
         function saveToServerCache() {
             if (!rawTransactions || rawTransactions.length === 0) return;
-            if (!localStorage.getItem('rxmuk_auth_user')) return;
+            if (!sbIsSignedIn()) return;
 
             showToast(`☁️ กำลังบันทึก ${rawTransactions.length.toLocaleString()} รายการขึ้น Cloud (กำลัง compress)...`, 'info');
             cloudStoragePut('raw_data.json', rawTransactions)
@@ -6860,13 +6863,16 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
                         </div>
                         <div class="login-form">
                             <div class="form-group" style="margin-bottom: 15px;">
-                                <label>Username</label>
-                                <input type="text" class="input-lock-username" placeholder="ระบุ Username" value="" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
+                                <label>อีเมล</label>
+                                <input type="email" class="input-lock-username" placeholder="อีเมล" value="" autocomplete="username" aria-label="อีเมล" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
                             </div>
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label>Password</label>
-                                <input type="password" class="input-lock-password" placeholder="••••••" value="" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
+                                <input type="password" class="input-lock-password" placeholder="••••••" value="" autocomplete="current-password" aria-label="Password" style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 16px; color: #fff;">
                             </div>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+                                <input type="checkbox" class="input-lock-remember"> จดจำการเข้าสู่ระบบ
+                            </label>
                             <button class="btn btn-primary btn-lock-login" style="width: 100%; justify-content: center; margin-top: 10px;">เข้าสู่ระบบเพื่อปลดล็อก ⚡</button>
                         </div>
                     </div>
@@ -6877,24 +6883,43 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
             const lockButtons = document.querySelectorAll('.btn-lock-login');
             lockButtons.forEach((btn, idx) => {
                 btn.addEventListener('click', () => {
-                    const uInputs = document.querySelectorAll('.input-lock-username');
-                    const pInputs = document.querySelectorAll('.input-lock-password');
-                    const u = uInputs[idx].value.trim();
-                    const p = pInputs[idx].value.trim();
-
-                    if ((u === 'admin' || u === 'rxmuk') && p === '123456') {
-                        localStorage.setItem('rxmuk_auth_user', u);
-                        checkAuthState();
-                    } else {
-                        alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
-                    }
+                    const pInput = document.querySelectorAll('.input-lock-password')[idx];
+                    rxmukSignIn(document.querySelectorAll('.input-lock-username')[idx].value.trim(), pInput.value,
+                        document.querySelectorAll('.input-lock-remember')[idx].checked, btn, pInput);
                 });
             });
         }
 
+        // Shared by the main login and the tab lock screens: Supabase Auth, then the usual post-login loading
+        async function rxmukSignIn(email, password, remember, btn, passwordInput) {
+            if (!sbGetConfig()) { showToast('ยังไม่ได้ตั้งค่า Supabase', 'error'); return; }
+            if (!email || !password) { showToast('อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'error'); return; }
+            if (btn) btn.disabled = true;
+            try {
+                const s = await sbSignIn(email, password, remember);
+                localStorage.setItem('rxmuk_auth_user', s.email || email); // display cache only
+            } catch (e) {
+                // e.status is set for any HTTP answer; without it the request never reached Supabase
+                showToast(e.code === 'no_config' ? 'ยังไม่ได้ตั้งค่า Supabase'
+                    : e.status ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : 'เชื่อมต่อระบบยืนยันตัวตนไม่ได้ กรุณาลองใหม่', 'error');
+                return;
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+            if (passwordInput) passwordInput.value = '';
+            checkAuthState();
+            const loaded = await loadFromStorage();
+            if (loaded) refreshAllUI();
+            loadLatestDataFromServer();
+            renderImportHistory();
+        }
+
         // Show lock screens or dynamic breakdown data depending on session auth
+        // Signed in = a Supabase session is stored; rxmuk_auth_user is only the display name and unlocks nothing
         function checkAuthState() {
-            const loggedInUser = localStorage.getItem('rxmuk_auth_user');
+            const session = sbReadSession();
+            if (!session) { try { localStorage.removeItem('rxmuk_auth_user'); } catch {} }
+            const loggedInUser = session ? (session.email || localStorage.getItem('rxmuk_auth_user') || 'ผู้ใช้') : null;
 
             const userDisplayName = document.getElementById('user-display-name');
             const loginStatusPill = document.getElementById('login-status-pill');
@@ -6917,11 +6942,7 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
                 if(importLoginGate) importLoginGate.style.display = 'none';
                 if(importDashboard) importDashboard.style.display = 'block';
 
-                if (loggedInUser === 'admin') {
-                    if(authFullName) authFullName.textContent = 'System Administrator (admin)';
-                } else if (loggedInUser === 'rxmuk') {
-                    if(authFullName) authFullName.textContent = 'RxMuk (rxmuk)';
-                }
+                if(authFullName) authFullName.textContent = loggedInUser;
                 if(uploaderPanel) uploaderPanel.style.display = 'block';
 
                 // Display reports
@@ -6951,32 +6972,15 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
 
         // Bind main login submit
         if (btnLoginSubmit) {
-            btnLoginSubmit.addEventListener('click', async () => {
-                const u = inputUsername ? inputUsername.value.trim() : '';
-                const p = inputPassword ? inputPassword.value.trim() : '';
-
-                if (u === 'admin' && p === '123456') {
-                    localStorage.setItem('rxmuk_auth_user', 'admin');
-                    checkAuthState();
-                    const loaded = await loadFromStorage();
-                    if (loaded) refreshAllUI();
-                    loadLatestDataFromServer();
-                    renderImportHistory();
-                } else if (u === 'rxmuk' && p === '123456') {
-                    localStorage.setItem('rxmuk_auth_user', 'rxmuk');
-                    checkAuthState();
-                    const loaded = await loadFromStorage();
-                    if (loaded) refreshAllUI();
-                    loadLatestDataFromServer();
-                    renderImportHistory();
-                } else {
-                    alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
-                }
+            btnLoginSubmit.addEventListener('click', () => {
+                const remember = document.getElementById('input-remember-login');
+                rxmukSignIn(inputUsername ? inputUsername.value.trim() : '', inputPassword ? inputPassword.value : '',
+                    !!(remember && remember.checked), btnLoginSubmit, inputPassword);
             });
         }
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
-                localStorage.removeItem('rxmuk_auth_user');
+                sbSignOut();
                 rawTransactions = [];
                 hasUnsavedChanges = false;
                 checkAuthState();
@@ -10624,7 +10628,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
         // --- END NEW ANALYTICS & VISUALIZATION TABS IMPLEMENTATION ---
 
-        // Auto-load config from public/rxmuk-config.json (sets Supabase defaults + auto-login)
+        // Auto-load config from public/rxmuk-config.json (Supabase URL + publishable key; sign-in is always manual)
         async function loadAppConfig() {
             try {
                 const path = window.location.pathname.includes('/rxmuk/') ? '/rxmuk/public/rxmuk-config.json' : 'public/rxmuk-config.json';
@@ -10633,9 +10637,6 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 const cfg = await r.json();
                 if (cfg.supabase_url && cfg.supabase_key && !localStorage.getItem('rxmuk_sb_config')) {
                     localStorage.setItem('rxmuk_sb_config', JSON.stringify({ url: cfg.supabase_url, key: cfg.supabase_key }));
-                }
-                if (cfg.default_user && !localStorage.getItem('rxmuk_auth_user')) {
-                    localStorage.setItem('rxmuk_auth_user', cfg.default_user);
                 }
                 if (Number(cfg.annual_budget) > 0) window.rxmukAnnualBudget = Number(cfg.annual_budget);
             } catch(e) { console.warn('Config load failed:', e); }
@@ -10660,6 +10661,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             await loadAppConfig();
             generateSecuredLocks();
             checkAuthState();
+            // Validate/refresh a stored session in the background; re-render the lock state if it was revoked
+            sbGetSession().then(s => { if (!s && !sbReadSession()) checkAuthState(); });
             renderImportHistory();
 
             if (!(await loadFromStorage())) {
@@ -10805,9 +10808,128 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             try { return JSON.parse(localStorage.getItem(SB_LSKEY) || 'null'); } catch { return null; }
         }
 
-        function sbHeaders(key) {
-            return { 'Authorization': `Bearer ${key}`, 'apikey': key, 'Content-Type': 'application/json' };
+        // ─── SUPABASE AUTH SESSION ───────────────────────────────────────────
+        // {access_token, refresh_token, expires_at (unix s), email, user_id} in sessionStorage,
+        // or localStorage when "remember me" is ticked. Tokens and passwords are never logged.
+        const SB_SESSION_KEY = 'rxmuk_sb_session';
+        function sbStores() {
+            const out = [];
+            try { out.push(sessionStorage); } catch {}
+            try { out.push(localStorage); } catch {}
+            return out;
         }
+        function sbReadSession() {
+            for (const st of sbStores()) {
+                try { const s = JSON.parse(st.getItem(SB_SESSION_KEY) || 'null'); if (s && s.access_token) return s; } catch {}
+            }
+            return null;
+        }
+        function sbIsSignedIn() { return !!sbReadSession(); }
+        function sbSessionRemembered() {
+            try { return !!localStorage.getItem(SB_SESSION_KEY); } catch { return false; }
+        }
+        function sbClearSession() {
+            for (const st of sbStores()) { try { st.removeItem(SB_SESSION_KEY); } catch {} }
+        }
+        function sbSaveSession(s, remember) {
+            sbClearSession();
+            try { (remember ? localStorage : sessionStorage).setItem(SB_SESSION_KEY, JSON.stringify(s)); }
+            catch { console.warn('Session save failed'); }
+        }
+        function sbSessionFrom(data, prev) {
+            if (!data || !data.access_token || !data.refresh_token) return null;
+            const now = Math.floor(Date.now() / 1000);
+            return {
+                access_token: data.access_token,
+                refresh_token: data.refresh_token,
+                expires_at: Number(data.expires_at) || now + (Number(data.expires_in) || 3600),
+                email: (data.user && data.user.email) || (prev && prev.email) || '',
+                user_id: (data.user && data.user.id) || (prev && prev.user_id) || ''
+            };
+        }
+        async function sbTokenRequest(cfg, grant, body, prev) {
+            const res = await fetch(`${cfg.url}/auth/v1/token?grant_type=${grant}`, {
+                method: 'POST',
+                headers: { 'apikey': cfg.key, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const fail = () => Object.assign(new Error(`auth ${res.status}`), { status: res.status });
+            if (!res.ok) throw fail();
+            const s = sbSessionFrom(await res.json().catch(() => null), prev);
+            if (!s) throw fail();
+            return s;
+        }
+        let _sbLoginToastShown = false;
+        async function sbSignIn(email, password, remember = false, cfg = sbGetConfig()) {
+            if (!cfg || !cfg.url || !cfg.key) throw Object.assign(new Error('no config'), { code: 'no_config' });
+            const s = await sbTokenRequest(cfg, 'password', { email, password }, { email });
+            sbSaveSession(s, remember);
+            _sbLoginToastShown = false;
+            return s;
+        }
+        let _sbRefreshing = null; // one refresh at a time: a refresh token is single-use
+        function sbRefreshSession(cfg = sbGetConfig()) {
+            if (_sbRefreshing) return _sbRefreshing;
+            const cur = sbReadSession();
+            if (!cur || !cur.refresh_token || !cfg || !cfg.url) return Promise.resolve(null);
+            const remember = sbSessionRemembered();
+            _sbRefreshing = (async () => {
+                try {
+                    const s = await sbTokenRequest(cfg, 'refresh_token', { refresh_token: cur.refresh_token }, cur);
+                    sbSaveSession(s, remember);
+                    return s;
+                } catch (e) {
+                    // Auth rejected the refresh token: the session is over. Network/5xx (e.g. offline): keep it for a later retry.
+                    if (e.status >= 400 && e.status < 500) {
+                        sbClearSession();
+                        try { localStorage.removeItem('rxmuk_auth_user'); } catch {}
+                    }
+                    return null;
+                } finally {
+                    _sbRefreshing = null;
+                }
+            })();
+            return _sbRefreshing;
+        }
+        // A valid session (refreshed when it expires within 60s), or null
+        async function sbGetSession(cfg = sbGetConfig()) {
+            const s = sbReadSession();
+            if (!s) return null;
+            if (Number(s.expires_at) - Math.floor(Date.now() / 1000) > 60) return s;
+            return sbRefreshSession(cfg);
+        }
+        function sbSignOut(cfg = sbGetConfig()) {
+            const s = sbReadSession();
+            if (s && cfg && cfg.url) {
+                try {
+                    fetch(`${cfg.url}/auth/v1/logout`, { method: 'POST', headers: { 'apikey': cfg.key, 'Authorization': `Bearer ${s.access_token}` } })
+                        .catch(() => {});
+                } catch {}
+            }
+            sbClearSession();
+            try { localStorage.removeItem('rxmuk_auth_user'); } catch {}
+        }
+        // Every Supabase REST/storage call: the user's token when signed in, else the publishable key
+        // (works while the bucket still accepts the key; fails cleanly once it requires a user)
+        async function sbAuthHeaders(cfg, extra = {}) {
+            const s = await sbGetSession(cfg);
+            return { ...extra, 'apikey': cfg.key, 'Authorization': `Bearer ${s ? s.access_token : cfg.key}` };
+        }
+        // fetch with auth headers; on 401/403 refresh once and retry, or ask the guest to sign in
+        async function sbFetch(cfg, url, opts = {}) {
+            const { headers, ...rest } = opts;
+            let res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers) });
+            if (res.status !== 401 && res.status !== 403) return res;
+            if (sbReadSession() && await sbRefreshSession(cfg)) {
+                res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers) });
+            }
+            if ((res.status === 401 || res.status === 403) && !sbReadSession() && !_sbLoginToastShown) {
+                _sbLoginToastShown = true;
+                showToast('กรุณาเข้าสู่ระบบเพื่อโหลดข้อมูลจาก Cloud', 'error');
+            }
+            return res;
+        }
+        // ─── END SUPABASE AUTH SESSION ───────────────────────────────────────
 
         function supabaseSaveConfig() {
             const url = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
@@ -10817,7 +10939,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const badge = document.getElementById('supabase-status-badge');
             const info  = document.getElementById('supabase-sync-info');
             badge.textContent = '⏳ กำลังทดสอบ...'; badge.className = 'badge-status';
-            fetch(`${url}/storage/v1/bucket/${SB_BUCKET}`, { headers: sbHeaders(key) })
+            sbFetch({ url, key }, `${url}/storage/v1/bucket/${SB_BUCKET}`)
                 .then(r => {
                     if (r.ok || r.status === 404) {
                         localStorage.setItem(SB_LSKEY, JSON.stringify({ url, key }));
@@ -10858,9 +10980,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
 
         async function sbUploadFile(cfg, name, body, type) {
-            const res = await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}/${name}`, {
+            const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/${SB_BUCKET}/${name}`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${cfg.key}`, 'apikey': cfg.key, 'Content-Type': type, 'x-upsert': 'true' },
+                headers: { 'Content-Type': type, 'x-upsert': 'true' },
                 body
             });
             if (!res.ok) throw new Error(`${name} ${res.status}: ${await res.text()}`);
@@ -10891,13 +11013,13 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
         async function sbFetchMeta(cfg) {
             try {
-                const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                const m = await sbFetch(cfg, `${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { cache: 'no-store' });
                 if (m.ok) return (sbLastMeta = await m.json());
             } catch {}
             return null;
         }
         async function sbFetchGz(cfg, name) {
-            const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+            const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${name}`, { cache: 'no-store' });
             if (!res.ok) return null;
             return gunzipJson(await res.arrayBuffer());
         }
@@ -10973,17 +11095,17 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         // Remove files no longer listed in meta.json so storage stays well under the 1GB free tier
         async function sbDeleteUnused(cfg, keep) {
             try {
-                const res = await fetch(`${cfg.url}/storage/v1/object/list/${SB_BUCKET}`, {
+                const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/list/${SB_BUCKET}`, {
                     method: 'POST',
-                    headers: { ...sbHeaders(cfg.key), 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prefix: '', limit: 1000 })
                 });
                 if (!res.ok) return;
                 const stale = (await res.json()).map(o => o.name).filter(n => n && !keep.has(n));
                 if (!stale.length) return;
-                await fetch(`${cfg.url}/storage/v1/object/${SB_BUCKET}`, {
+                await sbFetch(cfg, `${cfg.url}/storage/v1/object/${SB_BUCKET}`, {
                     method: 'DELETE',
-                    headers: { ...sbHeaders(cfg.key), 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prefixes: stale })
                 });
             } catch (e) { console.warn('Cloud cleanup skipped:', e); }
@@ -10992,7 +11114,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         // Cloud meta.json was written after this browser's last push/pull
         async function sbCloudIsNewer(cfg) {
             try {
-                const m = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                const m = await sbFetch(cfg, `${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/meta.json`, { cache: 'no-store' });
                 if (!m.ok) return false;
                 const meta = await m.json();
                 const lastSync = Number(localStorage.getItem('rxmuk_sb_last_push') || 0);
@@ -11055,7 +11177,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const parts = await Promise.all(files.map(async (f, i) => {
                 const hit = f.at && cache[f.name];
                 if (hit && hit.at === f.at) { prog.done++; return hit.rows; }
-                const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
+                const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
                 const contentLen = parseInt(res.headers.get('content-length') || '0');
                 prog.total[i] = contentLen;
@@ -11161,9 +11283,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
         async function supabaseCreateBucket(url, key) {
             try {
-                await fetch(`${url}/storage/v1/bucket`, {
+                await sbFetch({ url, key }, `${url}/storage/v1/bucket`, {
                     method: 'POST',
-                    headers: sbHeaders(key),
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: SB_BUCKET, name: SB_BUCKET, public: false })
                 });
             } catch(e) { console.warn('Bucket create failed (may already exist):', e); }
