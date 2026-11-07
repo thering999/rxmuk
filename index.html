@@ -3190,7 +3190,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">DDD ตาม WHO ATC/DDD · คำนวณจากความแรงในชื่อยา · ประมาณการ</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">DDD ตาม WHO ATC/DDD · คำนวณจากความแรงในชื่อยา · ตัวหารคือใบสั่งยาทั้งหมดในตัวกรอง · ประมาณการ</div>
                     </div>
 
                     <!-- High Alert Drug Analysis -->
@@ -4547,7 +4547,7 @@ ORDER BY name;
                 const fi = (m + 2) % 12;
                 sums[fi] += +t.amount || 0;
                 yearSets[fi].add(y);
-                allYears.add(y);
+                allYears.add(m >= 10 ? y + 1 : y);
             }
             const profile = sums.map((s, i) => yearSets[i].size ? s / yearSets[i].size : 0);
             return { profile, years: allYears.size };
@@ -4559,6 +4559,7 @@ ORDER BY name;
             const sel = document.getElementById('seasonal-drug-select');
             const box = document.getElementById('seasonal-chart');
             if (!sel || !box) return;
+            if (activeTabName() !== 'drugs') return;
             if (!sel.value) { box.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center;">ไม่มีข้อมูล</div>'; return; }
             const dv = document.getElementById('drug-district-select');
             const hv = document.getElementById('drug-hosp-select');
@@ -4570,13 +4571,14 @@ ORDER BY name;
             const plotH = H - padB - padT;
             let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:640px;height:auto;" role="img" aria-label="รูปแบบการใช้ยารายเดือนตามปีงบประมาณ">`;
             profile.forEach((v, i) => {
+                v = Math.max(0, v);
                 const h = v / max * plotH;
                 const x = padL + i * (bw + gap), y = padT + plotH - h;
                 const peak = v > mean * 1.2;
                 const label = Math.round(v).toLocaleString();
                 svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" rx="3" fill="${peak ? 'var(--c-yellow)' : 'var(--c-primary)'}"><title>${SEASONAL_MONTHS[i]}: ${label}</title></rect>`;
                 svg += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 10}" fill="var(--text-muted)" font-size="10" text-anchor="middle">${SEASONAL_MONTHS[i]}</text>`;
-                if (v > 0) svg += `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" fill="var(--text-light)" font-size="8" text-anchor="middle">${label}</text>`;
+                if (v > 0) svg += `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" fill="var(--text-main)" font-size="8" text-anchor="middle">${label}</text>`;
             });
             svg += '</svg>';
             const note = years < 2 ? '<div style="color:var(--c-yellow);font-size:0.8rem;margin-top:6px;">ข้อมูลปีเดียว — รูปแบบฤดูกาลอาจไม่แม่น</div>' : '';
@@ -4896,13 +4898,13 @@ ORDER BY name;
             updateDistrictStats(list);
         }
 
-        // Flags units whose budget is > 2 population-SD from their district mean (districts need >= 3 units)
+        // Flags units whose budget is > 2 population-SD from their district mean (districts need >= 6 units: with population SD, max |z| = (n-1)/sqrt(n) <= 2 for n <= 5)
         function computeUnitOutliers(list) {
             const byDist = {};
             list.forEach(h => { (byDist[h.amphurCode] = byDist[h.amphurCode] || []).push(h); });
             const out = new Map();
             Object.values(byDist).forEach(units => {
-                if (units.length < 3) return;
+                if (units.length < 6) return;
                 const mean = units.reduce((s, h) => s + h.budget, 0) / units.length;
                 const sd = Math.sqrt(units.reduce((s, h) => s + (h.budget - mean) ** 2, 0) / units.length);
                 if (!(sd > 0) || !(mean > 0)) return;
@@ -7496,7 +7498,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         const totalCount = txs.length || 1;
 
         // Antibiotic Stats
-        const antiTxs = txs.filter(t => isAntibiotic(t.didstd));
+        const antiTxs = txs.filter(t => isAntibiotic(t.didstd, t.dname));
         const antiCount = antiTxs.length;
         const antiPct = (antiCount / totalCount) * 100;
 
@@ -7563,12 +7565,12 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             const antiAmt = {};
             antiTxs.forEach(t => {
                 antiAgg[t.didstd] = (antiAgg[t.didstd] || 0) + 1;
-                antiAmt[t.didstd] = (antiAmt[t.didstd] || 0) + (Number(t.amount) || 0);
+                antiAmt[t.didstd] = (antiAmt[t.didstd] || 0) + Math.max(0, Number(t.amount) || 0);
                 antiName[t.didstd] = t.dname;
             });
             const sortedAnti = Object.entries(antiAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
             antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([did, count]) => {
-                const ddd = antibioticDddPer1000([{ dname: antiName[did], amount: antiAmt[did] }], count);
+                const ddd = antibioticDddPer1000([{ dname: antiName[did], amount: antiAmt[did] }], totalCount);
                 return `
                 <tr>
                     <td>${drillBtn('drug', did, antiName[did] || did)}</td>
@@ -7653,17 +7655,17 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         }
 
         // WHO ATC/DDD (grams); first match wins, order matters
-        const ANTIBIOTIC_DDD = [{re:/amoxicillin.*clav|augmentin|co-amoxiclav/i, g:1.5}, {re:/amoxicillin/i, g:1.5}, {re:/ampicillin/i, g:6}, {re:/dicloxacillin/i, g:2}, {re:/cloxacillin/i, g:2}, {re:/penicillin v|phenoxymethyl/i, g:2}, {re:/cephalexin|cefalexin/i, g:2}, {re:/cefazolin/i, g:3}, {re:/ceftriaxone/i, g:2}, {re:/cefixime/i, g:0.4}, {re:/cefdinir/i, g:0.6}, {re:/ciprofloxacin/i, g:1}, {re:/norfloxacin/i, g:0.8}, {re:/ofloxacin/i, g:0.4}, {re:/levofloxacin/i, g:0.5}, {re:/azithromycin/i, g:0.3}, {re:/clarithromycin/i, g:0.5}, {re:/roxithromycin/i, g:0.3}, {re:/erythromycin/i, g:1}, {re:/doxycycline/i, g:0.1}, {re:/tetracycline/i, g:1}, {re:/clindamycin/i, g:1.2}, {re:/gentamicin/i, g:0.24}, {re:/metronidazole/i, g:2}];
+        const ANTIBIOTIC_DDD = [{re:/amoxicillin.*clav|augmentin|co-amoxiclav/i, g:1.5}, {re:/amoxicillin/i, g:1.5}, {re:/ampicillin/i, g:6}, {re:/dicloxacillin/i, g:2}, {re:/cloxacillin/i, g:2}, {re:/penicillin v|phenoxymethyl/i, g:2}, {re:/cephalexin|cefalexin/i, g:2}, {re:/cefazolin/i, g:3}, {re:/ceftriaxone/i, g:2}, {re:/cefixime/i, g:0.4}, {re:/cefdinir/i, g:0.6}, {re:/ciprofloxacin/i, g:1}, {re:/norfloxacin/i, g:0.8}, {re:/\bofloxacin/i, g:0.4}, {re:/levofloxacin/i, g:0.5}, {re:/azithromycin/i, g:0.3}, {re:/clarithromycin/i, g:0.5}, {re:/roxithromycin/i, g:0.3}, {re:/erythromycin/i, g:1}, {re:/doxycycline/i, g:0.1}, {re:/tetracycline/i, g:1}, {re:/clindamycin/i, g:1.2}, {re:/gentamicin/i, g:0.24}, {re:/metronidazole/i, g:2}];
 
         function parseStrengthMg(dname) {
-            const m = String(dname || '').match(/(\d+(?:\.\d+)?)(?:\s*\/\s*\d+(?:\.\d+)?)?\s*(mg|g)\b/i);
+            const m = String(dname || '').match(/(\d+(?:\.\d+)?)(?:\s*[\/+]\s*\d+(?:\.\d+)?)?\s*(mg|g)\b/i);
             if (!m) return null;
             const v = parseFloat(m[1]) * (m[2].toLowerCase() === 'g' ? 1000 : 1);
             return v > 0 ? v : null;
         }
 
-        // rows: [{dname, amount}] of one antibiotic; prescriptions = row count (defaults to rows.length,
-        // pass explicitly when rows are pre-aggregated). Returns null when no DDD match or no strength.
+        // rows: [{dname, amount}] of one antibiotic; prescriptions = denominator (all prescriptions in the filter;
+        // defaults to rows.length). Negative amounts (returns) ignored. Returns null when no DDD match or no strength.
         function antibioticDddPer1000(rows, prescriptions) {
             if (!rows || !rows.length) return null;
             const n = prescriptions || rows.length;
@@ -7671,7 +7673,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             const def = ANTIBIOTIC_DDD.find(d => d.re.test(String(name || '')));
             const mg = parseStrengthMg(name);
             if (!def || !mg || !n) return null;
-            const amt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+            const amt = rows.reduce((s, r) => s + Math.max(0, Number(r.amount) || 0), 0);
             return (amt * mg / (def.g * 1000)) / (n / 1000);
         }
 
@@ -7679,18 +7681,16 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         function isLikelyBrandName(dname) {
             if (typeof dname !== 'string' || !dname) return false;
             if (/[®™]/.test(dname)) return true;
-            if (/\(\s*[A-Z][A-Za-z]*[^)]*\)/.test(dname)) return true;
-            const m = dname.match(/[A-Za-z]+/);
-            if (!m) return false;
-            const w = m[0];
-            return w.length >= 4 && w === w.toUpperCase() && !['TAB', 'CAP', 'INJ', 'SYR', 'SUSP', 'CREAM', 'OINT', 'DROP', 'SOLN', 'AMP', 'VIAL'].includes(w);
+            // mixed-case word in parens = brand tag, e.g. "(Artane"; "(B)", "(PZA)" are source tags, not brands
+            return /\(\s*[A-Z][a-z]{3,}/.test(dname);
         }
 
-        function isAntibiotic(didstd) {
+        // didstd prefix match, OR (when dname given) name matches any ANTIBIOTIC_DDD pattern
+        function isAntibiotic(didstd, dname) {
+            if (dname && ANTIBIOTIC_DDD.some(d => d.re.test(String(dname)))) return true;
             if (!didstd) return false;
             const d = String(didstd);
-            // Amoxicillin (100127), Ceftriaxone (100227), Azithromycin (100221)
-            const prefixes = ["100127", "100227", "100221", "100125", "100412"];
+            const prefixes = ["100127", "100227", "100125", "100412"];
             return prefixes.some(p => d.startsWith(p));
         }
 
