@@ -2244,6 +2244,7 @@
                                         <th>ส่วนต่าง (Max-Min)</th>
                                         <th>แปรปรวน (%)</th>
                                         <th>ดู รพ.</th>
+                                        <th>แนวโน้มราคา</th>
                                     </tr>
                                 </thead>
                                 <tbody id="variance-breakdown-body">
@@ -7463,6 +7464,122 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             return prefixes.some(p => d.startsWith(p));
         }
 
+        let _priceSeries = {};
+
+        function buildSparklineSVG(points) {
+            if (!points || points.length === 0) return '';
+            const W = 100, H = 30;
+            let inner;
+            if (points.length === 1) {
+                inner = `<line x1="0" y1="15" x2="${W}" y2="15" stroke="var(--c-primary)" stroke-width="1.5"/>` +
+                        `<circle cx="50" cy="15" r="2" fill="var(--c-primary)"/>`;
+            } else {
+                const min = Math.min(...points), max = Math.max(...points);
+                const range = max - min;
+                const ys = points.map(v => range === 0 ? 15 : 28 - ((v - min) / range) * 26);
+                const xs = points.map((_, i) => (i / (points.length - 1)) * W);
+                const pts = xs.map((x, i) => `${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+                inner = `<polyline fill="none" stroke="var(--c-primary)" stroke-width="1.5" points="${pts}"/>` +
+                        `<circle cx="${xs[xs.length - 1].toFixed(1)}" cy="${ys[ys.length - 1].toFixed(1)}" r="2" fill="var(--c-primary)"/>`;
+            }
+            return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">${inner}</svg>`;
+        }
+
+        function showPriceTrendModal(didstd) {
+            const series = _priceSeries[didstd];
+            if (!series) return;
+            let modal = document.getElementById('price-trend-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'price-trend-modal';
+                modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML = `
+                    <div class="ptm-content" style="background:var(--bg-card, #1e293b);color:var(--text-main, #e2e8f0);border-radius:12px;padding:20px;width:min(760px,100%);max-height:90vh;overflow:auto;position:relative;">
+                        <button type="button" class="ptm-close" aria-label="ปิด" style="position:absolute;top:8px;right:12px;background:none;border:none;color:inherit;font-size:1.3rem;cursor:pointer;">✕</button>
+                        <h3 class="ptm-title" style="margin:0 28px 12px 0;"></h3>
+                        <canvas class="ptm-canvas" style="width:100%;height:300px;display:block;"></canvas>
+                        <div class="ptm-table" style="margin-top:12px;"></div>
+                    </div>`;
+                document.body.appendChild(modal);
+                const close = () => { modal.style.display = 'none'; };
+                modal.addEventListener('click', e => { if (e.target === modal) close(); });
+                modal.querySelector('.ptm-close').addEventListener('click', close);
+                document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display !== 'none') close(); });
+            }
+            modal.querySelector('.ptm-title').textContent = series.name || didstd;
+            modal.style.display = 'flex';
+
+            const canvas = modal.querySelector('.ptm-canvas');
+            const dpr = window.devicePixelRatio || 1;
+            const cw = canvas.clientWidth || 600, ch = 300;
+            canvas.width = Math.round(cw * dpr);
+            canvas.height = Math.round(ch * dpr);
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.font = '11px sans-serif';
+            const textColor = '#94a3b8', lineColor = '#00f2fe';
+            const fmt = v => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const vals = series.values, mons = series.months;
+
+            if (vals.length === 0) {
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                ctx.fillText('ไม่มีข้อมูลราคา', cw / 2, ch / 2);
+            } else {
+                const padL = 70, padR = 20, padT = 20, padB = 34;
+                const pw = cw - padL - padR, ph = ch - padT - padB;
+                let min = Math.min(...vals), max = Math.max(...vals);
+                if (max === min) { const d = Math.abs(max) * 0.1 || 1; min -= d; max += d; }
+                const yOf = v => padT + ph - ((v - min) / (max - min)) * ph;
+                const xOf = i => vals.length === 1 ? padL + pw / 2 : padL + (i / (vals.length - 1)) * pw;
+
+                ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+                ctx.fillStyle = textColor;
+                ctx.lineWidth = 1;
+                ctx.textAlign = 'right';
+                const grid = 4;
+                for (let g = 0; g <= grid; g++) {
+                    const v = min + ((max - min) * g) / grid;
+                    const y = yOf(v);
+                    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cw - padR, y); ctx.stroke();
+                    ctx.fillText('฿' + fmt(v), padL - 6, y + 4);
+                }
+                ctx.textAlign = 'center';
+                const step = Math.max(1, Math.ceil(vals.length / Math.max(1, Math.floor(pw / 60))));
+                mons.forEach((m, i) => {
+                    if (i % step === 0 || vals.length === 1) ctx.fillText(m, xOf(i), ch - padB + 16);
+                });
+
+                ctx.strokeStyle = lineColor;
+                ctx.lineWidth = 2;
+                if (vals.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(xOf(0), yOf(vals[0]));
+                    for (let i = 1; i < vals.length; i++) {
+                        const x0 = xOf(i - 1), y0 = yOf(vals[i - 1]), x1 = xOf(i), y1 = yOf(vals[i]);
+                        const mx = (x0 + x1) / 2;
+                        ctx.bezierCurveTo(mx, y0, mx, y1, x1, y1);
+                    }
+                    ctx.stroke();
+                }
+                ctx.fillStyle = lineColor;
+                vals.forEach((v, i) => {
+                    ctx.beginPath(); ctx.arc(xOf(i), yOf(v), 3.5, 0, Math.PI * 2); ctx.fill();
+                });
+                if (vals.length === 1) {
+                    ctx.fillStyle = textColor;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('฿' + fmt(vals[0]), xOf(0), yOf(vals[0]) - 10);
+                }
+            }
+
+            const tbl = modal.querySelector('.ptm-table');
+            tbl.innerHTML = '<table style="width:100%;font-size:0.85rem;"><thead><tr><th style="text-align:left;">เดือน</th><th style="text-align:right;">ราคาต่อหน่วยเฉลี่ย (฿)</th></tr></thead><tbody>' +
+                mons.map((m, i) => `<tr><td>${escapeHtml(m)}</td><td style="text-align:right;">${fmt(vals[i])}</td></tr>`).join('') +
+                '</tbody></table>';
+        }
+
         function renderPriceVarianceReport() {
             const body = document.getElementById('variance-breakdown-body');
             if(!body) return;
@@ -7480,10 +7597,16 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                         prices: [], 
                         totalAmount: 0, 
                         totalBudget: 0,
-                        purchases: {}
+                        purchases: {},
+                        months: {}
                     };
                 }
                 const unitPrice = t.price / t.amount;
+                if (t.month) {
+                    const mo = drugAgg[t.didstd].months[t.month] || (drugAgg[t.didstd].months[t.month] = { price: 0, amount: 0 });
+                    mo.price += t.price;
+                    mo.amount += t.amount;
+                }
                 drugAgg[t.didstd].prices.push(unitPrice);
                 drugAgg[t.didstd].totalAmount += t.amount;
                 drugAgg[t.didstd].totalBudget += t.price;
@@ -7516,6 +7639,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                     avgPrice,
                     diff,
                     variancePercent,
+                    months: d.months,
                     purchases: Object.values(d.purchases).map(p => ({
                         hospcode: p.hospcode,
                         hospname: p.hospname,
@@ -7544,9 +7668,19 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             document.getElementById('variance-stat-diff').textContent = `${highVarianceItems.toLocaleString()} รายการ`;
             document.getElementById('variance-stat-max-var').textContent = `${maxVariance.toFixed(1)}%`;
 
+            _priceSeries = {};
+            list.forEach(d => {
+                const ms = Object.keys(d.months).sort();
+                _priceSeries[d.didstd] = {
+                    name: d.name,
+                    months: ms,
+                    values: ms.map(m => d.months[m].price / d.months[m].amount)
+                };
+            });
+
             body.innerHTML = '';
             if (list.length === 0) {
-                body.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">ไม่พบข้อมูลเปรียบเทียบราคายา</td></tr>`;
+                body.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">ไม่พบข้อมูลเปรียบเทียบราคายา</td></tr>`;
                 document.getElementById('variance-detail-body').innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">ไม่มีข้อมูลรายละเอียดหน่วยบริการ</td></tr>`;
                 document.getElementById('variance-selected-drug-name').textContent = 'เลือกตัวยาเพื่อวิเคราะห์';
                 return;
@@ -7587,7 +7721,16 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                         ${isAnomaly ? ' ⚠️' : ''}
                     </td>
                     <td><button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.72rem; height: auto;">🔎 ดู</button></td>
+                    <td class="spark-cell" data-did="${escapeHtml(d.didstd)}" style="cursor:pointer" title="คลิกดูแนวโน้มราคา">${buildSparklineSVG(_priceSeries[d.didstd].values)}</td>
                 `;
+
+                const sparkCell = tr.querySelector('.spark-cell');
+                if (sparkCell) {
+                    sparkCell.addEventListener('click', e => {
+                        e.stopPropagation();
+                        showPriceTrendModal(sparkCell.dataset.did);
+                    });
+                }
 
                 tr.addEventListener('click', () => {
                     varianceSelectedDrug = d.didstd;
