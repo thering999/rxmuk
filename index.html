@@ -1147,6 +1147,7 @@
         /* Print Report styles */
         @media print {
             .rx-pv-scroll { max-height: none; overflow: visible; }
+            .no-print { display: none !important; }
             #print-executive-header {
                 display: block !important;
             }
@@ -1757,8 +1758,8 @@
                         <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
                             ไฟล์สต็อกระดับจังหวัด (.xlsx/.xls/.csv) เก็บในเบราว์เซอร์นี้เท่านั้น ไม่อัปโหลดขึ้น Cloud
                         </div>
-                        <input type="file" id="stock-file-input" accept=".xlsx,.xls,.csv" aria-label="เลือกไฟล์สต็อก">
-                        <div id="stock-map-box" style="display:none; margin-top:12px; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                        <input type="file" class="no-print" id="stock-file-input" accept=".xlsx,.xls,.csv" aria-label="เลือกไฟล์สต็อก">
+                        <div id="stock-map-box" class="no-print" style="display:none; margin-top:12px; gap:10px; flex-wrap:wrap; align-items:flex-end;">
                             <label style="font-size:0.78rem;">รหัสยา (didstd)<br><select id="stock-col-did"></select></label>
                             <label style="font-size:0.78rem;">ชื่อยา<br><select id="stock-col-name"></select></label>
                             <label style="font-size:0.78rem;">คงคลัง<br><select id="stock-col-qty"></select></label>
@@ -1776,8 +1777,8 @@
                         <div id="stock-cal-box" style="display:none; margin-top:20px; border-top:1px solid var(--card-border); padding-top:14px;">
                             <h3 class="panel-title" style="margin-bottom:10px;"><span>🗓️</span> ปฏิทินจัดซื้อ</h3>
                             <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
-                                <label style="font-size:0.8rem;" for="stock-lead-days">Lead time (วัน)</label>
-                                <input type="number" id="stock-lead-days" min="0" step="1" value="30" style="width:80px;">
+                                <label class="no-print" style="font-size:0.8rem;" for="stock-lead-days">Lead time (วัน)</label>
+                                <input type="number" class="no-print" id="stock-lead-days" min="0" step="1" value="30" style="width:80px;">
                                 <button class="btn" id="stock-btn-csv" type="button">⬇️ CSV</button>
                                 <button class="btn" id="stock-btn-ics" type="button">⬇️ iCal (.ics)</button>
                             </div>
@@ -2396,7 +2397,7 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetAbcVedTable()">🔄 รีเซ็ต</button>
-                        <button class="btn btn-secondary" id="ved-sim-open-btn">🧪 จำลองการจัดกลุ่ม VED</button>
+                        <button class="btn btn-secondary no-print" id="ved-sim-open-btn">🧪 จำลองการจัดกลุ่ม VED</button>
                         <button class="btn btn-primary" onclick="exportAbcVedExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
                     </div>
                 </div>
@@ -3291,9 +3292,9 @@
                 <div class="panel" id="rdu-corx-panel" style="margin-top: 20px; display:none;">
                     <div class="panel-header">
                         <h3 class="panel-title"><span>🔗</span> ยาที่สั่งร่วมกัน (Co-prescription)</h3>
-                        <button class="btn btn-secondary" id="rdu-corx-btn" type="button">คำนวณ</button>
+                        <button class="btn btn-secondary no-print" id="rdu-corx-btn" type="button">คำนวณ</button>
                     </div>
-                    <div id="rdu-corx-status" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">กด "คำนวณ" เพื่อวิเคราะห์ 50 ยาที่พบมากที่สุด (นับคู่ยาที่อยู่ใน pid เดียวกันในเดือนเดียวกัน)</div>
+                    <div id="rdu-corx-status" class="no-print" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">กด "คำนวณ" เพื่อวิเคราะห์ 50 ยาที่พบมากที่สุด (นับคู่ยาที่อยู่ใน pid เดียวกันในเดือนเดียวกัน)</div>
                     <div id="rdu-corx-out"></div>
                 </div>
             </div>
@@ -5421,6 +5422,9 @@ ORDER BY name;
                     sessionImportStarted = false;
                     localStorage.removeItem('rxmuk_raw_data');
                     idbSet('rxmuk_raw_data', null).catch(()=>{});
+                    idbSet('rxmuk_stock', null).catch(()=>{});
+                    _stockMap = null;
+                    if (document.getElementById('stock-panel')) renderStockTable();
 
                     // Delete Cloud file so reload doesn't bring old data back
                     gistDeleteFile('raw_data.json')
@@ -6079,17 +6083,23 @@ ORDER BY name;
             const svgEl = document.getElementById('dash-forecast-svg');
             const noData = msg => { textEl.textContent = msg; cmpEl.textContent = ''; svgEl.innerHTML = ''; };
             // Latest fiscal year present (the year filter, if set, already limits txs to one year)
+            const byMonth = new Map();
+            for (let i = 0; i < txs.length; i++) {
+                const t = txs[i];
+                if (t && t.month) byMonth.set(t.month, (byMonth.get(t.month) || 0) + (Number(t.price) || 0));
+            }
             let fy = '';
-            txs.forEach(t => { const f = t && t.month ? getThaiFiscalYear(t.month) : ''; if (f > fy) fy = f; });
+            const fyOf = new Map();
+            for (const mk of byMonth.keys()) { const f = getThaiFiscalYear(mk); fyOf.set(mk, f); if (f > fy) fy = f; }
             if (!fy) return noData('ข้อมูลไม่พอสำหรับคาดการณ์');
             const totals = new Array(12).fill(null);
-            txs.forEach(t => {
-                if (!t || !t.month || getThaiFiscalYear(t.month) !== fy) return;
-                const m = parseInt(String(t.month).split('-')[1], 10);
-                if (!m) return;
+            for (const [mk, sum] of byMonth) {
+                if (fyOf.get(mk) !== fy) continue;
+                const m = parseInt(String(mk).split('-')[1], 10);
+                if (!m) continue;
                 const idx = (m + 2) % 12;
-                totals[idx] = (totals[idx] || 0) + (Number(t.price) || 0);
-            });
+                totals[idx] = (totals[idx] || 0) + sum;
+            }
             const f = forecastFiscalYear(totals);
             if (!f) return noData('ข้อมูลไม่พอสำหรับคาดการณ์');
             const pctBand = f.projected > 0 ? f.band / f.projected * 100 : 0;
@@ -7648,12 +7658,14 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             if (t.pids) {
                 const pidArr = t.pids instanceof Set ? Array.from(t.pids) : Array.isArray(t.pids) ? t.pids : Object.values(t.pids);
                 pidArr.forEach(p => {
-                    if (!pidGroups[p]) pidGroups[p] = new Set();
-                    pidGroups[p].add(t.didstd);
+                    const pk = t.hospcode + ':' + p;
+                    if (!pidGroups[pk]) pidGroups[pk] = new Set();
+                    pidGroups[pk].add(t.didstd);
                 });
             } else if (t.pid && t.pid !== 'Unknown') {
-                if (!pidGroups[t.pid]) pidGroups[t.pid] = new Set();
-                pidGroups[t.pid].add(t.didstd);
+                const pk = t.hospcode + ':' + t.pid;
+                if (!pidGroups[pk]) pidGroups[pk] = new Set();
+                pidGroups[pk].add(t.didstd);
             }
         });
         const polyCount = Object.values(pidGroups).filter(set => set.size >= 5).length;
@@ -7827,6 +7839,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         let _coRxCache = null;
         let _coRxBound = false;
         let _coRxBusy = false;
+        let _coRxGen = 0;
 
         // Cheap: only decides panel visibility. Heavy work happens on the คำนวณ click.
         function updateCoRxPanel(txs) {
@@ -7840,7 +7853,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             }
             const out = document.getElementById('rdu-corx-out');
             const status = document.getElementById('rdu-corx-status');
-            if (_coRxCache && !_coRxBusy && _coRxCache.key !== coRxKey()) {
+            _coRxGen++;
+            if (_coRxCache && !_coRxBusy && (_coRxCache.ref !== rawTransactions || _coRxCache.key !== coRxKey())) {
                 out.innerHTML = '';
                 status.textContent = 'ตัวกรองเปลี่ยนแล้ว กด "คำนวณ" อีกครั้ง';
             }
@@ -7867,7 +7881,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 const t = txs[i];
                 const pl = coRxPidList(t);
                 for (let j = 0; j < pl.length; j++) {
-                    if (coRxUsablePid(pl[j])) rows.push({ d: t.didstd, n: t.dname, p: pl[j], m: t.month });
+                    if (coRxUsablePid(pl[j])) rows.push({ d: t.didstd, n: t.dname, p: t.hospcode + ':' + pl[j], m: t.month });
                 }
             }
             if (!rows.length) { status.textContent = 'ไม่มีข้อมูล pid'; out.innerHTML = ''; return; }
@@ -7875,8 +7889,13 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             status.textContent = `กำลังคำนวณ ${rows.length.toLocaleString()} แถว...`;
             out.innerHTML = '';
             const ref = rawTransactions;
+            const gen = ++_coRxGen;
             const done = (result) => {
                 _coRxBusy = false;
+                if (gen !== _coRxGen || key !== coRxKey()) {
+                    status.textContent = 'ตัวกรองเปลี่ยนแล้ว กด "คำนวณ" อีกครั้ง';
+                    return;
+                }
                 _coRxCache = { ref, key, result };
                 renderCoRx(result);
                 status.textContent = `คำนวณเสร็จ (${rows.length.toLocaleString()} แถว)`;
@@ -7957,14 +7976,23 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         // Repeated keys are summed. Map.imported / Map.skipped carry the counts (blank rows are ignored silently).
         function parseStockRows(rows, didCol, nameCol, qtyCol) {
             const map = new Map();
-            let imported = 0, skipped = 0;
+            let imported = 0, skipped = 0, sciWarn = false;
+            const blank = (v) => v === undefined || v === null || String(v).trim() === '';
             for (const row of rows) {
-                const rawKey = didCol ? row[didCol] : row[nameCol];
+                let useName = !didCol;
+                if (didCol) {
+                    const dv = row[didCol];
+                    if (blank(dv)) useName = !!nameCol;
+                    else {
+                        const ds = String(dv).trim();
+                        if (/e\+/i.test(ds) || !/^\d{24}$/.test(ds)) { sciWarn = true; useName = !!nameCol; }
+                    }
+                }
+                const rawKey = useName ? (nameCol ? row[nameCol] : undefined) : row[didCol];
                 const rawQty = row[qtyCol];
-                const blank = (v) => v === undefined || v === null || String(v).trim() === '';
                 if (blank(rawKey) && blank(rawQty)) continue;
                 let key = blank(rawKey) ? '' : String(rawKey).trim();
-                if (!didCol) key = key.toLowerCase();
+                if (useName) key = key.toLowerCase();
                 const qtyStr = blank(rawQty) ? '' : String(rawQty).replace(/,/g, '').trim();
                 const qty = qtyStr === '' ? NaN : Number(qtyStr);
                 if (!key || !Number.isFinite(qty) || qty < 0) { skipped++; continue; }
@@ -7973,6 +8001,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             }
             map.imported = imported;
             map.skipped = skipped;
+            map.sciWarn = sciWarn;
             return map;
         }
 
@@ -8062,7 +8091,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             const lead = Number(leadDays) || 0;
             const out = [];
             for (const r of stockDays) {
-                if (!Number.isFinite(r.days)) continue;
+                if (!Number.isFinite(r.days) || r.days > 3650) continue;
                 const date = new Date(base.getFullYear(), base.getMonth(), base.getDate() + Math.floor(r.days - lead));
                 out.push({ didstd: r.didstd, name: r.name, date, overdue: date < base });
             }
@@ -8097,7 +8126,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             for (const it of items) {
                 const ds = stockDateKey(it.date);
                 lines.push('BEGIN:VEVENT',
-                    'UID:' + String(it.didstd).replace(/[^A-Za-z0-9_-]/g, '_') + '-' + ds + '@rxmuk',
+                    'UID:' + 'rxmuk-reorder-' + String(it.didstd).replace(/[^A-Za-z0-9_-]/g, '_') + '@rxmuk',
                     'DTSTAMP:' + stamp,
                     'DTSTART;VALUE=DATE:' + ds,
                     'SUMMARY:' + icsEscape('สั่งซื้อ ' + it.name),
@@ -8293,7 +8322,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                     await saveStock(map);
                     map.savedAt = Date.now();
                     _stockMap = map;
-                    stockStatus(`นำเข้า ${map.imported} รายการ, ข้าม ${map.skipped}`);
+                    stockStatus(`นำเข้า ${map.imported} รายการ, ข้าม ${map.skipped}` + (map.sciWarn ? ' ⚠️ รหัสยาบางแถวถูก Excel แปลงเป็นเลขวิทยาศาสตร์ — จับคู่ด้วยชื่อยาแทน' : ''), !!map.sciWarn);
                     renderStockTable();
                 } catch (err) { stockStatus('บันทึกสต็อกไม่สำเร็จ: ' + err.message, true); }
             });
@@ -8896,11 +8925,14 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             if (!modal) {
                 modal = document.createElement('div');
                 modal.id = 'ved-sim-modal';
+                modal.setAttribute('role', 'dialog');
+                modal.setAttribute('aria-modal', 'true');
+                modal.setAttribute('aria-labelledby', 'ved-sim-title');
                 modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px;';
                 modal.innerHTML = `
                     <div style="background:#111827;color:#f3f4f6;border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:20px;width:min(1100px,100%);max-height:92vh;overflow:auto;position:relative;">
                         <button type="button" class="vsm-close" aria-label="ปิด" style="position:absolute;top:8px;right:12px;background:none;border:none;color:inherit;font-size:1.3rem;cursor:pointer;">✕</button>
-                        <h3 style="margin:0 28px 4px 0;">🧪 จำลองการจัดกลุ่ม VED (100 อันดับแรกตามงบ)</h3>
+                        <h3 id="ved-sim-title" style="margin:0 28px 4px 0;">🧪 จำลองการจัดกลุ่ม VED (100 อันดับแรกตามงบ)</h3>
                         <p style="margin:0 0 12px;font-size:0.8rem;color:#94a3b8;">การจำลองนี้ไม่เปลี่ยนข้อมูล VED จริง ลากการ์ดหรือเลือกจากรายการเพื่อย้ายกลุ่ม</p>
                         <div class="vsm-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px;"></div>
                         <div class="vsm-cols" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;"></div>
@@ -8911,7 +8943,12 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                         </div>
                     </div>`;
                 document.body.appendChild(modal);
-                const close = () => { modal.style.display = 'none'; };
+                const close = () => {
+                    modal.style.display = 'none';
+                    const op = modal._opener;
+                    modal._opener = null;
+                    if (op && op.focus && document.contains(op)) op.focus();
+                };
                 modal.addEventListener('click', e => { if (e.target === modal) close(); });
                 modal.querySelector('.vsm-close').addEventListener('click', close);
                 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display !== 'none') close(); });
@@ -8987,7 +9024,9 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             });
             modal.querySelector('.vsm-msg').textContent = list.length ? '' : 'ไม่มีข้อมูลยา — เปิดแท็บ ABC-VED ก่อน';
             modal._render();
+            modal._opener = document.activeElement;
             modal.style.display = 'flex';
+            modal.querySelector('.vsm-close').focus();
         }
 
         document.getElementById('ved-sim-open-btn')?.addEventListener('click', () => {
