@@ -11123,7 +11123,11 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         }
         // Every Supabase REST/storage call: the user's token when signed in, else the publishable key
         // (works while the bucket still accepts the key; fails cleanly once it requires a user)
-        async function sbAuthHeaders(cfg, extra = {}) {
+        function sbOrigin(u) { try { return new URL(u).origin; } catch { return ''; } }
+        async function sbAuthHeaders(cfg, extra = {}, url = cfg.url) {
+            // user token goes only to the saved Supabase origin, never to a URL being tried in the settings form
+            const saved = sbGetConfig();
+            if (!saved || !sbOrigin(url) || sbOrigin(url) !== sbOrigin(saved.url)) return { ...extra, 'apikey': cfg.key, 'Authorization': `Bearer ${cfg.key}` };
             const hadSession = sbIsSignedIn();
             const s = await sbGetSession(cfg);
             // signed in but token unavailable (e.g. offline refresh): fail rather than silently downgrade to the publishable key
@@ -11133,11 +11137,11 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
         // fetch with auth headers; on 401/403 refresh once and retry, or ask the guest to sign in
         async function sbFetch(cfg, url, opts = {}) {
             const { headers, ...rest } = opts;
-            let res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers) });
+            let res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers, url) });
             if (res.status !== 401 && res.status !== 403) return res;
             // 403 is usually an RLS denial; refresh only on 401 to avoid burning single-use refresh tokens
             if (res.status === 401 && sbReadSession() && await sbRefreshSession(cfg)) {
-                res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers) });
+                res = await fetch(url, { ...rest, headers: await sbAuthHeaders(cfg, headers, url) });
             }
             if ((res.status === 401 || res.status === 403) && !sbReadSession() && !_sbLoginToastShown) {
                 _sbLoginToastShown = true;
