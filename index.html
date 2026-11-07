@@ -1300,7 +1300,6 @@
                     </h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <button class="btn btn-secondary" onclick="printCurrentReport()" style="padding: 4px 10px; font-size: 0.75rem;">🖨️ พิมพ์รายงาน</button>
-                        <button class="btn print-keep" onclick="printActiveTab()" title="พิมพ์ / บันทึก PDF" style="margin-left:auto;">🖨️ พิมพ์ PDF</button>
                         <span id="dash-trend-source" class="badge-status success" style="font-size: 0.75rem;">ข้อมูลปัจจุบัน</span>
                     </div>
                 </div>
@@ -5806,9 +5805,18 @@ ORDER BY name;
             if (el) el.style.display = 'none';
         }
 
+        let _monthsCache = { ref: null, len: -1, months: [] };
+        function _getLoadedMonths() {
+            const rt = rawTransactions || [];
+            if (_monthsCache.ref !== rawTransactions || _monthsCache.len !== rt.length) {
+                _monthsCache = { ref: rawTransactions, len: rt.length, months: [...new Set(rt.filter(t => t?.month).map(t => t.month))].sort() };
+            }
+            return _monthsCache.months;
+        }
+
         function _burnAlertKey() {
             // key = fiscal year + count of loaded months, so a new month's data resets the dismissal
-            const months = [...new Set((rawTransactions || []).filter(t => t?.month).map(t => t.month))].sort();
+            const months = _getLoadedMonths();
             return months.length ? `${months[months.length - 1]}_${months.length}` : 'empty';
         }
 
@@ -5864,7 +5872,7 @@ ORDER BY name;
             const filteredMonths = [...new Set(txs.filter(t => t?.month).map(t => t.month))].sort();
             const fiscalMonthsPassed = filteredMonths.length;
             // dismissKey derived from all loaded data so a new import resets the dismissal
-            const allLoadedMonths = [...new Set((rawTransactions || []).filter(t => t?.month).map(t => t.month))].sort();
+            const allLoadedMonths = _getLoadedMonths();
             const dismissKey = allLoadedMonths.length ? `${allLoadedMonths[allLoadedMonths.length - 1]}_${allLoadedMonths.length}` : 'empty';
             checkBurnRateAlert(totalBudget, annualBudget, fiscalMonthsPassed, dismissKey);
             const burnPctEl = document.getElementById('dash-burn-pct');
@@ -6426,8 +6434,8 @@ ORDER BY name;
         if (globalSearchEl) {
             globalSearchEl.addEventListener('input', debounce(e => {
                 rxSearch = e.target.value.trim().toLowerCase();
-                // When cleared, remove stale badges from all tabs immediately
-                if (!rxSearch) document.querySelectorAll('.search-badge').forEach(b => b.remove());
+                // Remove stale badges from all tabs; the re-rendered tab adds its own
+                document.querySelectorAll('.search-badge').forEach(b => b.remove());
                 renderTab(activeTabName());
             }, 300));
         }
@@ -8127,12 +8135,15 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             }
 
             body.innerHTML = '';
-            if (drugList.length === 0) {
+            // Global search filters the detail table only; matrix/donut keep full-population ABC classes
+            const shownList = rxSearch ? applyGlobalSearch(drugList, ['didstd', 'name']) : drugList;
+            updateSearchBadge('abc-ved', rxSearch ? shownList.length : -1);
+            if (shownList.length === 0) {
                 body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">ไม่พบข้อมูลเวชภัณฑ์</td></tr>`;
                 return;
             }
 
-            drugList.forEach(d => {
+            shownList.forEach(d => {
                 const tr = document.createElement('tr');
                 const cat = abcVedCategory(d.abc, d.ved);
                 const catColor = !d.ved ? 'var(--text-muted)' : (cat.startsWith('Category I ') ? 'var(--c-red)' : (cat.startsWith('Category III') ? 'var(--c-green)' : 'var(--c-yellow)'));
@@ -8309,6 +8320,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             if (searchVal) {
                 list = list.filter(h => h.hospcode.includes(searchVal) || h.hospname.toLowerCase().includes(searchVal));
             }
+            if (rxSearch) list = applyGlobalSearch(list, ['hospcode', 'hospname']);
+            updateSearchBadge('quality', rxSearch ? list.length : -1);
 
             list.sort((a,b) => a.score - b.score);
 
