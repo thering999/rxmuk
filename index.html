@@ -1900,6 +1900,18 @@
                             </g>
                         </svg>
                     </div>
+
+                    <!-- Seasonal Pattern Panel -->
+                    <div class="panel">
+                        <div class="panel-header" style="margin-bottom: 15px;">
+                            <h3 class="panel-title">
+                                <span>📆</span>
+                                รูปแบบตามฤดูกาล (Seasonal Pattern)
+                            </h3>
+                        </div>
+                        <select id="seasonal-drug-select" class="select-control" style="width: 100%; margin-bottom: 12px;"></select>
+                        <div id="seasonal-chart"></div>
+                    </div>
                 </div>
             </div>
 
@@ -4487,6 +4499,73 @@ ORDER BY name;
         }
         const YOY_NA = 'เทียบไม่ได้: ยังไม่มีข้อมูลปีก่อนของเดือนที่เลือก หรือใช้ตัวกรองที่ข้อมูลสรุปไม่รองรับ';
 
+        // Seasonal profile: mean monthly dispensed amount per calendar month, fiscal order (0 = Oct ... 11 = Sep).
+        // Ignores year/month/date filters; respects the drug tab's district/hosp selects.
+        // Returns { profile: number[12], years: number } (years = distinct years with any data)
+        function computeSeasonalProfile(didstd, txs, districtVal, hospVal) {
+            const sums = new Array(12).fill(0);
+            const yearSets = Array.from({ length: 12 }, () => new Set());
+            const allYears = new Set();
+            for (const t of txs) {
+                if (!t || t.didstd !== didstd || typeof t.month !== 'string') continue;
+                if (districtVal && districtVal !== 'all' && t.amphurCode !== districtVal) continue;
+                if (hospVal && hospVal !== 'all' && t.hospcode !== hospVal) continue;
+                const parts = t.month.split('-');
+                let y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (!(m >= 1 && m <= 12) || !isFinite(y)) continue;
+                if (y > 2400) y -= 543; // BE -> AD
+                const fi = (m + 2) % 12;
+                sums[fi] += +t.amount || 0;
+                yearSets[fi].add(y);
+                allYears.add(y);
+            }
+            const profile = sums.map((s, i) => yearSets[i].size ? s / yearSets[i].size : 0);
+            return { profile, years: allYears.size };
+        }
+
+        const SEASONAL_MONTHS = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+
+        function renderSeasonalChart() {
+            const sel = document.getElementById('seasonal-drug-select');
+            const box = document.getElementById('seasonal-chart');
+            if (!sel || !box) return;
+            if (!sel.value) { box.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center;">ไม่มีข้อมูล</div>'; return; }
+            const dv = document.getElementById('drug-district-select');
+            const hv = document.getElementById('drug-hosp-select');
+            const { profile, years } = computeSeasonalProfile(sel.value, rawTransactions || [], dv ? dv.value : 'all', hv ? hv.value : 'all');
+            const max = Math.max(...profile);
+            if (!(max > 0)) { box.innerHTML = '<div style="color:var(--text-muted);padding:20px;text-align:center;">ไม่มีข้อมูล</div>'; return; }
+            const mean = profile.reduce((a, b) => a + b, 0) / 12;
+            const W = 480, H = 220, padL = 10, padB = 28, padT = 22, bw = 30, gap = (W - padL * 2 - bw * 12) / 11;
+            const plotH = H - padB - padT;
+            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:640px;height:auto;" role="img" aria-label="รูปแบบการใช้ยารายเดือนตามปีงบประมาณ">`;
+            profile.forEach((v, i) => {
+                const h = v / max * plotH;
+                const x = padL + i * (bw + gap), y = padT + plotH - h;
+                const peak = v > mean * 1.2;
+                const label = Math.round(v).toLocaleString();
+                svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" rx="3" fill="${peak ? 'var(--c-yellow)' : 'var(--c-primary)'}"><title>${SEASONAL_MONTHS[i]}: ${label}</title></rect>`;
+                svg += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 10}" fill="var(--text-muted)" font-size="10" text-anchor="middle">${SEASONAL_MONTHS[i]}</text>`;
+                if (v > 0) svg += `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" fill="var(--text-light)" font-size="8" text-anchor="middle">${label}</text>`;
+            });
+            svg += '</svg>';
+            const note = years < 2 ? '<div style="color:var(--c-yellow);font-size:0.8rem;margin-top:6px;">ข้อมูลปีเดียว — รูปแบบฤดูกาลอาจไม่แม่น</div>' : '';
+            box.innerHTML = svg + note;
+        }
+
+        let seasonalBound = false;
+        function updateSeasonalOptions(list) {
+            const sel = document.getElementById('seasonal-drug-select');
+            if (!sel) return;
+            if (!seasonalBound) { sel.addEventListener('change', renderSeasonalChart); seasonalBound = true; }
+            const top = list.slice().sort((a, b) => b.price - a.price).slice(0, 50);
+            const prev = sel.value;
+            sel.innerHTML = top.map(d => `<option value="${escapeHtml(d.didstd)}">${escapeHtml(d.name)}</option>`).join('');
+            if (prev && top.some(d => d.didstd === prev)) sel.value = prev;
+            renderSeasonalChart();
+        }
+
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
             if(!body) return;
@@ -4554,10 +4633,11 @@ ORDER BY name;
             // Render UI rows
             body.innerHTML = '';
             if (list.length === 0) {
-                const msg = (rawTransactions && rawTransactions.length > 0) 
-                    ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)' 
+                const msg = (rawTransactions && rawTransactions.length > 0)
+                    ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)'
                     : 'ยังไม่มีข้อมูลนำเข้าในระบบ';
                 body.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
+                updateSeasonalOptions(list);
                 return;
             }
 
@@ -4637,6 +4717,7 @@ ORDER BY name;
                     `;
                 });
             }
+            updateSeasonalOptions(list);
         }
 
         // One drug under the current filters: monthly trend, unit price spread and the units dispensing it most
