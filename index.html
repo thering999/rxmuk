@@ -1748,6 +1748,44 @@
                         </div>
                     </div>
 
+                    <!-- C3: stock import + stock-days estimation (browser-only, IndexedDB) -->
+                    <div class="panel" id="stock-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><span>📦</span> นำเข้าสต็อก &amp; ประมาณวันคงคลัง</h3>
+                            <span id="stock-saved-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+                            ไฟล์สต็อกระดับจังหวัด (.xlsx/.xls/.csv) เก็บในเบราว์เซอร์นี้เท่านั้น ไม่อัปโหลดขึ้น Cloud
+                        </div>
+                        <input type="file" id="stock-file-input" accept=".xlsx,.xls,.csv" aria-label="เลือกไฟล์สต็อก">
+                        <div id="stock-map-box" style="display:none; margin-top:12px; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                            <label style="font-size:0.78rem;">รหัสยา (didstd)<br><select id="stock-col-did"></select></label>
+                            <label style="font-size:0.78rem;">ชื่อยา<br><select id="stock-col-name"></select></label>
+                            <label style="font-size:0.78rem;">คงคลัง<br><select id="stock-col-qty"></select></label>
+                            <button class="btn btn-primary" id="stock-btn-import" type="button">นำเข้าสต็อก</button>
+                        </div>
+                        <div id="stock-status" style="margin-top:8px; font-size:0.8rem;" role="status"></div>
+                        <div class="table-container" style="margin-top:12px;">
+                            <table class="data-table">
+                                <thead><tr><th>รหัส</th><th>ชื่อยา</th><th>คงคลัง</th><th>ใช้เฉลี่ย/วัน</th><th>เหลืออีก (วัน)</th></tr></thead>
+                                <tbody id="stock-table-body"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- C4: procurement calendar -->
+                        <div id="stock-cal-box" style="display:none; margin-top:20px; border-top:1px solid var(--card-border); padding-top:14px;">
+                            <h3 class="panel-title" style="margin-bottom:10px;"><span>🗓️</span> ปฏิทินจัดซื้อ</h3>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+                                <label style="font-size:0.8rem;" for="stock-lead-days">Lead time (วัน)</label>
+                                <input type="number" id="stock-lead-days" min="0" step="1" value="30" style="width:80px;">
+                                <button class="btn" id="stock-btn-csv" type="button">⬇️ CSV</button>
+                                <button class="btn" id="stock-btn-ics" type="button">⬇️ iCal (.ics)</button>
+                            </div>
+                            <div id="stock-overdue-box"></div>
+                            <div id="stock-calendar"></div>
+                        </div>
+                    </div>
+
                     <!-- Import History / File logs panel (client-side log via IndexedDB) -->
                     <div class="panel" id="import-history-box">
                         <div class="panel-header">
@@ -4069,6 +4107,7 @@
             if (targetTab === 'access-index') renderAccessIndex();
             if (targetTab === 'rdu') renderRduMonitoring();
             if (targetTab === 'yoy') renderYoy();
+            if (targetTab === 'import') renderStockSection();
         }
 
         function activeTabName() {
@@ -7726,6 +7765,218 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             const key = abc + ved;
             if (['AV', 'AE', 'AD', 'BV', 'CV'].includes(key)) return 'Category I (เข้มงวดสูง)';
             return key === 'CD' ? 'Category III (ผ่อนปรน)' : 'Category II (ปานกลาง)';
+        }
+
+        // ===== C3 STOCK BEGIN =====
+        // Pure helpers (no DOM). Stock is province-level per didstd and lives only in this browser (IndexedDB rxmuk_stock)
+        function guessStockColumns(headers) {
+            const used = new Set();
+            const pick = (re) => {
+                const h = headers.find(x => !used.has(x) && re.test(String(x)));
+                if (h !== undefined) used.add(h);
+                return h === undefined ? '' : h;
+            };
+            const did = pick(/did|รหัส|code/i);
+            const qty = pick(/stock|qty|quantity|คงเหลือ|คงคลัง|จำนวน|balance/i);
+            const name = pick(/name|ชื่อ/i);
+            return { did, name, qty };
+        }
+
+        // Returns Map<key, qty>; key = trimmed didstd when didCol is set, else lowercased trimmed name.
+        // Repeated keys are summed. Map.imported / Map.skipped carry the counts (blank rows are ignored silently).
+        function parseStockRows(rows, didCol, nameCol, qtyCol) {
+            const map = new Map();
+            let imported = 0, skipped = 0;
+            for (const row of rows) {
+                const rawKey = didCol ? row[didCol] : row[nameCol];
+                const rawQty = row[qtyCol];
+                const blank = (v) => v === undefined || v === null || String(v).trim() === '';
+                if (blank(rawKey) && blank(rawQty)) continue;
+                let key = blank(rawKey) ? '' : String(rawKey).trim();
+                if (!didCol) key = key.toLowerCase();
+                const qtyStr = blank(rawQty) ? '' : String(rawQty).replace(/,/g, '').trim();
+                const qty = qtyStr === '' ? NaN : Number(qtyStr);
+                if (!key || !Number.isFinite(qty) || qty < 0) { skipped++; continue; }
+                map.set(key, (map.get(key) || 0) + qty);
+                imported++;
+            }
+            map.imported = imported;
+            map.skipped = skipped;
+            return map;
+        }
+
+        function stockMonthNorm(m) {
+            const mm = /^(\d{4})-(\d{1,2})/.exec(String(m || ''));
+            if (!mm) return null;
+            let y = parseInt(mm[1], 10);
+            if (y > 2400) y -= 543;
+            const mo = parseInt(mm[2], 10);
+            if (mo < 1 || mo > 12) return null;
+            return { y, mo, key: y + '-' + String(mo).padStart(2, '0') };
+        }
+
+        // Usage window = last 3 distinct months in txs (or fewer). Returns rows sorted by days ascending.
+        function computeStockDays(stockMap, txs) {
+            const normCache = new Map();
+            const norm = (m) => {
+                if (!normCache.has(m)) normCache.set(m, stockMonthNorm(m));
+                return normCache.get(m);
+            };
+            const months = new Map();
+            for (const t of txs) {
+                const n = norm(t.month);
+                if (n) months.set(n.key, n);
+            }
+            const win = [...months.values()].sort((a, b) => a.key < b.key ? -1 : 1).slice(-3);
+            const winKeys = new Set(win.map(n => n.key));
+            const daysInWindow = win.reduce((s, n) => s + new Date(n.y, n.mo, 0).getDate(), 0);
+
+            const usage = new Map();     // didstd -> amount in window
+            const nameOf = new Map();    // didstd -> name
+            const didByName = new Map(); // lowercased name -> didstd
+            for (const t of txs) {
+                const d = String(t.didstd);
+                if (!nameOf.has(d)) {
+                    const nm = t.dname == null ? '' : String(t.dname);
+                    nameOf.set(d, nm);
+                    const lk = nm.trim().toLowerCase();
+                    if (lk && !didByName.has(lk)) didByName.set(lk, d);
+                }
+                const n = norm(t.month);
+                if (n && winKeys.has(n.key)) usage.set(d, (usage.get(d) || 0) + (Number(t.amount) || 0));
+            }
+            // fold stock keys onto didstd (sum if two keys hit the same drug)
+            const stockByDid = new Map();
+            const unmatched = [];
+            for (const [key, qty] of stockMap) {
+                let d = nameOf.has(key) ? key : didByName.get(String(key).trim().toLowerCase());
+                if (d === undefined) unmatched.push({ didstd: key, name: key, stock: qty, avgDaily: null, days: Infinity, unmatched: true });
+                else stockByDid.set(d, (stockByDid.get(d) || 0) + qty);
+            }
+            const out = [];
+            for (const [d, stock] of stockByDid) {
+                const avgDaily = daysInWindow > 0 ? (usage.get(d) || 0) / daysInWindow : 0;
+                out.push({ didstd: d, name: nameOf.get(d), stock, avgDaily, days: avgDaily > 0 ? stock / avgDaily : Infinity });
+            }
+            out.sort((a, b) => a.days - b.days || (a.name < b.name ? -1 : 1));
+            // Infinity - Infinity is NaN: the comparator above falls through to name, which is still a consistent order
+            return out.concat(unmatched);
+        }
+
+        async function loadStock() {
+            try {
+                const rec = await idbGet('rxmuk_stock');
+                if (rec && Array.isArray(rec.items)) {
+                    const m = new Map(rec.items);
+                    m.savedAt = rec.savedAt;
+                    return m;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        async function saveStock(map) {
+            await idbSet('rxmuk_stock', { savedAt: Date.now(), items: [...map.entries()] });
+        }
+        // ===== C3 STOCK END =====
+
+        let _stockMap = null, _stockLoaded = false, _stockBound = false, _stockRows = [];
+
+        function stockDaysColor(days) {
+            if (days < 30) return '#ff5c7a';
+            if (days <= 90) return '#ffb300';
+            return '#3ecf8e';
+        }
+
+        function renderStockTable() {
+            const body = document.getElementById('stock-table-body');
+            const info = document.getElementById('stock-saved-info');
+            if (!body) return;
+            if (!_stockMap) {
+                body.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);">ยังไม่มีข้อมูลสต็อก</td></tr>';
+                if (info) info.textContent = '';
+                return;
+            }
+            if (info && _stockMap.savedAt) info.textContent = 'บันทึกล่าสุด ' + new Date(_stockMap.savedAt).toLocaleString('th-TH');
+            const rows = computeStockDays(_stockMap, rawTransactions);
+            const fmt = (n) => Number(n).toLocaleString('th-TH', { maximumFractionDigits: 1 });
+            body.innerHTML = rows.map(r => {
+                const usage = r.avgDaily === null ? '–' : fmt(r.avgDaily);
+                let daysCell;
+                if (r.unmatched) daysCell = '–';
+                else if (r.days === Infinity) daysCell = 'ไม่มีการใช้';
+                else daysCell = `<strong style="color:${stockDaysColor(r.days)};">${escapeHtml(fmt(r.days))}</strong>`;
+                return `<tr><td>${escapeHtml(r.didstd)}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(fmt(r.stock))}</td><td>${escapeHtml(usage)}</td><td>${daysCell}</td></tr>`;
+            }).join('') || '<tr><td colspan="5" style="color:var(--text-muted);">ไม่มีรายการ</td></tr>';
+        }
+
+        function stockStatus(msg, isErr) {
+            const el = document.getElementById('stock-status');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.color = isErr ? 'var(--c-red, #ff5c7a)' : 'var(--text-muted)';
+        }
+
+        function fillStockMapping(headers) {
+            const g = guessStockColumns(headers);
+            const opt = (h, sel) => `<option value="${escapeHtml(h)}"${h === sel ? ' selected' : ''}>${escapeHtml(h)}</option>`;
+            const none = '<option value="">— ไม่ใช้ —</option>';
+            const build = (id, sel) => { document.getElementById(id).innerHTML = none + headers.map(h => opt(h, sel)).join(''); };
+            build('stock-col-did', g.did);
+            build('stock-col-name', g.name);
+            build('stock-col-qty', g.qty);
+            document.getElementById('stock-map-box').style.display = 'flex';
+        }
+
+        function bindStockSection() {
+            if (_stockBound) return;
+            _stockBound = true;
+            document.getElementById('stock-file-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        _stockRows = XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' });
+                        const hs = new Set();
+                        _stockRows.slice(0, 50).forEach(r => Object.keys(r).forEach(k => hs.add(k)));
+                        if (!hs.size) { stockStatus('ไฟล์ว่างหรืออ่านหัวคอลัมน์ไม่ได้', true); return; }
+                        fillStockMapping([...hs]);
+                        stockStatus(`อ่านไฟล์ ${file.name}: ${_stockRows.length} แถว — เลือกคอลัมน์แล้วกดนำเข้า`);
+                    } catch (err) { stockStatus('อ่านไฟล์ไม่สำเร็จ: ' + err.message, true); }
+                };
+                reader.onerror = () => stockStatus('อ่านไฟล์ไม่สำเร็จ', true);
+                reader.readAsArrayBuffer(file);
+                e.target.value = '';
+            });
+            document.getElementById('stock-btn-import').addEventListener('click', async () => {
+                const did = document.getElementById('stock-col-did').value;
+                const name = document.getElementById('stock-col-name').value;
+                const qty = document.getElementById('stock-col-qty').value;
+                if (!qty || (!did && !name)) { stockStatus('ต้องเลือกคอลัมน์คงคลัง และรหัสยาหรือชื่อยา อย่างน้อยหนึ่งอย่าง', true); return; }
+                const map = parseStockRows(_stockRows, did, name, qty);
+                if (!map.size) { stockStatus(`นำเข้า 0 รายการ, ข้าม ${map.skipped}`, true); return; }
+                try {
+                    await saveStock(map);
+                    map.savedAt = Date.now();
+                    _stockMap = map;
+                    stockStatus(`นำเข้า ${map.imported} รายการ, ข้าม ${map.skipped}`);
+                    renderStockTable();
+                } catch (err) { stockStatus('บันทึกสต็อกไม่สำเร็จ: ' + err.message, true); }
+            });
+        }
+
+        // Called only when the Import tab is shown (renderTab); nothing here runs at cold load
+        async function renderStockSection() {
+            if (!document.getElementById('stock-panel')) return;
+            bindStockSection();
+            if (!_stockLoaded) {
+                _stockLoaded = true;
+                _stockMap = await loadStock();
+            }
+            renderStockTable();
         }
 
         function getDrugGroup(didstd) {
