@@ -2358,6 +2358,7 @@
                         </select>
 
                         <button class="btn btn-secondary" onclick="resetAbcVedTable()">🔄 รีเซ็ต</button>
+                        <button class="btn btn-secondary" id="ved-sim-open-btn">🧪 จำลองการจัดกลุ่ม VED</button>
                         <button class="btn btn-primary" onclick="exportAbcVedExcel()" style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); box-shadow: 0 4px 15px rgba(27, 94, 32, 0.3);">🟢 ส่งออก Excel</button>
                     </div>
                 </div>
@@ -8287,6 +8288,131 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             downloadExcel(filename, headers, rows, "District Distribution");
         }
 
+        // ===== C2: VED simulation (never mutates drugVedMap) =====
+        let _abcVedDrugList = [];
+        const VED_SIM_KEY = 'rxmuk_ved_sim';
+
+        function vedSimSummary(drugs, overrides) {
+            const out = { cat1: { count: 0, budget: 0 }, cat2: { count: 0, budget: 0 }, cat3: { count: 0, budget: 0 }, unclassified: { count: 0, budget: 0 } };
+            (drugs || []).forEach(d => {
+                const hasOv = overrides && Object.prototype.hasOwnProperty.call(overrides, d.didstd);
+                const ved = hasOv ? overrides[d.didstd] : d.ved;
+                let bucket = out.unclassified;
+                if (ved === 'V' || ved === 'E' || ved === 'D') {
+                    const c = abcVedCategory(d.abc, ved);
+                    bucket = c.indexOf('Category III') === 0 ? out.cat3 : (c.indexOf('Category II ') === 0 ? out.cat2 : out.cat1);
+                }
+                bucket.count++;
+                bucket.budget += d.price || 0;
+            });
+            return out;
+        }
+
+        function openVedSimulation() {
+            const list = (_abcVedDrugList || []).slice(0, 100);
+            let modal = document.getElementById('ved-sim-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'ved-sim-modal';
+                modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML = `
+                    <div style="background:#111827;color:#f3f4f6;border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:20px;width:min(1100px,100%);max-height:92vh;overflow:auto;position:relative;">
+                        <button type="button" class="vsm-close" aria-label="ปิด" style="position:absolute;top:8px;right:12px;background:none;border:none;color:inherit;font-size:1.3rem;cursor:pointer;">✕</button>
+                        <h3 style="margin:0 28px 4px 0;">🧪 จำลองการจัดกลุ่ม VED (100 อันดับแรกตามงบ)</h3>
+                        <p style="margin:0 0 12px;font-size:0.8rem;color:#94a3b8;">การจำลองนี้ไม่เปลี่ยนข้อมูล VED จริง ลากการ์ดหรือเลือกจากรายการเพื่อย้ายกลุ่ม</p>
+                        <div class="vsm-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px;"></div>
+                        <div class="vsm-cols" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;"></div>
+                        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                            <button type="button" class="btn btn-primary vsm-save">บันทึกการจำลอง</button>
+                            <button type="button" class="btn btn-secondary vsm-reset">รีเซ็ต</button>
+                            <span class="vsm-msg" style="align-self:center;font-size:0.8rem;color:#94a3b8;"></span>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                const close = () => { modal.style.display = 'none'; };
+                modal.addEventListener('click', e => { if (e.target === modal) close(); });
+                modal.querySelector('.vsm-close').addEventListener('click', close);
+                document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display !== 'none') close(); });
+                modal._st = { list: [], cur: {} };
+                const cols = modal.querySelector('.vsm-cols');
+                const move = (id, ved) => { modal._st.cur[id] = ved; modal._render(); };
+                cols.addEventListener('dragstart', e => {
+                    const card = e.target.closest && e.target.closest('.vsm-card');
+                    if (!card) return;
+                    e.dataTransfer.setData('text/plain', card.dataset.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                cols.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('.vsm-col')) e.preventDefault(); });
+                cols.addEventListener('drop', e => {
+                    const col = e.target.closest && e.target.closest('.vsm-col');
+                    if (!col) return;
+                    e.preventDefault();
+                    const id = e.dataTransfer.getData('text/plain');
+                    if (id in modal._st.cur) move(id, col.dataset.ved);
+                });
+                cols.addEventListener('change', e => {
+                    const sel = e.target.closest && e.target.closest('.vsm-sel');
+                    if (sel) move(sel.dataset.id, sel.value);
+                });
+                modal.querySelector('.vsm-save').addEventListener('click', () => {
+                    const ov = modal._diff();
+                    const msg = modal.querySelector('.vsm-msg');
+                    try { localStorage.setItem(VED_SIM_KEY, JSON.stringify(ov)); msg.textContent = 'บันทึกแล้ว (' + Object.keys(ov).length + ' รายการ)'; }
+                    catch (err) { msg.textContent = 'บันทึกไม่สำเร็จ'; }
+                });
+                modal.querySelector('.vsm-reset').addEventListener('click', () => {
+                    modal._st.list.forEach(d => { modal._st.cur[d.didstd] = d.ved || ''; });
+                    try { localStorage.removeItem(VED_SIM_KEY); } catch (err) { /* ignore */ }
+                    modal.querySelector('.vsm-msg').textContent = 'รีเซ็ตแล้ว';
+                    modal._render();
+                });
+                modal._diff = () => {
+                    const ov = {};
+                    modal._st.list.forEach(d => { const c = modal._st.cur[d.didstd]; if (c !== (d.ved || '')) ov[d.didstd] = c; });
+                    return ov;
+                };
+                modal._render = () => {
+                    const { list: items, cur } = modal._st;
+                    const fmt = n => Math.round(n).toLocaleString();
+                    const before = vedSimSummary(items, null);
+                    const after = vedSimSummary(items, modal._diff());
+                    const labels = [['cat1', 'Category I', 'var(--c-red)'], ['cat2', 'Category II', 'var(--c-yellow)'], ['cat3', 'Category III', 'var(--c-green)'], ['unclassified', 'ไม่ระบุ', 'var(--text-muted)']];
+                    modal.querySelector('.vsm-summary').innerHTML = labels.map(([k, lbl, color]) => {
+                        const delta = after[k].budget - before[k].budget;
+                        const dTxt = delta === 0 ? '±0' : (delta > 0 ? '+' : '') + fmt(delta);
+                        const dStyle = delta === 0 ? 'color:#94a3b8;' : 'background:rgba(250,204,21,0.2);color:#fde68a;padding:0 4px;border-radius:4px;font-weight:bold;';
+                        return `<div style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px;"><div style="color:${color};font-weight:bold;">${lbl}</div><div style="font-size:0.8rem;">${fmt(before[k].budget)} → ${fmt(after[k].budget)} ฿</div><div style="font-size:0.8rem;">Δ <span style="${dStyle}">${dTxt} ฿</span> (${before[k].count} → ${after[k].count} รายการ)</div></div>`;
+                    }).join('');
+                    const colDefs = [['V', 'V (Vital)'], ['E', 'E (Essential)'], ['D', 'D (Desirable)'], ['', 'ไม่ระบุ']];
+                    modal.querySelector('.vsm-cols').innerHTML = colDefs.map(([v, lbl]) => {
+                        const cards = items.filter(d => cur[d.didstd] === v).map(d => {
+                            const id = escapeHtml(String(d.didstd));
+                            const opts = colDefs.map(([ov, ol]) => `<option value="${ov}"${ov === v ? ' selected' : ''}>${ov || 'ไม่ระบุ'}</option>`).join('');
+                            return `<div class="vsm-card" draggable="true" data-id="${id}" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px;margin-bottom:6px;font-size:0.75rem;cursor:grab;"><div style="font-weight:bold;word-break:break-word;">${escapeHtml(d.name || d.didstd)}</div><div style="color:#94a3b8;">${escapeHtml(d.abc)} · ${fmt(d.price)} ฿</div><select class="vsm-sel" data-id="${id}" aria-label="ย้ายกลุ่ม VED" style="margin-top:4px;width:100%;background:#1f2937;color:inherit;border:1px solid rgba(255,255,255,0.2);border-radius:4px;">${opts}</select></div>`;
+                        }).join('');
+                        return `<div class="vsm-col" data-ved="${v}" style="border:1px dashed rgba(255,255,255,0.2);border-radius:8px;padding:6px;min-height:120px;max-height:50vh;overflow:auto;"><div style="font-weight:bold;margin-bottom:6px;">${lbl}</div>${cards}</div>`;
+                    }).join('');
+                };
+            }
+            const st = modal._st;
+            st.list = list;
+            st.cur = {};
+            let saved = {};
+            try { saved = JSON.parse(localStorage.getItem(VED_SIM_KEY) || '{}') || {}; } catch (err) { saved = {}; }
+            list.forEach(d => {
+                const s = Object.prototype.hasOwnProperty.call(saved, d.didstd) ? saved[d.didstd] : null;
+                st.cur[d.didstd] = (s === 'V' || s === 'E' || s === 'D' || s === '') ? s : (d.ved || '');
+            });
+            modal.querySelector('.vsm-msg').textContent = list.length ? '' : 'ไม่มีข้อมูลยา — เปิดแท็บ ABC-VED ก่อน';
+            modal._render();
+            modal.style.display = 'flex';
+        }
+
+        document.getElementById('ved-sim-open-btn')?.addEventListener('click', () => {
+            if (!_abcVedDrugList.length) renderAbcVedMatrix();
+            openVedSimulation();
+        });
+
         function renderAbcVedMatrix() {
             const body = document.getElementById('abc-ved-detail-body');
             if(!body) return;
@@ -8320,6 +8446,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 }
                 d.ved = getDrugVed(d.didstd);
             });
+            _abcVedDrugList = drugList;
 
             const matrix = {
                 'AV': { count: 0, budget: 0 }, 'AE': { count: 0, budget: 0 }, 'AD': { count: 0, budget: 0 },
