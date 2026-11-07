@@ -1962,10 +1962,12 @@
                                 ตารางแจกแจงรายการยา
                             </h3>
                         </div>
+                        <div id="drug-fav-line" hidden style="margin-bottom:8px; color:#fbbf24; font-size:0.85rem; font-weight:600;"></div>
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
                                     <tr>
+                                        <th class="fav-cell"><span class="sr-only">ติดตาม</span></th>
                                         <th id="th-drug-didstd" onclick="changeDrugSort('didstd')" style="cursor: pointer; user-select: none;">รหัสยา 24 หลัก</th>
                                         <th id="th-drug-name" onclick="changeDrugSort('name')" style="cursor: pointer; user-select: none;" title="คลิกชื่อยาเพื่อดูแนวโน้มรายเดือน">ชื่อยา</th>
                                         <th id="th-drug-amount" onclick="changeDrugSort('amount')" style="cursor: pointer; user-select: none;">จำนวนจ่าย</th>
@@ -2222,10 +2224,12 @@
                                 ตารางข้อมูลหน่วยบริการ
                             </h3>
                         </div>
+                        <div id="hosp-fav-line" hidden style="margin-bottom:8px; color:#fbbf24; font-size:0.85rem; font-weight:600;"></div>
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
                                     <tr>
+                                        <th class="fav-cell"><span class="sr-only">ติดตาม</span></th>
                                         <th>รหัสหน่วย</th>
                                         <th>หน่วยบริการ</th>
                                         <th>จำนวนจ่าย (ครั้ง)</th>
@@ -4716,6 +4720,72 @@ ORDER BY name;
             renderSeasonalChart();
         }
 
+        // --- F3: FAVORITES (per browser) ---
+        // localStorage.rxmuk_favorites = {drugs:[didstd...], units:[hospcode...]}, max 20 each
+        const FAV_MAX = 20;
+        function getFavorites() {
+            const empty = { drugs: [], units: [] };
+            try {
+                const raw = localStorage.getItem('rxmuk_favorites');
+                if (!raw) return empty;
+                const o = JSON.parse(raw);
+                if (!o || typeof o !== 'object' || Array.isArray(o)) return empty;
+                const clean = a => Array.isArray(a) ? [...new Set(a.filter(x => typeof x === 'string' && x))].slice(0, FAV_MAX) : [];
+                return { drugs: clean(o.drugs), units: clean(o.units) };
+            } catch (_) { return empty; }
+        }
+        // kind: 'drugs' | 'units'. Returns false only when adding would exceed the limit.
+        function toggleFavorite(kind, id) {
+            if (kind !== 'drugs' && kind !== 'units') return false;
+            id = String(id);
+            const fav = getFavorites();
+            const i = fav[kind].indexOf(id);
+            if (i >= 0) fav[kind].splice(i, 1);
+            else if (fav[kind].length >= FAV_MAX) return false;
+            else fav[kind].push(id);
+            try { localStorage.setItem('rxmuk_favorites', JSON.stringify(fav)); } catch (_) { return false; }
+            return true;
+        }
+        // Stable: pinned rows first, each group keeps the order it already had
+        function sortFavoritesFirst(list, kind, idField) {
+            const set = new Set(getFavorites()[kind]);
+            if (!set.size) return list;
+            const pinned = [], rest = [];
+            list.forEach(r => (set.has(String(r[idField])) ? pinned : rest).push(r));
+            return pinned.concat(rest);
+        }
+        function favStarHtml(kind, id) {
+            const on = getFavorites()[kind].includes(String(id));
+            return `<button type="button" class="fav-btn" data-fav-kind="${kind}" data-key="${escapeHtml(id)}" aria-pressed="${on}" aria-label="${on ? 'เลิกติดตาม' : 'ติดตาม'}" style="background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;padding:2px 4px;color:${on ? '#fbbf24' : 'var(--text-muted)'};">${on ? '★' : '☆'}</button>`;
+        }
+        // One capture-phase listener per tbody: capture so the row's own click handler never runs for a star click
+        function bindFavClicks(body, rerender) {
+            if (body._favBound) return;
+            body._favBound = true;
+            body.addEventListener('click', e => {
+                const b = e.target.closest && e.target.closest('.fav-btn');
+                if (!b) return;
+                e.stopPropagation();
+                e.preventDefault();
+                const kind = b.dataset.favKind, key = b.dataset.key;
+                if (!toggleFavorite(kind, key)) {
+                    const fav = getFavorites();
+                    if (fav[kind].length >= FAV_MAX && !fav[kind].includes(key)) showToast(`ติดตามได้สูงสุด ${FAV_MAX} รายการ`, 'warn');
+                    return;
+                }
+                rerender();
+                const again = [...body.querySelectorAll('.fav-btn')].find(x => x.dataset.key === key);
+                if (again) again.focus();
+            }, true);
+        }
+        function updateFavLine(id, kind) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const n = getFavorites()[kind].length;
+            el.hidden = n === 0;
+            el.textContent = n ? `รายการที่ติดตาม (${n})` : '';
+        }
+
         function renderDrugBreakdown() {
             const body = document.getElementById('drug-breakdown-body');
             if(!body) return;
@@ -4782,11 +4852,13 @@ ORDER BY name;
 
             // Render UI rows
             body.innerHTML = '';
+            bindFavClicks(body, renderDrugBreakdown);
+            updateFavLine('drug-fav-line', 'drugs');
             if (list.length === 0) {
                 const msg = (rawTransactions && rawTransactions.length > 0)
                     ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)'
                     : 'ยังไม่มีข้อมูลนำเข้าในระบบ';
-                body.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
                 updateSeasonalOptions(list);
                 return;
             }
@@ -4794,7 +4866,8 @@ ORDER BY name;
             const yoyCol = yoyColumn(txs, 'drugs', yoyBlocked('drug', ['district', 'hosp']));
             yoyHeader('th-drug-yoy', yoyCol, YOY_NA + ' (สรุปรายยาเป็นยอดทั้งจังหวัด จึงเทียบไม่ได้เมื่อกรองอำเภอ/หน่วยบริการ)');
 
-            list.forEach(d => {
+            // F3: pinned first, after the user's sort; chart/stats below keep the plain sorted list
+            sortFavoritesFirst(list, 'drugs', 'didstd').forEach(d => {
                 const tr = document.createElement('tr');
                 const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : (d.abc === 'C' ? 'var(--c-green)' : 'var(--text-muted)'));
                 const anomalyBadge = d.isAnomaly ? `<span class="badge-status danger" style="font-size:0.65rem; margin-left:8px;" title="ราคาต่อหน่วยบางรายการต่างจากค่าเฉลี่ยเกิน 150%">⚠️ ราคาผิดปกติ</span>` : '';
@@ -4803,6 +4876,7 @@ ORDER BY name;
                 const nedBadge = isOnNed(d.didstd, d.name) === false ? `<span class="badge-status" style="font-size:0.65rem; margin-left:8px; color:var(--c-yellow);" title="ไม่อยู่ในบัญชียาหลักแห่งชาติที่นำเข้า">นอกบัญชี</span>` : '';
 
                 tr.innerHTML = `
+                    <td class="fav-cell">${favStarHtml('drugs', d.didstd)}</td>
                     <td><code>${escapeHtml(d.didstd)}</code></td>
                     <td><button type="button" class="link-btn" title="ดูแนวโน้มรายเดือนและหน่วยบริการที่จ่าย"><strong>${escapeHtml(d.name)}</strong></button> ${anomalyBadge}${nedBadge}</td>
                     <td>${d.amount.toLocaleString()}</td>
@@ -5089,21 +5163,25 @@ ORDER BY name;
             list.sort((a,b) => b.budget - a.budget);
 
             body.innerHTML = '';
+            bindFavClicks(body, renderHospBreakdown);
+            updateFavLine('hosp-fav-line', 'units');
             if (list.length === 0) {
-                const msg = (rawTransactions && rawTransactions.length > 0) 
-                    ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)' 
+                const msg = (rawTransactions && rawTransactions.length > 0)
+                    ? 'ไม่พบข้อมูลที่ตรงตามเงื่อนไข (ลองกดปุ่ม 🔄 รีเซ็ตตัวกรอง ด้านบน)'
                     : 'ยังไม่มีข้อมูลนำเข้าในระบบ';
-                body.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted); padding: 30px;">${msg}</td></tr>`;
                 return;
             }
 
-            list.forEach(h => {
+            // F3: pinned first after the budget sort; stats/radar keep the plain sorted list
+            sortFavoritesFirst(list, 'units', 'hospcode').forEach(h => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 if (qualitySelectedHosp === h.hospcode) {
                     tr.style.background = 'rgba(0, 242, 254, 0.1)';
                 }
                 tr.innerHTML = `
+                    <td class="fav-cell">${favStarHtml('units', h.hospcode)}</td>
                     <td><code>${escapeHtml(h.hospcode)}</code></td>
                     <td><strong>${escapeHtml(h.name)}</strong>${outlierFlagHtml(outliers.get(h.hospcode))}</td>
                     <td>${h.count.toLocaleString()}</td>
@@ -5805,7 +5883,7 @@ ORDER BY name;
             const safe = s => (/^[=+\-@]/.test(s) && !/^[+-]?\d[\d,]*(\.\d+)?%?$/.test(s)) ? "'" + s : s;
             return Array.from(table.rows || [])
                 .filter(r => r.offsetParent !== null)
-                .map(r => Array.from(r.cells).map(c => safe(clean(c.innerText))).join('\t'))
+                .map(r => Array.from(r.cells).filter(c => !c.classList.contains('fav-cell')).map(c => safe(clean(c.innerText))).join('\t'))
                 .join('\n');
         }
 
