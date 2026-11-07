@@ -4023,7 +4023,10 @@
             return tab ? tab.id.replace('tab-', '') : 'dashboard';
         }
 
+        // init code switches tabs/filters before restoreUiState runs; saving then would overwrite the stored state
+        let _uiRestored = false;
         function saveUiState() {
+            if (!_uiRestored) return;
             try {
                 const yearEl = document.getElementById('drug-year-select');
                 const monthEl = document.getElementById('drug-month-select');
@@ -4069,7 +4072,7 @@
                 // Restore active tab (skipRender=true; DOMContentLoaded renders below)
                 const validTabs = ['dashboard','import','drugs','district','hosp','variance','abc-ved','quality','map','access-index','rdu','yoy'];
                 if (s.tab && validTabs.includes(s.tab)) switchTab(s.tab, true);
-            } catch(e) {}
+            } catch(e) {} finally { _uiRestored = true; }
         }
 
         tabBtns.forEach(btn => {
@@ -8994,6 +8997,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             } else {
                 refreshAllUI();
             }
+            // before the (possibly slow) cloud refresh, so a late restore can't yank the user back to an old tab
+            restoreUiState();
 
             // The browser cache is shown first and was never compared with the cloud, so imports from other
             // machines and cloud clean-ups stayed invisible (and the next push re-uploaded removed rows).
@@ -9005,7 +9010,6 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
 
             updateNavDataStatus();
             populateAllFilterDropdowns();
-            restoreUiState();
             renderDrugBreakdown();
             renderDistrictBreakdown();
             renderHospBreakdown();
