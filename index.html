@@ -4061,7 +4061,11 @@
                 if (s.year)  handleFilterChange('year',     s.year,  true);
                 if (s.month) handleFilterChange('month',    s.month, true);
                 if (s.dist)  handleFilterChange('district', s.dist,  true);
+                s.hosp = validate(s.hosp, 'drug-hosp-select');
                 if (s.hosp)  handleFilterChange('hosp',     s.hosp,  true);
+                const gs = document.getElementById('global-search');
+                if (gs) gs.value = '';
+                rxSearch = '';
 
                 // Restore active tab (skipRender=true; DOMContentLoaded renders below)
                 const validTabs = ['dashboard','import','drugs','district','hosp','variance','abc-ved','quality','map','access-index','rdu','yoy'];
@@ -4111,6 +4115,7 @@
 
         // Duplicate-import state
         let _importOverwrite = false;
+        let _lastImportLogged = false;
         let _lastImportRows = null;
         let _lastImportFilename = '';
         let _lastImportUploadTime = '';
@@ -5101,10 +5106,14 @@ ORDER BY name;
                     }
                     const rowCount = rows.length;
                     const dateStr = new Date().toLocaleString('th-TH', {hour12: false});
+                    const ok = processParsedExcelData(rows, file.name, dateStr);
+                    if (ok === false) {
+                        showToast('⚠️ ทุกแถวซ้ำกับข้อมูลเดิม — ไม่ได้นำเข้า', 'warn');
+                        return;
+                    }
                     const newTr = document.createElement('tr');
                     newTr.innerHTML = `<td>${dateStr}</td><td><code>${escapeHtml(file.name)}</code></td><td>${rowCount.toLocaleString()} แถว</td><td><span class="badge-status success">admin</span></td>`;
                     if (importHistoryBody) importHistoryBody.insertBefore(newTr, importHistoryBody.firstChild);
-                    processParsedExcelData(rows, file.name, dateStr);
                     try { localStorage.setItem('rxmuk_last_import_filename', file.name); } catch {}
                     resultMsg.className = "badge-status success";
                     resultMsg.innerHTML = `✅ นำเข้าสำเร็จ! ${rowCount.toLocaleString()} แถว จาก "${escapeHtml(sheetName)}" — กำลังบันทึก backup อัตโนมัติ...`;
@@ -5331,6 +5340,7 @@ ORDER BY name;
         function processParsedExcelData(rows, filename, uploadTimeStr) {
             console.log(`Processing file: ${filename} with ${rows.length} rows`);
             const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
+            if (!_importOverwrite) _lastImportLogged = false;
             _lastImportRows = rows;
             _lastImportFilename = filename;
             _lastImportUploadTime = uploadTimeStr;
@@ -5420,7 +5430,7 @@ ORDER BY name;
 
             if (newTxs.length === 0 && dupCount > 0 && !_importOverwrite) {
                 showDupWarning(dupCount);
-                return;
+                return false;
             }
 
             // Replace only same source + same months, like the CSV path. Replacing everything here made the
@@ -5484,18 +5494,23 @@ ORDER BY name;
 
             // Save to storage for persistence
             saveToStorage();
-            addImportHistoryEntry({
-                date: uploadTime,
-                filename: filename,
-                rows: rawTransactions.length,
-                user: localStorage.getItem('rxmuk_auth_user') || '-'
-            }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
+            if (!_importOverwrite || !_lastImportLogged) {
+                _lastImportLogged = true;
+                addImportHistoryEntry({
+                    date: uploadTime,
+                    filename: filename,
+                    rows: rawTransactions.length,
+                    user: localStorage.getItem('rxmuk_auth_user') || '-'
+                }).then(renderImportHistory).catch(e => console.warn('History log failed:', e));
+            }
 
             // Update nav status
             refreshAllUI();
             renderImportHistory();
 
             if (dupCount > 0 && !_importOverwrite) showDupWarning(dupCount);
+            if (!dupCount) _lastImportRows = null;
+            return true;
         }
 
         // Process pre-aggregated data (specifically for large CSV streaming)
@@ -6915,7 +6930,7 @@ ORDER BY name;
             const info  = document.getElementById('raw-modal-info');
             const tbl   = document.getElementById('raw-modal-table');
             if (!modal || !info || !tbl) return;
-            info.textContent = `แสดง ${txs.length.toLocaleString()} รายการ — หน่วยบริการ ${escapeHtml(hospcode)} เดือน ${escapeHtml(month)}`;
+            info.textContent = `แสดง ${txs.length.toLocaleString()} รายการ — หน่วยบริการ ${hospcode} เดือน ${month}`;
             const cols = ['ปี-เดือน','อำเภอ','หน่วยบริการ (Hospcode)','ชื่อสถานบริการ','รหัสยา (DID)','ชื่อยา','จำนวน','ราคา (฿)','ต้นทุน (฿)','เวลาที่นำเข้า'];
             let html = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
             txs.slice(0, 2000).forEach(t => {
@@ -8143,11 +8158,18 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             renderAbcVedMatrix();
         }
 
-        function renderMissingDataHeatmap() {
+        function renderMissingDataHeatmap(txsIn) {
             const container = document.getElementById('missing-heatmap-container');
             if (!container) return;
+            if (!container.dataset.bound) {
+                container.dataset.bound = '1';
+                container.addEventListener('click', e => {
+                    const td = e.target.closest('td[data-h]');
+                    if (td) showRawModalForCell(td.dataset.h, td.dataset.m);
+                });
+            }
 
-            const txs = getFilteredTransactions('quality');
+            const txs = txsIn || getFilteredTransactions('quality');
             if (!txs.length) { container.innerHTML = '<p style="color:var(--text-muted);padding:12px;">ไม่มีข้อมูล</p>'; return; }
 
             // Build counts[hospcode][month] = rowCount
@@ -8217,7 +8239,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                         title = `${cnt} แถว (${(ratio * 100).toFixed(0)}% ของ median ${median})`;
                     }
                     const cellStyle = `padding:3px 6px;text-align:center;background:${bg};cursor:pointer;border:1px solid rgba(0,0,0,0.15);`;
-                    html += `<td style="${cellStyle}" title="${escapeHtml(title)}" onclick="showRawModalForCell('${escapeHtml(h)}','${escapeHtml(m)}')">${cnt || '—'}</td>`;
+                    html += `<td style="${cellStyle}" title="${escapeHtml(title)}" data-h="${escapeHtml(h)}" data-m="${escapeHtml(m)}">${cnt || '—'}</td>`;
                 });
                 html += '</tr>';
             });
@@ -8462,7 +8484,7 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     }
                 }
             }
-            renderMissingDataHeatmap();
+            renderMissingDataHeatmap(txs);
         }
 
         function resetQualityTable() {
