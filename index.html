@@ -1813,6 +1813,27 @@
                         </div>
                     </div>
 
+                    <!-- D4: NED essential-drug-list comparison (user-imported list, browser-only, IndexedDB rxmuk_ned) -->
+                    <div class="panel" id="ned-panel">
+                        <div class="panel-header">
+                            <h3 class="panel-title"><span>📚</span> นำเข้าบัญชียาหลักแห่งชาติ (NED)</h3>
+                            <span id="ned-saved-info" style="font-size:0.75rem; color:var(--text-muted);"></span>
+                        </div>
+                        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
+                            นำเข้าไฟล์บัญชียาหลักฉบับทางการ (.xlsx/.xls/.csv) เพื่อเทียบยานอกบัญชี เก็บในเบราว์เซอร์นี้เท่านั้น ไม่อัปโหลดขึ้น Cloud
+                        </div>
+                        <input type="file" class="no-print" id="ned-file-input" accept=".xlsx,.xls,.csv" aria-label="เลือกไฟล์บัญชียาหลักแห่งชาติ">
+                        <div id="ned-map-box" class="no-print" style="display:none; margin-top:12px; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                            <label style="font-size:0.78rem;">รหัสยา (didstd)<br><select id="ned-col-did"></select></label>
+                            <label style="font-size:0.78rem;">ชื่อยา<br><select id="ned-col-name"></select></label>
+                            <button class="btn btn-primary no-print" id="ned-btn-import" type="button">นำเข้าบัญชียาหลัก</button>
+                        </div>
+                        <div style="margin-top:8px;">
+                            <button class="btn no-print" id="ned-btn-clear" type="button" style="display:none;">ล้างบัญชียาหลัก</button>
+                        </div>
+                        <div id="ned-status" style="margin-top:8px; font-size:0.8rem;" role="status"></div>
+                    </div>
+
                     <!-- Import History / File logs panel (client-side log via IndexedDB) -->
                     <div class="panel" id="import-history-box">
                         <div class="panel-header">
@@ -1875,6 +1896,10 @@
                         <div style="flex:1 1 160px;background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);border-radius:10px;padding:12px 16px;">
                             <div style="font-size:0.75rem;color:var(--text-muted);" title="เกณฑ์ของแท็บนี้: A มูลค่ารวมเกิน 100,000 บาท, B เกิน 25,000 บาท, C ไม่เกิน 25,000 บาท (แท็บ ABC-VED ใช้สัดส่วนมูลค่าสะสม 70/20/10)">🏆 ยากลุ่ม A (มูลค่ารวมเกิน 100,000 บาท)</div>
                             <div id="drug-stat-abc" style="font-size:1.4rem;font-weight:800;color:var(--c-secondary);">—</div>
+                        </div>
+                        <div id="drug-stat-ned-card" style="display:none;flex:1 1 160px;background:rgba(255,92,122,0.08);border:1px solid rgba(255,92,122,0.2);border-radius:10px;padding:12px 16px;">
+                            <div style="font-size:0.75rem;color:var(--text-muted);" title="มูลค่ายาที่ไม่อยู่ในบัญชียาหลักแห่งชาติที่นำเข้า ÷ มูลค่ารวมของรายการที่กรองอยู่">📚 % มูลค่ายานอกบัญชี</div>
+                            <div id="drug-stat-ned" style="font-size:1.4rem;font-weight:800;color:var(--c-red, #ff5c7a);">—</div>
                         </div>
                         <button onclick="showRawModal('drug')" style="flex:0 0 auto;align-self:center;background:rgba(0,242,254,0.1);border:1px solid rgba(0,242,254,0.3);color:var(--c-primary);border-radius:10px;padding:10px 18px;cursor:pointer;font-size:0.85rem;font-weight:600;">🔎 ดูข้อมูลดิบ</button>
                         <button class="btn print-keep" onclick="printActiveTab()" title="พิมพ์ / บันทึก PDF" style="margin-left:auto;">🖨️ พิมพ์ PDF</button>
@@ -3225,6 +3250,10 @@
                     <div style="flex:1 1 180px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:12px 16px;">
                         <div style="font-size:0.75rem;color:var(--text-muted);">💊 สัดส่วน Generic (ประมาณการ)</div>
                         <div id="rdu-stat-generic" style="font-size:1.4rem;font-weight:800;color:var(--c-blue, #3b82f6);">—</div>
+                    </div>
+                    <div id="rdu-stat-ned-card" style="display:none;flex:1 1 180px;background:rgba(255,92,122,0.08);border:1px solid rgba(255,92,122,0.2);border-radius:10px;padding:12px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-muted);" title="มูลค่ายาที่ไม่อยู่ในบัญชียาหลักแห่งชาติที่นำเข้า ÷ มูลค่ารวมของรายการที่กรองอยู่">📚 % มูลค่ายานอกบัญชี</div>
+                        <div id="rdu-stat-ned" style="font-size:1.4rem;font-weight:800;color:var(--c-red, #ff5c7a);">—</div>
                     </div>
                     <button class="btn print-keep" onclick="printActiveTab()" title="พิมพ์ / บันทึก PDF" style="margin-left:auto;">🖨️ พิมพ์ PDF</button>
                 </div>
@@ -4767,10 +4796,12 @@ ORDER BY name;
                 const badgeColor = d.abc === 'A' ? 'var(--c-red)' : (d.abc === 'B' ? 'var(--c-yellow)' : (d.abc === 'C' ? 'var(--c-green)' : 'var(--text-muted)'));
                 const anomalyBadge = d.isAnomaly ? `<span class="badge-status danger" style="font-size:0.65rem; margin-left:8px;" title="ราคาต่อหน่วยบางรายการต่างจากค่าเฉลี่ยเกิน 150%">⚠️ ราคาผิดปกติ</span>` : '';
                 const adc = d.adc.toFixed(1);
+                // D4: only when a NED list is loaded (isOnNed returns null otherwise)
+                const nedBadge = isOnNed(d.didstd, d.name) === false ? `<span class="badge-status" style="font-size:0.65rem; margin-left:8px; color:var(--c-yellow);" title="ไม่อยู่ในบัญชียาหลักแห่งชาติที่นำเข้า">นอกบัญชี</span>` : '';
 
                 tr.innerHTML = `
                     <td><code>${escapeHtml(d.didstd)}</code></td>
-                    <td><button type="button" class="link-btn" title="ดูแนวโน้มรายเดือนและหน่วยบริการที่จ่าย"><strong>${escapeHtml(d.name)}</strong></button> ${anomalyBadge}</td>
+                    <td><button type="button" class="link-btn" title="ดูแนวโน้มรายเดือนและหน่วยบริการที่จ่าย"><strong>${escapeHtml(d.name)}</strong></button> ${anomalyBadge}${nedBadge}</td>
                     <td>${d.amount.toLocaleString()}</td>
                     <td style="color:var(--c-primary); font-weight:bold;">${adc}</td>
                     <td>${Math.round(d.price).toLocaleString()} บาท</td>
@@ -5451,6 +5482,9 @@ ORDER BY name;
                     idbSet('rxmuk_stock', null).catch(()=>{});
                     _stockMap = null;
                     if (document.getElementById('stock-panel')) renderStockTable();
+                    idbSet('rxmuk_ned', null).catch(()=>{});
+                    _ned = null; _nedLoaded = true;
+                    renderNedStatus();
 
                     // Delete Cloud file so reload doesn't bring old data back
                     gistDeleteFile('raw_data.json')
@@ -7320,6 +7354,12 @@ ORDER BY name;
             if (el('drug-stat-price'))  el('drug-stat-price').textContent  = totalPrice.toLocaleString() + ' ฿';
             if (el('drug-stat-amount')) el('drug-stat-amount').textContent = totalAmt.toLocaleString() + ' หน่วย';
             if (el('drug-stat-abc'))    el('drug-stat-abc').textContent    = abcA.toLocaleString() + ' รายการ';
+            const nedCard = el('drug-stat-ned-card');
+            if (nedCard) {
+                const pct = nedOffListPct(list.map(d => ({ didstd: d.didstd, dname: d.name, price: d.price })));
+                nedCard.style.display = pct === null ? 'none' : '';
+                if (pct !== null && el('drug-stat-ned')) el('drug-stat-ned').textContent = pct.toFixed(1) + '%';
+            }
         }
 
         function updateDistrictStats(list) {
@@ -7832,6 +7872,12 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         document.getElementById('rdu-stat-antibiotic').textContent = `${antiPct.toFixed(1)}%`;
         document.getElementById('rdu-stat-had').textContent = `${hadCount.toLocaleString()} รายการ`;
         document.getElementById('rdu-stat-poly').textContent = polyCount.toLocaleString();
+        const rduNedCard = document.getElementById('rdu-stat-ned-card');
+        if (rduNedCard) {
+            const nedPct = nedOffListPct(txs);
+            rduNedCard.style.display = nedPct === null ? 'none' : '';
+            if (nedPct !== null) document.getElementById('rdu-stat-ned').textContent = nedPct.toFixed(1) + '%';
+        }
 
         // Generic ratio (name heuristic): distinct didstd per unit and province
         const genUnits = {};
@@ -8238,6 +8284,181 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         }
         // ===== C3 STOCK END =====
 
+        // ===== D4 NED BEGIN =====
+        // Pure helpers (no DOM). The NED list is never embedded: it comes only from a user-imported file (IndexedDB rxmuk_ned).
+        let _ned = null, _nedLoaded = false, _nedBound = false, _nedRows = [];
+
+        // Name normaliser, deliberately simple: lowercase; drop strength tokens ("500 mg", "5/500 mg", "0.5%", "100 iu/ml"),
+        // bare numbers and common dosage-form words; strip punctuation; collapse spaces. "Paracetamol 500 mg Tablet" -> "paracetamol".
+        const NED_UNIT = '(?:mcg|µg|ug|mg|g|kg|ml|l|iu|u|meq|mmol|%)';
+        const NED_STRENGTH_RE = new RegExp('(?<![a-z0-9])\\d+(?:[.,]\\d+)?\\s*' + NED_UNIT + '?(?:\\s*[\\/+]\\s*\\d+(?:[.,]\\d+)?\\s*' + NED_UNIT + '?)*(?![a-z])', 'gi');
+        const NED_FORM_RE = /\b(?:tablets?|tabs?|capsules?|caps?|injection|inj|syrup|suspension|susp|solution|soln|cream|ointment|gel|drops?|powder|film[- ]coated|enteric[- ]coated|sr|er|xr)\b/gi;
+        function normNedName(name) {
+            return String(name == null ? '' : name).toLowerCase()
+                .replace(NED_STRENGTH_RE, ' ')
+                .replace(NED_FORM_RE, ' ')
+                .replace(/[^a-z0-9฀-๿]+/g, ' ')
+                .replace(/\s+/g, ' ').trim();
+        }
+
+        function guessNedColumns(headers) {
+            const used = new Set();
+            const pick = (re) => {
+                const h = headers.find(x => !used.has(x) && re.test(String(x)));
+                if (h !== undefined) used.add(h);
+                return h === undefined ? '' : h;
+            };
+            const did = pick(/did|รหัส|code/i);
+            const name = pick(/name|ชื่อ|generic|รายการ/i);
+            return { did, name };
+        }
+
+        // Returns {dids:[...], names:[...], imported, skipped}. didstd must be 24 digits (Excel scientific notation is skipped);
+        // a row counts as imported when it yields a valid didstd or a name.
+        function parseNedRows(rows, didCol, nameCol) {
+            const dids = new Set(), names = new Set();
+            let imported = 0, skipped = 0;
+            const blank = (v) => v === undefined || v === null || String(v).trim() === '';
+            for (const row of rows) {
+                const dv = didCol ? row[didCol] : '', nv = nameCol ? row[nameCol] : '';
+                if (blank(dv) && blank(nv)) continue;
+                let ok = false;
+                if (!blank(dv)) {
+                    const ds = String(dv).trim();
+                    if (/^\d{24}$/.test(ds)) { dids.add(ds); ok = true; }
+                }
+                if (!blank(nv)) {
+                    const nm = String(nv).trim();
+                    if (normNedName(nm)) { names.add(nm); ok = true; }
+                }
+                if (ok) imported++; else skipped++;
+            }
+            return { dids: [...dids], names: [...names], imported, skipped };
+        }
+
+        function buildNed(rec) {
+            if (!rec || (!Array.isArray(rec.dids) && !Array.isArray(rec.names))) return null;
+            const names = new Set();
+            (rec.names || []).forEach(n => { const k = normNedName(n); if (k) names.add(k); });
+            const dids = new Set((rec.dids || []).map(d => String(d).trim()));
+            if (!dids.size && !names.size) return null;
+            return { dids, names, savedAt: rec.savedAt, source: rec.source || '' };
+        }
+
+        // true/false, or null when no list is loaded (callers must show nothing for null)
+        function isOnNed(didstd, dname) {
+            if (!_ned) return null;
+            if (didstd != null && _ned.dids.has(String(didstd).trim())) return true;
+            const k = normNedName(dname);
+            return !!k && _ned.names.has(k);
+        }
+
+        // items: [{didstd, dname, price}] -> off-list share of the total price in %, or null when no list is loaded
+        function nedOffListPct(items) {
+            if (!_ned) return null;
+            const cache = new Map();
+            let off = 0, total = 0;
+            for (const t of items) {
+                const p = Number(t.price) || 0;
+                total += p;
+                let on = cache.get(t.didstd);
+                if (on === undefined) { on = isOnNed(t.didstd, t.dname); cache.set(t.didstd, on); }
+                if (on === false) off += p;
+            }
+            return total > 0 ? (off / total) * 100 : 0;
+        }
+        // ===== D4 NED END =====
+
+        // D4 DOM + storage (kept apart from the pure helpers above)
+        async function loadNedOnce() {
+            if (_nedLoaded) return _ned;
+            _nedLoaded = true;
+            try { _ned = buildNed(await idbGet('rxmuk_ned')); } catch (e) { _ned = null; }
+            return _ned;
+        }
+
+        function nedStatus(msg, isErr) {
+            const el = document.getElementById('ned-status');
+            if (!el) return;
+            el.textContent = msg;
+            el.style.color = isErr ? 'var(--c-red, #ff5c7a)' : 'var(--text-muted)';
+        }
+
+        function renderNedStatus() {
+            const info = document.getElementById('ned-saved-info');
+            const clr = document.getElementById('ned-btn-clear');
+            if (!info) return;
+            if (_ned) {
+                const n = _ned.dids.size + _ned.names.size;
+                const d = _ned.savedAt ? new Date(_ned.savedAt).toLocaleDateString('th-TH') : '';
+                nedStatus(`โหลดแล้ว ${n.toLocaleString()} รายการ (${d})` + (_ned.source ? ' — ' + _ned.source : ''));
+                info.textContent = '';
+                if (clr) clr.style.display = '';
+            } else {
+                nedStatus('ยังไม่ได้นำเข้าบัญชียาหลักแห่งชาติ');
+                if (clr) clr.style.display = 'none';
+            }
+        }
+
+        function rerenderForNed() {
+            const t = activeTabName();
+            if (t === 'drugs' || t === 'rdu') renderTab(t);
+        }
+
+        function bindNedSection() {
+            if (_nedBound || !document.getElementById('ned-panel')) return;
+            _nedBound = true;
+            document.getElementById('ned-file-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        _nedRows = XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' });
+                        _nedRows._file = file.name;
+                        const hs = new Set();
+                        _nedRows.slice(0, 50).forEach(r => Object.keys(r).forEach(k => hs.add(k)));
+                        if (!hs.size) { nedStatus('ไฟล์ว่างหรืออ่านหัวคอลัมน์ไม่ได้', true); return; }
+                        const headers = [...hs];
+                        const g = guessNedColumns(headers);
+                        const opt = (h, sel) => `<option value="${escapeHtml(h)}"${h === sel ? ' selected' : ''}>${escapeHtml(h)}</option>`;
+                        const none = '<option value="">— ไม่ใช้ —</option>';
+                        document.getElementById('ned-col-did').innerHTML = none + headers.map(h => opt(h, g.did)).join('');
+                        document.getElementById('ned-col-name').innerHTML = none + headers.map(h => opt(h, g.name)).join('');
+                        document.getElementById('ned-map-box').style.display = 'flex';
+                        nedStatus(`อ่านไฟล์ ${file.name}: ${_nedRows.length} แถว — เลือกคอลัมน์แล้วกดนำเข้า`);
+                    } catch (err) { nedStatus('อ่านไฟล์ไม่สำเร็จ: ' + err.message, true); }
+                };
+                reader.onerror = () => nedStatus('อ่านไฟล์ไม่สำเร็จ', true);
+                reader.readAsArrayBuffer(file);
+                e.target.value = '';
+            });
+            document.getElementById('ned-btn-import').addEventListener('click', async () => {
+                const did = document.getElementById('ned-col-did').value;
+                const name = document.getElementById('ned-col-name').value;
+                if (!did && !name) { nedStatus('ต้องเลือกคอลัมน์รหัสยาหรือชื่อยา อย่างน้อยหนึ่งอย่าง', true); return; }
+                const r = parseNedRows(_nedRows, did, name);
+                if (!r.dids.length && !r.names.length) { nedStatus(`นำเข้า 0 รายการ, ข้าม ${r.skipped}`, true); return; }
+                const rec = { savedAt: Date.now(), source: _nedRows._file || '', dids: r.dids, names: r.names };
+                try {
+                    await idbSet('rxmuk_ned', rec);
+                    _ned = buildNed(rec); _nedLoaded = true;
+                    renderNedStatus();
+                    nedStatus(document.getElementById('ned-status').textContent + ` — ข้าม ${r.skipped}`);
+                    document.getElementById('ned-map-box').style.display = 'none';
+                    rerenderForNed();
+                } catch (err) { nedStatus('บันทึกบัญชียาหลักไม่สำเร็จ: ' + err.message, true); }
+            });
+            document.getElementById('ned-btn-clear').addEventListener('click', async () => {
+                try { await idbSet('rxmuk_ned', null); } catch (e) {}
+                _ned = null; _nedLoaded = true;
+                renderNedStatus();
+                rerenderForNed();
+            });
+        }
+
         // ===== C4 CAL BEGIN =====
         function stockDateKey(d) {
             return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
@@ -8491,6 +8712,8 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             bindN8nSection();
             if (!document.getElementById('stock-panel')) return;
             bindStockSection();
+            bindNedSection();
+            loadNedOnce().then(renderNedStatus);
             if (!_stockLoaded) {
                 _stockLoaded = true;
                 _stockMap = await loadStock();
@@ -10222,6 +10445,9 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             renderAccessIndex();
             updateDashboardOverview();
             if (typeof updateImportStatusBar === 'function') updateImportStatusBar();
+
+            // D4: load the user-imported NED list after first render; re-render only the tabs that show it
+            setTimeout(() => { loadNedOnce().then(() => { if (_ned) rerenderForNed(); }); }, 0);
 
             // AUTO-PULL from Supabase if local is empty (silent — no error toast if cloud empty)
             if (rawTransactions.length === 0 && sbGetConfig()) {
