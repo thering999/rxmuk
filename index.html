@@ -3286,6 +3286,16 @@
                     </div>
                     <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">แสดง 10 หน่วยที่สัดส่วน Generic ต่ำสุด · จำแนกจากรูปแบบชื่อยา · ประมาณการ</div>
                 </div>
+
+                <!-- C5 Co-prescription -->
+                <div class="panel" id="rdu-corx-panel" style="margin-top: 20px; display:none;">
+                    <div class="panel-header">
+                        <h3 class="panel-title"><span>🔗</span> ยาที่สั่งร่วมกัน (Co-prescription)</h3>
+                        <button class="btn btn-secondary" id="rdu-corx-btn" type="button">คำนวณ</button>
+                    </div>
+                    <div id="rdu-corx-status" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">กด "คำนวณ" เพื่อวิเคราะห์ 50 ยาที่พบมากที่สุด (นับคู่ยาที่อยู่ใน pid เดียวกันในเดือนเดียวกัน)</div>
+                    <div id="rdu-corx-out"></div>
+                </div>
             </div>
         </section>
     </div>
@@ -7724,6 +7734,7 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
                 </tr>
             `).join('') : '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ไม่พบการใช้ยา HAD</td></tr>';
         }
+        updateCoRxPanel(txs);
         }
 
         function resetRduDashboard() {
@@ -7766,6 +7777,166 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             if (['AV', 'AE', 'AD', 'BV', 'CV'].includes(key)) return 'Category I (เข้มงวดสูง)';
             return key === 'CD' ? 'Category III (ผ่อนปรน)' : 'Category II (ปานกลาง)';
         }
+
+        // ===== C5 COPRESC BEGIN =====
+        // Pure: no closures/globals (its source is shipped to a Web Worker via toString()).
+        // rows: [{d: didstd, n: dname, p: pid, m: month}]
+        function buildCoPrescription(rows, topN) {
+            const cnt = new Map();
+            const names = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                cnt.set(r.d, (cnt.get(r.d) || 0) + 1);
+                if (!names.has(r.d)) names.set(r.d, r.n);
+            }
+            const top = Array.from(cnt.entries()).sort((a, b) => b[1] - a[1]).slice(0, topN);
+            const idx = new Map();
+            const drugs = top.map((e, i) => { idx.set(e[0], i); return { didstd: e[0], name: names.get(e[0]) }; });
+            const groups = new Map();
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                const k = idx.get(r.d);
+                if (k === undefined) continue;
+                const gk = r.p + '|' + r.m;
+                let g = groups.get(gk);
+                if (!g) { g = new Set(); groups.set(gk, g); }
+                g.add(k);
+            }
+            const n = drugs.length;
+            const matrix = [];
+            for (let i = 0; i < n; i++) matrix.push(new Array(n).fill(0));
+            groups.forEach(g => {
+                if (g.size < 2) return;
+                const a = Array.from(g);
+                for (let i = 0; i < a.length; i++) {
+                    for (let j = i + 1; j < a.length; j++) {
+                        matrix[a[i]][a[j]]++;
+                        matrix[a[j]][a[i]]++;
+                    }
+                }
+            });
+            return { drugs, matrix };
+        }
+
+        function coRxUsablePid(p) { return p !== undefined && p !== null && p !== '' && p !== 'Unknown'; }
+        function coRxPidList(t) {
+            if (t.pids) return t.pids instanceof Set ? Array.from(t.pids) : Array.isArray(t.pids) ? t.pids : Object.values(t.pids);
+            return t.pid !== undefined ? [t.pid] : [];
+        }
+
+        let _coRxCache = null;
+        let _coRxBound = false;
+        let _coRxBusy = false;
+
+        // Cheap: only decides panel visibility. Heavy work happens on the คำนวณ click.
+        function updateCoRxPanel(txs) {
+            const panel = document.getElementById('rdu-corx-panel');
+            if (!panel) return;
+            const ok = txs.some(t => t.pids ? coRxPidList(t).some(coRxUsablePid) : coRxUsablePid(t.pid));
+            panel.style.display = ok ? '' : 'none';
+            if (!_coRxBound) {
+                _coRxBound = true;
+                document.getElementById('rdu-corx-btn').addEventListener('click', runCoRx);
+            }
+            const out = document.getElementById('rdu-corx-out');
+            const status = document.getElementById('rdu-corx-status');
+            if (_coRxCache && !_coRxBusy && _coRxCache.key !== coRxKey()) {
+                out.innerHTML = '';
+                status.textContent = 'ตัวกรองเปลี่ยนแล้ว กด "คำนวณ" อีกครั้ง';
+            }
+        }
+
+        function coRxKey() {
+            const v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+            return rawTransactions.length + '|' + ['rdu-year-select', 'rdu-month-select', 'rdu-district-select'].map(v).join('|');
+        }
+
+        function runCoRx() {
+            if (_coRxBusy) return;
+            const status = document.getElementById('rdu-corx-status');
+            const out = document.getElementById('rdu-corx-out');
+            const key = coRxKey();
+            if (_coRxCache && _coRxCache.ref === rawTransactions && _coRxCache.key === key) {
+                renderCoRx(_coRxCache.result);
+                status.textContent = 'ใช้ผลที่คำนวณไว้แล้ว';
+                return;
+            }
+            const txs = getFilteredTransactions('rdu');
+            const rows = [];
+            for (let i = 0; i < txs.length; i++) {
+                const t = txs[i];
+                const pl = coRxPidList(t);
+                for (let j = 0; j < pl.length; j++) {
+                    if (coRxUsablePid(pl[j])) rows.push({ d: t.didstd, n: t.dname, p: pl[j], m: t.month });
+                }
+            }
+            if (!rows.length) { status.textContent = 'ไม่มีข้อมูล pid'; out.innerHTML = ''; return; }
+            _coRxBusy = true;
+            status.textContent = `กำลังคำนวณ ${rows.length.toLocaleString()} แถว...`;
+            out.innerHTML = '';
+            const ref = rawTransactions;
+            const done = (result) => {
+                _coRxBusy = false;
+                _coRxCache = { ref, key, result };
+                renderCoRx(result);
+                status.textContent = `คำนวณเสร็จ (${rows.length.toLocaleString()} แถว)`;
+            };
+            const fallback = () => setTimeout(() => {
+                try { done(buildCoPrescription(rows, 50)); }
+                catch (e) { _coRxBusy = false; status.textContent = 'คำนวณไม่สำเร็จ'; }
+            }, 0);
+            let worker = null, url = null;
+            try {
+                const src = buildCoPrescription.toString() + '\nonmessage = function(e){ postMessage(buildCoPrescription(e.data.rows, e.data.topN)); };';
+                url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+                worker = new Worker(url);
+            } catch (e) {
+                if (url) URL.revokeObjectURL(url);
+                fallback();
+                return;
+            }
+            const cleanup = () => { worker.terminate(); URL.revokeObjectURL(url); };
+            worker.onmessage = (e) => { cleanup(); done(e.data); };
+            worker.onerror = () => { cleanup(); fallback(); };
+            worker.postMessage({ rows, topN: 50 });
+        }
+
+        function renderCoRx(res) {
+            const out = document.getElementById('rdu-corx-out');
+            const { drugs, matrix } = res;
+            const n = drugs.length;
+            if (!n) { out.innerHTML = '<div style="color:var(--text-muted);">ไม่พบข้อมูล</div>'; return; }
+            const tot = matrix.map(r => r.reduce((s, v) => s + v, 0));
+            const order = tot.map((v, i) => i).sort((a, b) => tot[b] - tot[a]).slice(0, 20);
+            let max = 0;
+            order.forEach(i => order.forEach(j => { if (matrix[i][j] > max) max = matrix[i][j]; }));
+            if (!max) { out.innerHTML = '<div style="color:var(--text-muted);">ไม่พบยาที่สั่งร่วมกัน</div>'; return; }
+            const short = s => { s = String(s || ''); return s.length > 12 ? s.slice(0, 12) + '…' : s; };
+            let h = '<div class="table-container" style="overflow:auto;"><table class="data-table" style="font-size:0.7rem;"><thead><tr><th></th>';
+            order.forEach(j => { h += `<th title="${escapeHtml(drugs[j].name)}" style="writing-mode:vertical-rl;white-space:nowrap;">${escapeHtml(short(drugs[j].name))}</th>`; });
+            h += '</tr></thead><tbody>';
+            order.forEach(i => {
+                h += `<tr><th title="${escapeHtml(drugs[i].name)}" style="white-space:nowrap;text-align:left;">${escapeHtml(short(drugs[i].name))}</th>`;
+                order.forEach(j => {
+                    const v = matrix[i][j];
+                    const a = i === j ? 0 : v / max;
+                    const bg = a > 0 ? `rgba(239,68,68,${(0.08 + a * 0.85).toFixed(2)})` : 'transparent';
+                    h += `<td title="${escapeHtml(drugs[i].name)} + ${escapeHtml(drugs[j].name)}: ${v.toLocaleString()}" style="background:${bg};min-width:22px;height:22px;"></td>`;
+                });
+                h += '</tr>';
+            });
+            h += '</tbody></table></div>';
+            const pairs = [];
+            for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (matrix[i][j] > 0) pairs.push([i, j, matrix[i][j]]);
+            pairs.sort((a, b) => b[2] - a[2]);
+            h += '<div style="margin-top:12px;font-weight:600;">10 คู่ที่สั่งร่วมกันมากที่สุด</div><ol style="margin:6px 0 0 20px;">';
+            pairs.slice(0, 10).forEach(p => {
+                h += `<li>${escapeHtml(drugs[p[0]].name)} + ${escapeHtml(drugs[p[1]].name)} <b>(${p[2].toLocaleString()})</b></li>`;
+            });
+            h += '</ol>';
+            out.innerHTML = h;
+        }
+        // ===== C5 COPRESC END =====
 
         // ===== C3 STOCK BEGIN =====
         // Pure helpers (no DOM). Stock is province-level per didstd and lives only in this browser (IndexedDB rxmuk_stock)
