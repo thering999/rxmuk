@@ -3780,11 +3780,11 @@
                 <span>⚠️ พบ <strong>${dupCount.toLocaleString()}</strong> แถวซ้ำกับข้อมูลที่นำเข้าก่อนหน้า — ข้ามแถวซ้ำแล้ว</span>
                 <div style="display:flex;gap:8px;">
                     <button onclick="reimportWithOverwrite()" style="flex:1;padding:6px 10px;background:#0b0f19;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;font-weight:600;">เขียนทับแถวซ้ำ</button>
-                    <button onclick="document.getElementById('dup-warn-banner').remove()" style="padding:6px 10px;background:transparent;border:1px solid rgba(0,0,0,0.3);border-radius:6px;cursor:pointer;font-size:0.85rem;">✕</button>
+                    <button onclick="document.getElementById('dup-warn-banner').remove(); _lastImportRows = null;" style="padding:6px 10px;background:transparent;border:1px solid rgba(0,0,0,0.3);border-radius:6px;cursor:pointer;font-size:0.85rem;">✕</button>
                 </div>
             `;
             document.body.appendChild(banner);
-            setTimeout(() => { if (banner.parentNode) banner.remove(); }, 15000);
+            setTimeout(() => { if (banner.parentNode) { banner.remove(); _lastImportRows = null; } }, 15000);
         }
 
         function reimportWithOverwrite() {
@@ -3792,8 +3792,12 @@
             if (banner) banner.remove();
             if (!_lastImportRows) return;
             _importOverwrite = true;
-            processParsedExcelData(_lastImportRows, _lastImportFilename, _lastImportUploadTime);
-            _importOverwrite = false;
+            try {
+                processParsedExcelData(_lastImportRows, _lastImportFilename, _lastImportUploadTime);
+            } finally {
+                _importOverwrite = false;
+            }
+            _lastImportRows = null;
         }
 
         function printActiveTab() {
@@ -5344,7 +5348,17 @@ ORDER BY name;
             const dateKeys = keys.filter(isExcelDateKey);
 
             const newTxs = [];
-            const existingKeys = new Set(rawTransactions.map(t => `${t.hospcode}|${t.didstd}|${t.month}`));
+            const srcKey = sourceKeyOf(filename);
+            const rowKeyOf = t => `${t.hospcode}|${t.didstd}|${t.pid}|${t.date}|${t.amount}|${t.price}|${t.cost}`;
+            // Dup detection only vs rows from OTHER sources; same-src re-import is handled by the month/src filter
+            const otherKeys = new Map();
+            rawTransactions.forEach(t => {
+                if (t.src && t.src !== srcKey) {
+                    const k = rowKeyOf(t);
+                    otherKeys.set(k, (otherKeys.get(k) || 0) + 1);
+                }
+            });
+            const removeKeys = new Map();
             let dupCount = 0;
 
             rows.forEach(row => {
@@ -5377,10 +5391,13 @@ ORDER BY name;
                 const dateStr = parseFullDateFromRow(row, dateKeys);
                 const monthStr = dateStr.slice(0, 7);
 
-                const dupKey = `${hospcode}|${didstd}|${monthStr}`;
-                if (existingKeys.has(dupKey)) {
+                const dupKey = `${hospcode}|${didstd}|${pid}|${dateStr}|${amount}|${price}|${cost}`;
+                const left = otherKeys.get(dupKey) || 0;
+                if (left > 0) {
+                    otherKeys.set(dupKey, left - 1);
                     dupCount++;
                     if (!_importOverwrite) return; // skip duplicate; `return` exits the forEach callback
+                    removeKeys.set(dupKey, (removeKeys.get(dupKey) || 0) + 1);
                 }
 
                 newTxs.push({
@@ -5400,17 +5417,25 @@ ORDER BY name;
                 });
             });
 
-            if (dupCount > 0 && !_importOverwrite) {
+            if (newTxs.length === 0 && dupCount > 0 && !_importOverwrite) {
                 showDupWarning(dupCount);
+                return;
             }
 
             // Replace only same source + same months, like the CSV path. Replacing everything here made the
             // auto-push upload just this file's months and then delete every other month from the cloud
-            const srcKey = sourceKeyOf(filename);
             newTxs.forEach(t => { t.src = srcKey; });
             const newMonths = new Set(newTxs.map(t => t.month || ''));
             const before = rawTransactions.length;
-            rawTransactions = rawTransactions.filter(r => !(newMonths.has(r.month || '') && (!r.src || r.src === srcKey)));
+            rawTransactions = rawTransactions.filter(r => {
+                if (newMonths.has(r.month || '') && (!r.src || r.src === srcKey)) return false;
+                if (removeKeys.size && r.src && r.src !== srcKey) {
+                    const k = rowKeyOf(r);
+                    const n = removeKeys.get(k) || 0;
+                    if (n > 0) { removeKeys.set(k, n - 1); return false; }
+                }
+                return true;
+            });
             const replaced = before - rawTransactions.length;
             rawTransactions = rawTransactions.concat(newTxs);
             sessionImportStarted = true;
@@ -5468,6 +5493,8 @@ ORDER BY name;
             // Update nav status
             refreshAllUI();
             renderImportHistory();
+
+            if (dupCount > 0 && !_importOverwrite) showDupWarning(dupCount);
         }
 
         // Process pre-aggregated data (specifically for large CSV streaming)
