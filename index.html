@@ -3762,6 +3762,40 @@
         }
 
 
+        function showDupWarning(dupCount) {
+            const existing = document.getElementById('dup-warn-banner');
+            if (existing) existing.remove();
+
+            const banner = document.createElement('div');
+            banner.id = 'dup-warn-banner';
+            Object.assign(banner.style, {
+                position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999,
+                background: 'rgba(245,158,11,0.95)', color: '#000',
+                padding: '12px 16px', borderRadius: '10px', fontFamily: 'Sarabun, sans-serif',
+                fontSize: '0.9rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                maxWidth: '380px', lineHeight: '1.4', display: 'flex',
+                flexDirection: 'column', gap: '8px'
+            });
+            banner.innerHTML = `
+                <span>⚠️ พบ <strong>${dupCount.toLocaleString()}</strong> แถวซ้ำกับข้อมูลที่นำเข้าก่อนหน้า — ข้ามแถวซ้ำแล้ว</span>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="reimportWithOverwrite()" style="flex:1;padding:6px 10px;background:#0b0f19;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;font-weight:600;">เขียนทับแถวซ้ำ</button>
+                    <button onclick="document.getElementById('dup-warn-banner').remove()" style="padding:6px 10px;background:transparent;border:1px solid rgba(0,0,0,0.3);border-radius:6px;cursor:pointer;font-size:0.85rem;">✕</button>
+                </div>
+            `;
+            document.body.appendChild(banner);
+            setTimeout(() => { if (banner.parentNode) banner.remove(); }, 15000);
+        }
+
+        function reimportWithOverwrite() {
+            const banner = document.getElementById('dup-warn-banner');
+            if (banner) banner.remove();
+            if (!_lastImportRows) return;
+            _importOverwrite = true;
+            processParsedExcelData(_lastImportRows, _lastImportFilename, _lastImportUploadTime);
+            _importOverwrite = false;
+        }
+
         function printActiveTab() {
             const active = document.querySelector('.tab-content.active');
             if (!active) { window.print(); return; }
@@ -4069,6 +4103,12 @@
 
         // Global search state
         let rxSearch = '';
+
+        // Duplicate-import state
+        let _importOverwrite = false;
+        let _lastImportRows = null;
+        let _lastImportFilename = '';
+        let _lastImportUploadTime = '';
 
         // Global Transaction Log
         let rawTransactions = [];
@@ -5286,6 +5326,9 @@ ORDER BY name;
         function processParsedExcelData(rows, filename, uploadTimeStr) {
             console.log(`Processing file: ${filename} with ${rows.length} rows`);
             const uploadTime = uploadTimeStr || new Date().toLocaleString('th-TH', { hour12: false });
+            _lastImportRows = rows;
+            _lastImportFilename = filename;
+            _lastImportUploadTime = uploadTimeStr;
             const keys = Object.keys(rows[0] || {});
             
             // Detect key mappings (English, Thai, substrings)
@@ -5301,6 +5344,8 @@ ORDER BY name;
             const dateKeys = keys.filter(isExcelDateKey);
 
             const newTxs = [];
+            const existingKeys = new Set(rawTransactions.map(t => `${t.hospcode}|${t.didstd}|${t.month}`));
+            let dupCount = 0;
 
             rows.forEach(row => {
                 let hospcode = String(row[hospcodeKey] || 'Unknown').trim();
@@ -5332,6 +5377,12 @@ ORDER BY name;
                 const dateStr = parseFullDateFromRow(row, dateKeys);
                 const monthStr = dateStr.slice(0, 7);
 
+                const dupKey = `${hospcode}|${didstd}|${monthStr}`;
+                if (existingKeys.has(dupKey)) {
+                    dupCount++;
+                    if (!_importOverwrite) return; // skip duplicate; `return` exits the forEach callback
+                }
+
                 newTxs.push({
                     pid,
                     didstd,
@@ -5348,6 +5399,10 @@ ORDER BY name;
                     uploadTime: uploadTime
                 });
             });
+
+            if (dupCount > 0 && !_importOverwrite) {
+                showDupWarning(dupCount);
+            }
 
             // Replace only same source + same months, like the CSV path. Replacing everything here made the
             // auto-push upload just this file's months and then delete every other month from the cloud
