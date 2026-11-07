@@ -460,6 +460,7 @@ h1, h2, h3, h4, h5, h6 {
   header, .hero, .tab-btn, .filter-row, .btn:not(.print-keep),
   #raw-data-modal, .toast-container, #burn-alert-banner, #dup-warn-banner,
   #price-trend-modal, #global-search, #seasonal-drug-select { display: none !important; }
+  .no-print { display: none !important; }
   #missing-heatmap-container { overflow: visible !important; }
   .tab-content { display: none !important; }
   .tab-content.active { display: block !important; }
