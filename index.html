@@ -1269,6 +1269,9 @@
           <span id="burn-alert-msg" style="color:var(--c-red); font-weight:600;"></span>
           <button onclick="dismissBurnAlert()" style="background:none; border:1px solid var(--c-red); color:var(--c-red); border-radius:6px; padding:4px 10px; cursor:pointer; font-size:0.85rem;">✕ ปิด</button>
         </div>
+        <div class="container no-print" style="margin-bottom:12px; text-align:right;">
+            <button id="monthly-report-btn" class="btn btn-secondary no-print" type="button" onclick="openMonthlyReport()">📄 สร้างรายงานประจำเดือน</button>
+        </div>
         <!-- Stats Grid -->
         <section class="container grid-stats">
             <div class="stat-card">
@@ -6322,6 +6325,127 @@ ORDER BY name;
             const lbl = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
             lbl.forEach((l, i) => { s += `<text x="${X(i)}" y="${H - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${l}</text>`; });
             svgEl.innerHTML = s;
+        }
+
+        // --- E4: PRINTABLE MONTHLY REPORT (browser "Save as PDF"; jsPDF cannot shape Thai) ---
+        // Pure: data = { txs, periodText, generatedText, annualBudget, forecastLine }
+        function buildMonthlyReportHtml(data) {
+            const txs = Array.isArray(data.txs) ? data.txs.filter(Boolean) : [];
+            const n = v => Math.round(Number(v) || 0).toLocaleString('th-TH');
+            const e = escapeHtml;
+            const annual = data.annualBudget > 0 ? data.annualBudget : 250000000;
+            const total = txs.reduce((s, t) => s + (Number(t.price) || 0), 0);
+            const hospSet = new Set(txs.map(t => t.hospcode));
+            const drugSet = new Set(txs.map(t => t.didstd));
+            const burn = Math.min(100, total / annual * 100);
+
+            const drugAgg = new Map();
+            txs.forEach(t => {
+                let d = drugAgg.get(t.didstd);
+                if (!d) drugAgg.set(t.didstd, d = { didstd: t.didstd, name: t.dname, amount: 0, price: 0 });
+                d.amount += Number(t.amount) || 0;
+                d.price += Number(t.price) || 0;
+            });
+            const topDrugs = [...drugAgg.values()].sort((a, b) => b.price - a.price).slice(0, 20);
+
+            const distAgg = new Map();
+            txs.forEach(t => {
+                const code = t.amphurCode || '?';
+                let d = distAgg.get(code);
+                if (!d) distAgg.set(code, d = { code, name: t.amphurName || `อำเภอ ${code}`, units: new Set(), budget: 0 });
+                d.units.add(t.hospcode);
+                d.budget += Number(t.price) || 0;
+            });
+            const dists = [...distAgg.values()].sort((a, b) => b.budget - a.budget);
+
+            const antiCount = txs.filter(t => isAntibiotic(t.didstd, t.dname)).length;
+            const antiPct = txs.length ? antiCount / txs.length * 100 : 0;
+            const genSeen = new Map();
+            txs.forEach(t => { if (!genSeen.has(t.didstd)) genSeen.set(t.didstd, !isLikelyBrandName(t.dname)); });
+            let genN = 0;
+            genSeen.forEach(g => { if (g) genN++; });
+            const genPct = genSeen.size ? genN / genSeen.size * 100 : 0;
+
+            // same rules as renderDataQualityScorecard
+            let missing = 0, invalid = 0, zero = 0, bad = 0;
+            txs.forEach(t => {
+                const m = (t.didstd === 'N/A' || !t.didstd);
+                const i = (!m && t.didstd.length !== 24);
+                const z = (t.price <= 0);
+                if (m) missing++;
+                if (i) invalid++;
+                if (z) zero++;
+                if (m || i || z) bad++;
+            });
+            const score = txs.length ? (txs.length - bad) / txs.length * 100 : 100;
+
+            const drugRows = topDrugs.length ? topDrugs.map((d, i) => `<tr><td class="c">${i + 1}</td><td>${e(d.name)}<div class="sub">${e(d.didstd)}</div></td><td class="r">${n(d.amount)}</td><td class="r">${n(d.price)}</td><td class="r">${total > 0 ? (d.price / total * 100).toFixed(1) : '0.0'}%</td></tr>`).join('')
+                : '<tr><td colspan="5" class="c">ไม่มีข้อมูล</td></tr>';
+            const distRows = dists.length ? dists.map(d => {
+                const pop = MUKDAHAN_POPULATION[d.code] && MUKDAHAN_POPULATION[d.code].pop;
+                return `<tr><td>${e(d.name)}</td><td class="r">${n(d.units.size)}</td><td class="r">${n(d.budget)}</td><td class="r">${total > 0 ? (d.budget / total * 100).toFixed(1) : '0.0'}%</td><td class="r">${pop ? n(d.budget / pop * 1000) : '–'}</td></tr>`;
+            }).join('') : '<tr><td colspan="5" class="c">ไม่มีข้อมูล</td></tr>';
+
+            const css = `@page { size: A4; margin: 15mm }
+*{box-sizing:border-box}body{font-family:'Sarabun',sans-serif;color:#111;font-size:12pt;line-height:1.5;margin:0}
+h2{font-size:15pt;border-bottom:2px solid #0e7490;padding-bottom:4px;margin:22px 0 10px;color:#0e7490}
+.cover{text-align:center;padding-top:80mm;page-break-after:always}.cover .mark{font-size:60pt}.cover h1{font-size:26pt;margin:10px 0}
+.cover p{font-size:14pt;margin:4px 0;color:#444}
+table{width:100%;border-collapse:collapse;font-size:10.5pt}th,td{border:1px solid #999;padding:4px 7px;vertical-align:top}th{background:#e6f4f7}
+tr{page-break-inside:avoid}.r{text-align:right}.c{text-align:center}.sub{font-size:8.5pt;color:#666}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}.kv div{border:1px solid #ccc;padding:6px 10px}.kv b{display:block;font-size:14pt}
+section{page-break-inside:auto}`;
+            return `<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>รายงานการใช้ยา จังหวัดมุกดาหาร</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>${css}</style></head><body>
+<div class="cover"><div class="mark">💊</div><h1>รายงานการใช้ยา จังหวัดมุกดาหาร</h1><p>ช่วงข้อมูล: ${e(data.periodText)}</p><p>จัดทำเมื่อ ${e(data.generatedText)}</p></div>
+<section><h2>1. สรุปผู้บริหาร</h2>
+<div class="kv"><div>มูลค่ารวม<b>${n(total)} บาท</b></div><div>จำนวนรายการยา<b>${n(drugSet.size)} รายการ</b></div><div>จำนวนหน่วยบริการ<b>${n(hospSet.size)} แห่ง</b></div><div>ใช้งบประมาณ (เทียบ ${n(annual)} บาท/ปี)<b>${burn.toFixed(1)}%</b></div></div>
+${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
+<section><h2>2. ยา 20 อันดับแรกตามมูลค่า</h2>
+<table><thead><tr><th>#</th><th>รายการยา</th><th>จำนวนจ่าย</th><th>มูลค่า (บาท)</th><th>สัดส่วน</th></tr></thead><tbody>${drugRows}</tbody></table></section>
+<section><h2>3. สรุปรายอำเภอ</h2>
+<table><thead><tr><th>อำเภอ</th><th>หน่วยบริการ</th><th>มูลค่า (บาท)</th><th>สัดส่วน</th><th>บาท/ประชากร 1,000 คน</th></tr></thead><tbody>${distRows}</tbody></table></section>
+<section><h2>4. ตัวชี้วัด RDU</h2>
+<div class="kv"><div>ยาปฏิชีวนะ (สัดส่วนรายการจ่าย)<b>${antiPct.toFixed(1)}%</b></div><div>ยาสามัญ (ประมาณจากชื่อยา)<b>${genPct.toFixed(1)}%</b></div></div></section>
+<section><h2>5. คุณภาพข้อมูล</h2>
+<div class="kv"><div>คะแนนคุณภาพรวม<b>${score.toFixed(1)}%</b></div><div>แถวข้อมูลทั้งหมด<b>${n(txs.length)}</b></div><div>รหัสยาขาด/ไม่ครบ 24 หลัก<b>${n(missing + invalid)}</b></div><div>ราคาเป็นศูนย์<b>${n(zero)}</b></div></div></section>
+<script>window.onload=function(){print()}<\/script>
+</body></html>`;
+        }
+
+        function openMonthlyReport() {
+            const txs = getFilteredTransactions('drug');
+            const val = id => { const el = document.getElementById(id); return el ? el.value : 'all'; };
+            const y = val('drug-year-select'), m = val('drug-month-select');
+            const periodText = m !== 'all' ? `เดือน ${m}` : (y !== 'all' ? `ปีงบประมาณ ${y}` : 'ทั้งหมด');
+            const annual = window.rxmukAnnualBudget || 250000000;
+            // C1 forecast line (same derivation as renderBudgetForecast)
+            let forecastLine = '';
+            const byMonth = new Map();
+            txs.forEach(t => { if (t && t.month) byMonth.set(t.month, (byMonth.get(t.month) || 0) + (Number(t.price) || 0)); });
+            let fy = '';
+            for (const mk of byMonth.keys()) { const f = getThaiFiscalYear(mk); if (f > fy) fy = f; }
+            if (fy) {
+                const totals = new Array(12).fill(null);
+                for (const [mk, sum] of byMonth) {
+                    if (getThaiFiscalYear(mk) !== fy) continue;
+                    const mm = parseInt(String(mk).split('-')[1], 10);
+                    if (mm) { const idx = (mm + 2) % 12; totals[idx] = (totals[idx] || 0) + sum; }
+                }
+                const f = forecastFiscalYear(totals);
+                if (f) forecastLine = `คาดว่าจะใช้งบ ${Math.round(f.projected).toLocaleString('th-TH')} บาท ณ สิ้นปีงบประมาณ ${fy}`;
+            }
+            const html = buildMonthlyReportHtml({
+                txs, periodText, annualBudget: annual, forecastLine,
+                generatedText: new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+            });
+            const w = window.open('', '_blank');
+            if (!w) { showToast('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต popup แล้วลองอีกครั้ง', 'warn'); return; }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
         }
 
         function updateDashboardOverview() {
