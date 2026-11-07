@@ -2882,6 +2882,21 @@
                   <h3 style="margin:0 0 12px;font-size:1rem;">🗓️ Missing Data Heatmap — ความครบถ้วนรายหน่วย × เดือน</h3>
                   <div id="missing-heatmap-container" style="overflow-x:auto;"></div>
                 </div>
+                <div class="card" style="margin-top:16px;">
+                  <h3>บันทึกหมายเหตุรายหน่วย (แชร์ทุกบัญชี)</h3>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;">
+                    <input id="anno-hospcode" placeholder="รหัสหน่วย" maxlength="10" aria-label="รหัสหน่วย" style="width:110px;">
+                    <input id="anno-month" type="month" aria-label="เดือน">
+                    <input id="anno-note" placeholder="หมายเหตุ เช่น ระบบ HIS ล่ม ส่งข้อมูลไม่ครบ" maxlength="2000" aria-label="หมายเหตุ" style="flex:1; min-width:200px;">
+                    <button class="btn btn-primary" onclick="addAnnotation()">บันทึก</button>
+                  </div>
+                  <div class="table-container">
+                    <table class="data-table">
+                      <thead><tr><th>หน่วย</th><th>เดือน</th><th>หมายเหตุ</th><th>ผู้บันทึก</th><th></th></tr></thead>
+                      <tbody id="anno-body"><tr><td colspan="5" style="text-align:center;">เข้าสู่ระบบเพื่อดูหมายเหตุ</td></tr></tbody>
+                    </table>
+                  </div>
+                </div>
             </div>
             <div class="secured-lock" style="display: none;"></div>
         </section>
@@ -10228,6 +10243,56 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 }
             }
             renderMissingDataHeatmap(txs);
+            renderAnnotations();
+        }
+
+        // E1: shared notes per hospcode+month; RLS limits reads to approved users, deletes to the author
+        async function renderAnnotations() {
+            const body = document.getElementById('anno-body');
+            if (!body) return;
+            const cfg = sbGetConfig();
+            const msg = t => { body.innerHTML = `<tr><td colspan="5" style="text-align:center;">${escapeHtml(t)}</td></tr>`; };
+            if (!cfg || !cfg.url || !sbIsSignedIn()) return msg('เข้าสู่ระบบเพื่อดูหมายเหตุ');
+            try {
+                const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_annotations?select=id,hospcode,month,note,author,user_id&order=month.desc,created_at.desc&limit=200`);
+                if (!res.ok) return msg(`โหลดไม่สำเร็จ (${res.status})`);
+                const rows = await res.json();
+                if (!rows.length) return msg('ยังไม่มีหมายเหตุ');
+                const me = (sbReadSession() || {}).user_id;
+                body.innerHTML = rows.map(r => `<tr>
+                    <td>${escapeHtml(r.hospcode)}</td><td>${escapeHtml(r.month)}</td>
+                    <td>${escapeHtml(r.note)}</td><td>${escapeHtml(r.author || '-')}</td>
+                    <td>${r.user_id === me ? `<button class="btn" data-anno-id="${Number(r.id)}" onclick="deleteAnnotation(this.dataset.annoId)" aria-label="ลบหมายเหตุ">ลบ</button>` : ''}</td></tr>`).join('');
+            } catch (e) { msg('โหลดไม่สำเร็จ'); }
+        }
+
+        async function addAnnotation() {
+            const cfg = sbGetConfig();
+            if (!cfg || !cfg.url || !sbIsSignedIn()) { showToast('กรุณาเข้าสู่ระบบก่อน', 'error'); return; }
+            const hospcode = document.getElementById('anno-hospcode').value.trim();
+            const month = document.getElementById('anno-month').value;
+            const note = document.getElementById('anno-note').value.trim();
+            if (!/^\w{1,10}$/.test(hospcode) || !/^\d{4}-\d{2}$/.test(month) || !note) {
+                showToast('กรอกรหัสหน่วย เดือน และหมายเหตุให้ครบ', 'error'); return;
+            }
+            const author = (sbReadSession() || {}).email || '';
+            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_annotations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ hospcode, month, note: note.slice(0, 2000), author })
+            }).catch(() => null);
+            if (!res || !res.ok) { showToast('บันทึกไม่สำเร็จ (บัญชีอาจยังไม่ได้รับอนุมัติ)', 'error'); return; }
+            document.getElementById('anno-note').value = '';
+            showToast('บันทึกหมายเหตุแล้ว', 'success');
+            renderAnnotations();
+        }
+
+        async function deleteAnnotation(id) {
+            const cfg = sbGetConfig();
+            if (!cfg || !cfg.url || !/^\d+$/.test(String(id))) return;
+            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_annotations?id=eq.${id}`, { method: 'DELETE' }).catch(() => null);
+            if (!res || !res.ok) { showToast('ลบไม่สำเร็จ', 'error'); return; }
+            renderAnnotations();
         }
 
         function resetQualityTable() {
