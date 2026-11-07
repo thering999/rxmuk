@@ -1363,6 +1363,7 @@
                     </h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <button class="btn btn-secondary" onclick="printCurrentReport()" style="padding: 4px 10px; font-size: 0.75rem;">🖨️ พิมพ์รายงาน</button>
+                        <button class="btn btn-secondary" onclick="createShareSnapshot()" title="ลิงก์สรุปรายอำเภอ อายุ 7 วัน เปิดได้เฉพาะผู้ที่เข้าสู่ระบบ" style="padding: 4px 10px; font-size: 0.75rem;">🔗 แชร์สรุป</button>
                         <span id="dash-trend-source" class="badge-status success" style="font-size: 0.75rem;">ข้อมูลปัจจุบัน</span>
                     </div>
                 </div>
@@ -7005,7 +7006,10 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
         function checkAuthState() {
             const session = sbReadSession();
             if (!session) { try { localStorage.removeItem('rxmuk_auth_user'); } catch {} rxProfile = null; }
-            else sbLoadProfile();
+            else {
+                sbLoadProfile();
+                if (!window._rxSnapOpened) { window._rxSnapOpened = true; openShareSnapshotFromUrl(); }
+            }
             const loggedInUser = session ? (session.email || localStorage.getItem('rxmuk_auth_user') || 'ผู้ใช้') : null;
 
             const userDisplayName = document.getElementById('user-display-name');
@@ -10286,6 +10290,66 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                     <td>${escapeHtml(r.note)}</td><td>${escapeHtml(r.author || '-')}</td>
                     <td>${r.user_id === me ? `<button class="btn" data-anno-id="${Number(r.id)}" onclick="deleteAnnotation(this.dataset.annoId)" aria-label="ลบหมายเหตุ">ลบ</button>` : ''}</td></tr>`).join('');
             } catch (e) { msg('โหลดไม่สำเร็จ'); }
+        }
+
+        // E5: share link = aggregated per-amphur totals only (no pid, no row data), sign-in required, 7-day expiry
+        async function createShareSnapshot() {
+            const cfg = sbGetConfig();
+            if (!cfg || !cfg.url || !sbIsSignedIn()) { showToast('กรุณาเข้าสู่ระบบก่อน', 'error'); return; }
+            const txs = getFilteredTransactions('dash');
+            if (!txs.length) { showToast('ไม่มีข้อมูลให้แชร์', 'error'); return; }
+            const byAmp = {};
+            const months = new Set();
+            for (const t of txs) {
+                const k = t.amphurCode || '-';
+                const a = byAmp[k] || (byAmp[k] = { code: k, name: t.amphurName || k, value: 0, units: new Set() });
+                a.value += Number(t.price) || 0;
+                a.units.add(t.hospcode);
+                if (t.month) months.add(t.month);
+            }
+            const data = {
+                months: [...months].sort(),
+                districts: Object.values(byAmp).map(a => ({ code: a.code, name: a.name, value: Math.round(a.value), units: a.units.size }))
+                    .sort((x, y) => y.value - x.value)
+            };
+            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_snapshots?select=id`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                body: JSON.stringify({ title: 'สรุปมูลค่าจ่ายยารายอำเภอ', data })
+            }).catch(() => null);
+            if (!res || !res.ok) { showToast('สร้างลิงก์ไม่สำเร็จ (บัญชีอาจยังไม่ได้รับอนุมัติ)', 'error'); return; }
+            const [row] = await res.json();
+            const link = `${location.origin}${location.pathname}?snap=${encodeURIComponent(row.id)}`;
+            try { await navigator.clipboard.writeText(link); showToast('คัดลอกลิงก์แล้ว (อายุ 7 วัน)', 'success'); }
+            catch { prompt('คัดลอกลิงก์นี้', link); }
+        }
+
+        async function openShareSnapshotFromUrl() {
+            const id = new URLSearchParams(location.search).get('snap');
+            if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
+            const cfg = sbGetConfig();
+            if (!cfg || !cfg.url || !sbIsSignedIn()) { showToast('เข้าสู่ระบบเพื่อเปิดลิงก์แชร์', 'error'); return; }
+            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_snapshots?select=title,data,created_at,expires_at&id=eq.${id}`).catch(() => null);
+            const rows = res && res.ok ? await res.json() : [];
+            if (!rows.length) { showToast('ลิงก์หมดอายุหรือไม่มีสิทธิ์เปิด', 'error'); return; }
+            const { title, data, expires_at } = rows[0];
+            const box = document.createElement('div');
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+            box.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;';
+            const months = (data.months || []);
+            box.innerHTML = `<div style="background:#0d1b2e;color:#fff;border-radius:12px;padding:20px;max-width:640px;width:100%;max-height:85vh;overflow:auto;">
+                <h3 style="margin-top:0;">${escapeHtml(title || 'สรุป')}</h3>
+                <p style="font-size:.8rem;opacity:.7;">เดือน ${escapeHtml(months[0] || '-')} – ${escapeHtml(months[months.length - 1] || '-')} · หมดอายุ ${escapeHtml(new Date(expires_at).toLocaleString('th-TH'))}</p>
+                <table class="data-table"><thead><tr><th>อำเภอ</th><th>หน่วย</th><th>มูลค่า (฿)</th></tr></thead><tbody>
+                ${(data.districts || []).map(d => `<tr><td>${escapeHtml(d.name)}</td><td>${Number(d.units)}</td><td>${Number(d.value).toLocaleString()}</td></tr>`).join('')}
+                </tbody></table>
+                <button class="btn btn-primary" style="margin-top:12px;">ปิด</button></div>`;
+            const close = () => { box.remove(); history.replaceState(null, '', location.pathname); };
+            box.querySelector('button').addEventListener('click', close);
+            box.addEventListener('click', e => { if (e.target === box) close(); });
+            document.body.appendChild(box);
+            box.querySelector('button').focus();
         }
 
         async function addAnnotation() {
