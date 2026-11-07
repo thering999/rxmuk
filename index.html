@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- SheetJS CDN for client-side Excel parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
     <script>
         // Global Constants & Mappings
         const drugVedMap = {
@@ -1239,7 +1239,7 @@
             <button id="sheets-copy-btn" class="btn no-print" type="button" onclick="copyActiveTableToSheets()" title="คัดลอกตารางในแท็บนี้เพื่อวางใน Google Sheets"
                 style="margin-left:8px; padding:5px 10px; font-size:0.75rem; white-space:nowrap;">📋 คัดลอกไป Google Sheets</button>
             <div class="user-status-area" style="display:flex; align-items:center; gap:10px;">
-                <span id="offline-badge" role="status" hidden
+                <span id="offline-badge" class="no-print" role="status" hidden
                     style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; border-radius:12px; padding:2px 10px; font-size:0.72rem; font-weight:600; white-space:nowrap;">ออฟไลน์</span>
                 <button id="theme-toggle" onclick="toggleTheme()" title="สลับ Light/Dark Mode"
                     style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:1rem; color:var(--text-main); transition:all 0.2s;">
@@ -1765,7 +1765,7 @@
                             <h3 class="panel-title"><span>🔔</span> แจ้งเตือน n8n หลังนำเข้าข้อมูล</h3>
                         </div>
                         <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">
-                            ส่งเฉพาะจำนวน (ชื่อไฟล์ เดือน จำนวนแถว จำนวนหน่วยบริการ) ไม่มีข้อมูลผู้ป่วย
+                            ข้อมูลที่ส่ง: ชื่อไฟล์ เดือน จำนวนแถว จำนวนหน่วยบริการ และชื่อผู้นำเข้า (ไม่มีข้อมูลผู้ป่วย) · n8n ต้องเปิด CORS ให้โดเมนนี้ · หน้า https เรียก http ไม่ได้ยกเว้น localhost
                         </div>
                         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                             <input type="url" class="no-print" id="n8n-url" placeholder="https://n8n.example.com/webhook/rxmuk" aria-label="Webhook URL" style="flex:1; min-width:240px;">
@@ -5798,9 +5798,11 @@ ORDER BY name;
         // D3: table -> TSV (header + visible rows). Cells use innerText (drill buttons contribute their label)
         function tableToTsv(table) {
             const clean = s => String(s == null ? '' : s).replace(/[\t\r\n]+/g, ' ').trim();
+            // Formula-injection guard: prefix ' for = + - @ leading cells, except plain numbers (-12, -1,234.5)
+            const safe = s => (/^[=+\-@]/.test(s) && !/^[+-]?\d[\d,]*(\.\d+)?%?$/.test(s)) ? "'" + s : s;
             return Array.from(table.rows || [])
                 .filter(r => r.offsetParent !== null)
-                .map(r => Array.from(r.cells).map(c => clean(c.innerText)).join('\t'))
+                .map(r => Array.from(r.cells).map(c => safe(clean(c.innerText))).join('\t'))
                 .join('\n');
         }
 
@@ -8291,11 +8293,13 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         // Name normaliser, deliberately simple: lowercase; drop strength tokens ("500 mg", "5/500 mg", "0.5%", "100 iu/ml"),
         // bare numbers and common dosage-form words; strip punctuation; collapse spaces. "Paracetamol 500 mg Tablet" -> "paracetamol".
         const NED_UNIT = '(?:mcg|µg|ug|mg|g|kg|ml|l|iu|u|meq|mmol|%)';
-        const NED_STRENGTH_RE = new RegExp('(?<![a-z0-9])\\d+(?:[.,]\\d+)?\\s*' + NED_UNIT + '?(?:\\s*[\\/+]\\s*\\d+(?:[.,]\\d+)?\\s*' + NED_UNIT + '?)*(?![a-z])', 'gi');
+        const NED_STRENGTH_RE = new RegExp('(^|[^a-z0-9])\\d+(?:[.,]\\d+)?\\s*' + NED_UNIT + '?(?:\\s*[\\/+]\\s*\\d+(?:[.,]\\d+)?\\s*' + NED_UNIT + '?)*(?![a-z])', 'gi');
         const NED_FORM_RE = /\b(?:tablets?|tabs?|capsules?|caps?|injection|inj|syrup|suspension|susp|solution|soln|cream|ointment|gel|drops?|powder|film[- ]coated|enteric[- ]coated|sr|er|xr)\b/gi;
         function normNedName(name) {
             return String(name == null ? '' : name).toLowerCase()
-                .replace(NED_STRENGTH_RE, ' ')
+                .replace(NED_STRENGTH_RE, '$1 ')
+                .replace(/\s*\/\s*ml\b/g, ' ')
+                .replace(/\s+ml\s*$/, '')
                 .replace(NED_FORM_RE, ' ')
                 .replace(/[^a-z0-9฀-๿]+/g, ' ')
                 .replace(/\s+/g, ' ').trim();
@@ -8361,8 +8365,9 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             for (const t of items) {
                 const p = Number(t.price) || 0;
                 total += p;
-                let on = cache.get(t.didstd);
-                if (on === undefined) { on = isOnNed(t.didstd, t.dname); cache.set(t.didstd, on); }
+                const key = t.didstd || ('n:' + normNedName(t.dname));
+                let on = cache.get(key);
+                if (on === undefined) { on = isOnNed(t.didstd, t.dname); cache.set(key, on); }
                 if (on === false) off += p;
             }
             return total > 0 ? (off / total) * 100 : 0;
@@ -10886,9 +10891,15 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             }
         }
 
+        let _sbPullInFlight = false; // shared by init, reconnect and manual pulls
         async function supabasePullData(silent = false) {
             const cfg = sbGetConfig();
             if (!cfg) { if (!silent) showToast('กรุณาตั้งค่า Supabase ก่อน', 'error'); return; }
+            if (_sbPullInFlight) return;
+            _sbPullInFlight = true;
+            try { await _supabasePullImpl(cfg, silent); } finally { _sbPullInFlight = false; }
+        }
+        async function _supabasePullImpl(cfg, silent) {
             const info = document.getElementById('supabase-sync-info');
             const setInfo = t => { if (info) info.textContent = t; };
             setInfo('⏳ กำลังโหลดจาก Cloud...');
@@ -10936,7 +10947,11 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 lastReconnectSync = Date.now();
                 try {
                     const cfg = sbGetConfig();
-                    if (cfg && await sbCloudIsNewer(cfg)) await supabasePullData(true);
+                    if (!cfg || _sbPullInFlight) return;
+                    if (await sbCloudIsNewer(cfg)) {
+                        if (rawTransactions.length === 0) await supabasePullData(true);
+                        else showToast('☁️ Cloud มีข้อมูลใหม่กว่าในเครื่องนี้ — เปิดแท็บนำเข้าแล้วกด "โหลดจาก Cloud" เมื่อพร้อม', 'warn');
+                    }
                 } catch (e) { console.warn('Reconnect sync skipped:', e); }
             }
             window.addEventListener('offline', syncBadge);

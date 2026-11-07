@@ -2,7 +2,7 @@
  * Navigation/index.html: network-first (new deploys arrive, reloadIfStale keeps working).
  * hospitals_db.js, icon, manifest: stale-while-revalidate. Versioned cdnjs scripts: cache-first.
  * Everything else (PHP, /api/, Supabase, uploads/, config json, Authorization, non-GET): untouched. */
-const CACHE = 'rxmuk-v1';
+const CACHE = 'rxmuk-v2';
 const CDN_XLSX = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 // index.html loads hospitals_db.js as 'public/hospitals_db.js' when served from the root.
 const PRECACHE = [
@@ -14,7 +14,7 @@ const STATIC_FILES = ['/hospitals_db.js', '/icon.svg', '/manifest.webmanifest'];
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE);
-        await Promise.allSettled(PRECACHE.map(u => cache.add(u)));
+        await Promise.allSettled(PRECACHE.map(u => cache.add(u === CDN_XLSX ? new Request(u, { mode: 'cors' }) : u)));
         await self.skipWaiting();
     })());
 });
@@ -36,15 +36,20 @@ function isNeverCache(req, url) {
     return false;
 }
 
+function isShell(req) {
+    const p = new URL(req.url).pathname;
+    return p === '/' || p === '/index.html' || p.endsWith('/index.html');
+}
+
 async function networkFirst(req) {
     const cache = await caches.open(CACHE);
     try {
         const res = await fetch(req);
-        if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
+        if (res && res.ok && isShell(req)) cache.put(req, res.clone()).catch(() => {});
         return res;
     } catch (e) {
         const hit = await cache.match(req, { ignoreSearch: true })
-            || await cache.match('./index.html') || await cache.match('./');
+            || (req.mode === 'navigate' ? (await cache.match('./index.html') || await cache.match('./')) : undefined);
         if (hit) return hit;
         throw e;
     }
@@ -55,7 +60,7 @@ async function cacheFirst(req) {
     const hit = await cache.match(req);
     if (hit) return hit;
     const res = await fetch(req);
-    if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone()).catch(() => {});
+    if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
     return res;
 }
 
