@@ -6843,8 +6843,8 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
                     const u = uInputs[idx].value.trim();
                     const p = pInputs[idx].value.trim();
 
-                    if (u === 'admin' && p === '123456') {
-                        localStorage.setItem('rxmuk_auth_user', 'admin');
+                    if ((u === 'admin' || u === 'rxmuk') && p === '123456') {
+                        localStorage.setItem('rxmuk_auth_user', u);
                         checkAuthState();
                     } else {
                         alert('Username หรือ Password ไม่ถูกต้อง! กรุณาลองใหม่อีกครั้ง');
