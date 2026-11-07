@@ -1236,6 +1236,8 @@
                   border-radius:20px; padding:5px 12px; color:var(--text-main); font-size:0.8rem; width:180px;"
                 autocomplete="off">
             </div>
+            <button id="sheets-copy-btn" class="btn no-print" type="button" onclick="copyActiveTableToSheets()" title="คัดลอกตารางในแท็บนี้เพื่อวางใน Google Sheets"
+                style="margin-left:8px; padding:5px 10px; font-size:0.75rem; white-space:nowrap;">📋 คัดลอกไป Google Sheets</button>
             <div class="user-status-area" style="display:flex; align-items:center; gap:10px;">
                 <span id="offline-badge" role="status" hidden
                     style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; border-radius:12px; padding:2px 10px; font-size:0.72rem; font-weight:600; white-space:nowrap;">ออฟไลน์</span>
@@ -5757,6 +5759,57 @@ ORDER BY name;
             if (url.protocol === 'https:') return !!url.hostname;
             if (url.protocol === 'http:') return ['localhost', '127.0.0.1', 'n8n'].includes(url.hostname);
             return false;
+        }
+
+        // D3: table -> TSV (header + visible rows). Cells use innerText (drill buttons contribute their label)
+        function tableToTsv(table) {
+            const clean = s => String(s == null ? '' : s).replace(/[\t\r\n]+/g, ' ').trim();
+            return Array.from(table.rows || [])
+                .filter(r => r.offsetParent !== null)
+                .map(r => Array.from(r.cells).map(c => clean(c.innerText)).join('\t'))
+                .join('\n');
+        }
+
+        async function copyTextToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* fall through */ }
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            Object.assign(ta.style, { position: 'fixed', left: '-9999px', top: '0', opacity: '0' });
+            document.body.appendChild(ta);
+            ta.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            ta.remove();
+            return ok;
+        }
+
+        async function copyActiveTableToSheets() {
+            const tab = document.getElementById('tab-' + activeTabName());
+            const table = tab && Array.from(tab.querySelectorAll('.data-table')).find(t => t.offsetParent !== null);
+            if (!table) { showToast('ไม่พบตารางในแท็บนี้', 'warn'); return; }
+            const ok = await copyTextToClipboard(tableToTsv(table));
+            if (!ok) { showToast('คัดลอกไม่สำเร็จ', 'error'); return; }
+            const t = document.createElement('div');
+            t.appendChild(document.createTextNode('คัดลอกแล้ว — เปิด Google Sheets แล้วกด Ctrl+V '));
+            const a = document.createElement('a');
+            a.href = 'https://sheets.new';
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = 'เปิด Sheets';
+            a.style.color = '#fff';
+            a.style.textDecoration = 'underline';
+            t.appendChild(a);
+            Object.assign(t.style, {
+                position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999,
+                background: '#10b981', color: '#fff', padding: '12px 20px', borderRadius: '10px',
+                fontFamily: 'Sarabun, sans-serif', fontSize: '0.9rem', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                maxWidth: '360px', lineHeight: '1.4', transition: 'opacity 0.3s'
+            });
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 6000);
         }
 
         // D2: POST aggregate counts only (no patient-level data) with a 10s timeout; never throws, never blocks import
