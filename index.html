@@ -3182,13 +3182,15 @@
                                         <th>ชื่อยา</th>
                                         <th>จำนวนจ่าย</th>
                                         <th>สัดส่วนจังหวัด</th>
+                                        <th>DDD/1000 ใบสั่งยา</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rdu-antibiotic-body">
-                                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ยังไม่มีข้อมูล</td></tr>
+                                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ยังไม่มีข้อมูล</td></tr>
                                 </tbody>
                             </table>
                         </div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">DDD ตาม WHO ATC/DDD · คำนวณจากความแรงในชื่อยา · ประมาณการ</div>
                     </div>
 
                     <!-- High Alert Drug Analysis -->
@@ -7558,18 +7560,23 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
         if (antiBody) {
             const antiAgg = {};
             const antiName = {};
+            const antiAmt = {};
             antiTxs.forEach(t => {
                 antiAgg[t.didstd] = (antiAgg[t.didstd] || 0) + 1;
+                antiAmt[t.didstd] = (antiAmt[t.didstd] || 0) + (Number(t.amount) || 0);
                 antiName[t.didstd] = t.dname;
             });
             const sortedAnti = Object.entries(antiAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([did, count]) => `
+            antiBody.innerHTML = sortedAnti.length ? sortedAnti.map(([did, count]) => {
+                const ddd = antibioticDddPer1000([{ dname: antiName[did], amount: antiAmt[did] }], count);
+                return `
                 <tr>
                     <td>${drillBtn('drug', did, antiName[did] || did)}</td>
                     <td>${count.toLocaleString()}</td>
                     <td>${((count/antiCount)*100).toFixed(1)}%</td>
-                </tr>
-            `).join('') : '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">ไม่พบการใช้ยาปฏิชีวนะ</td></tr>';
+                    <td>${ddd === null ? '–' : ddd.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">ไม่พบการใช้ยาปฏิชีวนะ</td></tr>';
         }
 
         // HAD Table
@@ -7643,6 +7650,29 @@ RxMuk แสดงแผนที่ bubble chart แบ่งตาม 7 อำ
             // Hypertension / Cardiovascular (Amlodipine, Enalapril, Losartan, Atenolol)
             if (d.startsWith("124846") || d.startsWith("103859") || d.startsWith("100600") || d.startsWith("100245")) return "ht";
             return "other";
+        }
+
+        // WHO ATC/DDD (grams); first match wins, order matters
+        const ANTIBIOTIC_DDD = [{re:/amoxicillin.*clav|augmentin|co-amoxiclav/i, g:1.5}, {re:/amoxicillin/i, g:1.5}, {re:/ampicillin/i, g:6}, {re:/dicloxacillin/i, g:2}, {re:/cloxacillin/i, g:2}, {re:/penicillin v|phenoxymethyl/i, g:2}, {re:/cephalexin|cefalexin/i, g:2}, {re:/cefazolin/i, g:3}, {re:/ceftriaxone/i, g:2}, {re:/cefixime/i, g:0.4}, {re:/cefdinir/i, g:0.6}, {re:/ciprofloxacin/i, g:1}, {re:/norfloxacin/i, g:0.8}, {re:/ofloxacin/i, g:0.4}, {re:/levofloxacin/i, g:0.5}, {re:/azithromycin/i, g:0.3}, {re:/clarithromycin/i, g:0.5}, {re:/roxithromycin/i, g:0.3}, {re:/erythromycin/i, g:1}, {re:/doxycycline/i, g:0.1}, {re:/tetracycline/i, g:1}, {re:/clindamycin/i, g:1.2}, {re:/gentamicin/i, g:0.24}, {re:/metronidazole/i, g:2}];
+
+        function parseStrengthMg(dname) {
+            const m = String(dname || '').match(/(\d+(?:\.\d+)?)(?:\s*\/\s*\d+(?:\.\d+)?)?\s*(mg|g)\b/i);
+            if (!m) return null;
+            const v = parseFloat(m[1]) * (m[2].toLowerCase() === 'g' ? 1000 : 1);
+            return v > 0 ? v : null;
+        }
+
+        // rows: [{dname, amount}] of one antibiotic; prescriptions = row count (defaults to rows.length,
+        // pass explicitly when rows are pre-aggregated). Returns null when no DDD match or no strength.
+        function antibioticDddPer1000(rows, prescriptions) {
+            if (!rows || !rows.length) return null;
+            const n = prescriptions || rows.length;
+            const name = rows[0].dname;
+            const def = ANTIBIOTIC_DDD.find(d => d.re.test(String(name || '')));
+            const mg = parseStrengthMg(name);
+            if (!def || !mg || !n) return null;
+            const amt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+            return (amt * mg / (def.g * 1000)) / (n / 1000);
         }
 
         // Name heuristic for brand-name drugs; Thai-only names (no Latin letters) count as generic
