@@ -4608,8 +4608,29 @@
         }
 
         // Shared dynamic filter resolver; `exclude` lists filter types to ignore (filter pickers use it to count what each choice would give)
+        // E2 phase 1: role scope is a UI convenience only; the full province file is still downloaded
+        let rxProfile = null;
+        async function sbLoadProfile() {
+            const cfg = sbGetConfig();
+            const s = sbReadSession();
+            if (!cfg || !cfg.url || !s || !s.user_id) { rxProfile = null; return; }
+            try {
+                const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rxmuk_users?select=role,amp_code,hospcode,display_name&user_id=eq.${encodeURIComponent(s.user_id)}`);
+                const rows = res.ok ? await res.json() : [];
+                const prev = JSON.stringify(rxProfile);
+                rxProfile = rows[0] || null;
+                if (JSON.stringify(rxProfile) !== prev && rawTransactions.length) refreshAllUI();
+            } catch (e) { console.warn('Profile load failed:', e); }
+        }
+        function applyRoleScope(txs) {
+            if (!rxProfile || rxProfile.role === 'province') return txs;
+            if (rxProfile.role === 'district' && rxProfile.amp_code) return txs.filter(t => t && t.amphurCode === rxProfile.amp_code);
+            if (rxProfile.role === 'unit' && rxProfile.hospcode) return txs.filter(t => t && t.hospcode === rxProfile.hospcode);
+            return txs;
+        }
+
         function getFilteredTransactions(prefix, exclude) {
-            let txs = rawTransactions;
+            let txs = applyRoleScope(rawTransactions);
 
             const selectVal = type => {
                 const el = document.getElementById(`${prefix}-${type}-select`);
@@ -6983,7 +7004,8 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
         // Signed in = a Supabase session is stored; rxmuk_auth_user is only the display name and unlocks nothing
         function checkAuthState() {
             const session = sbReadSession();
-            if (!session) { try { localStorage.removeItem('rxmuk_auth_user'); } catch {} }
+            if (!session) { try { localStorage.removeItem('rxmuk_auth_user'); } catch {} rxProfile = null; }
+            else sbLoadProfile();
             const loggedInUser = session ? (session.email || localStorage.getItem('rxmuk_auth_user') || 'ผู้ใช้') : null;
 
             const userDisplayName = document.getElementById('user-display-name');
