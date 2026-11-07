@@ -251,35 +251,55 @@
 
         .nav-links {
             display: flex;
-            gap: 0 4px;
+            gap: 0 2px;
             list-style: none;
             align-items: center;
             flex-wrap: nowrap;
-            justify-content: center;
+            justify-content: flex-start;
             width: 100%;
             border-top: 1px solid rgba(255,255,255,0.07);
-            padding: 6px 0;
+            padding: 4px 0;
             overflow-x: auto;
+            overflow-y: visible;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
 
-        .nav-links::-webkit-scrollbar { height: 3px; }
+        .nav-links::-webkit-scrollbar { display: none; }
 
         .nav-links a {
             text-decoration: none;
             color: var(--text-muted);
             font-weight: 600;
             font-size: 0.82rem;
-            transition: color 0.2s;
+            transition: color 0.2s, background 0.2s;
             cursor: pointer;
             white-space: nowrap;
-            padding: 4px 10px;
+            padding: 5px 11px;
             border-radius: 6px;
+            position: relative;
         }
 
-        .nav-links a:hover, .nav-links a.active {
+        .nav-links a:hover {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.06);
+        }
+
+        .nav-links a.active {
             color: var(--c-primary);
-            background: rgba(99,102,241,0.08);
+            background: rgba(99,102,241,0.12);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            border-radius: 2px;
+            background: var(--c-primary);
         }
 
         .nav-links a:focus-visible {
@@ -10985,16 +11005,25 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
             const fys = new Set(pickRawFys(meta));
             const listed = metaFiles(meta).filter(f => f.fy === 'unknown' || fys.has(f.fy));
             const files = listed.length ? listed : [{ name: SB_FILE }];
-            let all = [];
-            for (let i = 0; i < files.length; i++) {
-                const f = files[i];
+
+            // IDB cache: skip files whose `at` timestamp hasn't changed
+            let cache = {};
+            try { cache = (await idbGet('rxmuk_raw_files_cache')) || {}; } catch {}
+
+            const parts = await Promise.all(files.map(async (f, i) => {
+                const hit = f.at && cache[f.name];
+                if (hit && hit.at === f.at) return hit.rows;
                 const res = await fetch(`${cfg.url}/storage/v1/object/authenticated/${SB_BUCKET}/${f.name}`, { headers: sbHeaders(cfg.key), cache: 'no-store' });
                 if (!res.ok) throw new Error(`${res.status}: ไม่พบข้อมูลบน Cloud (กรุณาอัปโหลดก่อน)`);
                 const label = files.length > 1 ? `ไฟล์ ${i + 1}/${files.length}${f.month ? ` เดือน ${f.month}` : ''} ` : '';
-                const part = await gunzipJson(await readWithProgress(res, label));
-                if (Array.isArray(part)) all = all.concat(part);
-            }
-            return all;
+                const bytes = await readWithProgress(res, label);
+                const rows = await gunzipJson(bytes);
+                if (f.at && Array.isArray(rows)) cache[f.name] = { at: f.at, rows };
+                return rows;
+            }));
+
+            idbSet('rxmuk_raw_files_cache', cache).catch(() => {});
+            return parts.filter(Array.isArray).flat();
         }
 
         // Month summaries of every fiscal year on the cloud, cached in IndexedDB per upload time
