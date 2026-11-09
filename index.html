@@ -4532,8 +4532,9 @@
             const groups = { drugs: new Map(), districts: new Map(), hospitals: new Map(), district_drugs: new Map(), hospital_drugs: new Map() };
             const add = (map, key, head, t) => {
                 let a = map.get(key);
-                if (!a) map.set(key, a = { ...head, rows: 0, amount: 0, value: 0, cost: 0 });
+                if (!a) map.set(key, a = { ...head, rows: 0, amount: 0, value: 0, cost: 0, _p: new Set() });
                 a.rows++; a.amount += +t.amount || 0; a.value += +t.price || 0; a.cost += +t.cost || 0;
+                if (t.pid) a._p.add(t.pid); // distinct patients; only the count is published
                 return a;
             };
             // Drug classification, computed once per drug (same rules as the RDU / map / ED tabs)
@@ -4554,8 +4555,10 @@
                 return c;
             };
             const tot = { rows: 0, amount: 0, value: 0, cost: 0 };
+            const totPatients = new Set();
             for (const t of rows) {
                 tot.rows++; tot.amount += +t.amount || 0; tot.value += +t.price || 0; tot.cost += +t.cost || 0;
+                if (t.pid) totPatients.add(t.pid);
                 const drug = { didstd: t.didstd || '', dname: t.dname || '', ...classify(t.didstd || '', t.dname || '') };
                 const amp = { amp_code: t.amphurCode || '', amp_name: t.amphurName || '' };
                 const hosp = { hospcode: t.hospcode || '', hospname: t.hospname || '', amp_code: t.amphurCode || '' };
@@ -4578,29 +4581,35 @@
             const suppress = (map, areaKeys) => {
                 const out = new Map(), others = new Map();
                 for (const [k, a] of map) {
-                    if (a.rows >= PUBLIC_MIN_CELL) { out.set(k, a); continue; }
+                    // keep only cells with enough dispensings AND enough distinct patients
+                    if (a.rows >= PUBLIC_MIN_CELL && a._p.size >= PUBLIC_MIN_CELL) { out.set(k, a); continue; }
                     const ak = areaKeys.map(f => a[f]).join('|');
                     let o = others.get(ak);
-                    if (!o) others.set(ak, o = { ...Object.fromEntries(areaKeys.map(f => [f, a[f]])), didstd: '', dname: PUBLIC_OTHERS, group: '', antibiotic: null, high_alert: null, ed_list: null, rows: 0, amount: 0, value: 0, cost: 0, suppressed_items: 0 });
+                    if (!o) others.set(ak, o = { ...Object.fromEntries(areaKeys.map(f => [f, a[f]])), didstd: '', dname: PUBLIC_OTHERS, group: '', antibiotic: null, high_alert: null, ed_list: null, rows: 0, amount: 0, value: 0, cost: 0, _p: new Set(), suppressed_items: 0 });
                     o.rows += a.rows; o.amount += a.amount; o.value += a.value; o.cost += a.cost; o.suppressed_items++;
+                    for (const p of a._p) o._p.add(p);
                 }
                 for (const [ak, o] of others) out.set(`others|${ak}`, o);
                 return out;
             };
-            const finish = (map, perUnit) => [...map.values()].map(a => {
-                const o = { ...a, amount: r2(a.amount), value: r2(a.value), cost: r2(a.cost) };
+            const finish = (map, perUnit) => [...map.values()].map(({ _p, ...a }) => {
+                // fewer than PUBLIC_MIN_CELL patients is published as null ("< 5"), never as 1-4
+                const n = _p.size >= PUBLIC_MIN_CELL ? _p.size : null;
+                const o = { ...a, patients: n, amount: r2(a.amount), value: r2(a.value), cost: r2(a.cost) };
+                o.value_per_patient = n ? r2(a.value / n) : null;
                 if (perUnit) { o.unit_price = a.amount ? r2(a.value / a.amount) : null; o.unit_cost = a.amount ? r2(a.cost / a.amount) : null; }
                 if (!opts.cost) { delete o.cost; delete o.unit_cost; }
                 return o;
             }).sort((x, y) => y.value - x.value);
             const districts = finish(groups.districts, false).map(d => {
                 const pop = MUKDAHAN_POPULATION[d.amp_code] ? MUKDAHAN_POPULATION[d.amp_code].pop : null;
-                return { ...d, population: pop, value_per_capita: pop ? r2(d.value / pop) : null, amount_per_1000: pop ? r2(d.amount / pop * 1000) : null };
+                return { ...d, population: pop, value_per_capita: pop ? r2(d.value / pop) : null, amount_per_1000: pop ? r2(d.amount / pop * 1000) : null,
+                    patients_per_1000: pop ? r2(d.patients / pop * 1000) : null };
             });
             const hospitals = finish(groups.hospitals, false).map(({ _bad, ...h }) =>
                 ({ ...h, quality_score: h.rows ? r2((h.rows - (_bad || 0)) / h.rows * 100) : null }));
             const out = {
-                month, rows: tot.rows, amount: r2(tot.amount), value: r2(tot.value), cost: r2(tot.cost),
+                month, rows: tot.rows, patients: totPatients.size, amount: r2(tot.amount), value: r2(tot.value), cost: r2(tot.cost),
                 drugs: finish(groups.drugs, true),
                 districts,
                 hospitals,
@@ -4611,8 +4620,8 @@
             return out;
         }
         const PUBLIC_MIN_CELL = 5;
-        const PUBLIC_OTHERS = 'อื่นๆ (รวมยาที่จ่ายน้อยกว่า 5 ครั้ง)';
-        const PUBLIC_SCHEMA_VERSION = '1.4';
+        const PUBLIC_OTHERS = 'อื่นๆ (รวมยาที่จ่ายน้อยกว่า 5 ครั้งหรือ 5 คน)';
+        const PUBLIC_SCHEMA_VERSION = '1.5';
         const PUBLIC_COST_KEY = 'rxmuk_public_api_cost';
         function publicCostEnabled() { try { return localStorage.getItem(PUBLIC_COST_KEY) !== '0'; } catch { return true; } }
         // CSV for Excel / Google Sheets IMPORTDATA: BOM for Thai, formula-leading text escaped
@@ -4624,12 +4633,12 @@
             };
             return '﻿' + [cols.join(','), ...rows.map(r => cols.map(c => cell(r[c])).join(','))].join('\r\n');
         }
-        const PU_TOT = ['rows', 'amount', 'value', 'cost'];
+        const PU_TOT = ['rows', 'patients', 'amount', 'value', 'cost', 'value_per_patient'];
         const PU_UNIT = [...PU_TOT, 'unit_price', 'unit_cost'];
         const PU_DRUG = ['didstd', 'dname', 'group', 'antibiotic', 'high_alert', 'ed_list'];
         const PUBLIC_COLS = {
             drugs: [...PU_DRUG, ...PU_UNIT],
-            districts: ['amp_code', 'amp_name', ...PU_TOT, 'population', 'value_per_capita', 'amount_per_1000'],
+            districts: ['amp_code', 'amp_name', ...PU_TOT, 'population', 'value_per_capita', 'amount_per_1000', 'patients_per_1000'],
             hospitals: ['hospcode', 'hospname', 'amp_code', ...PU_TOT, 'missing_did', 'invalid_did', 'zero_price', 'quality_score'],
             district_drugs: ['amp_code', 'amp_name', ...PU_DRUG, ...PU_UNIT, 'suppressed_items'],
             hospital_drugs: ['hospcode', 'hospname', 'amp_code', ...PU_DRUG, ...PU_UNIT, 'suppressed_items']
@@ -4684,7 +4693,7 @@
                     info.textContent = `⏳ สรุปเดือน ${m} (${mi + 1}/${months.length})...`;
                     const j = publicMonthData(m, by.get(m), { cost });
                     const jobs = [() => putJson(`summary/${m}.json`,
-                        { month: j.month, rows: j.rows, amount: j.amount, value: j.value, cost: j.cost, drugs: j.drugs, districts: j.districts, hospitals: j.hospitals })];
+                        { month: j.month, rows: j.rows, patients: j.patients, amount: j.amount, value: j.value, cost: j.cost, drugs: j.drugs, districts: j.districts, hospitals: j.hospitals })];
                     for (const k of Object.keys(PUBLIC_COLS)) {
                         jobs.push(() => putJson(`${k}/${m}.json`, j[k]));
                         jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], publicCols(k, cost)));
@@ -4697,7 +4706,7 @@
                         t.value[mi] = d.value; t.amount[mi] = d.amount; t.cost[mi] = d.cost;
                     }
                     index.push({
-                        month: m, rows: j.rows, amount: j.amount, value: j.value, cost: j.cost,
+                        month: m, rows: j.rows, patients: j.patients, amount: j.amount, value: j.value, cost: j.cost,
                         url: `${pubBase}/summary/${m}.json`,
                         files: Object.fromEntries(Object.keys(PUBLIC_COLS).map(k => [k, { json: `${pubBase}/${k}/${m}.json`, csv: `${pubBase}/${k}/${m}.csv` }]))
                     });
