@@ -574,6 +574,13 @@
         }
 
         .api-note { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 12px; }
+        .api-fields { border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 14px 12px; margin: 12px 0 0; }
+        .api-fields legend { padding: 0 6px; font-weight: 600; font-size: 0.9rem; }
+        .api-fields legend .api-note { font-weight: 400; margin: 0; }
+        .api-check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; cursor: pointer; line-height: 1.4; }
+        .api-check input { margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px; }
+        .api-check-all { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--card-border); }
+        .api-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 16px; }
         .api-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
         .api-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
         .api-meta { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.85rem; margin: 0 0 16px; }
@@ -3359,12 +3366,16 @@
                         <dt>ข้อมูลรายเดือน</dt><dd><code id="api-pub-month">-</code></dd>
                     </dl>
                     <div id="api-pub-examples"></div>
-                    <div id="api-pub-admin" class="api-row" hidden>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
-                            <input type="checkbox" id="api-pub-cost"> เผยแพร่ต้นทุน (cost, unit_cost)
-                        </label>
-                        <button type="button" class="btn btn-primary" onclick="publishPublicApi()">🔄 เผยแพร่ / อัปเดต API สาธารณะ</button>
-                        <span class="api-note" style="margin:0;">สร้างสรุปจากข้อมูลที่โหลดอยู่ทุกเดือน แล้วอัปโหลดทับของเดิม (เฉพาะ super admin · ทำให้อัตโนมัติทุกครั้งที่อัปโหลดข้อมูลขึ้น Cloud)</span>
+                    <div id="api-pub-admin" hidden>
+                        <fieldset class="api-fields">
+                            <legend>เลือกข้อมูลที่จะเผยแพร่ <span class="api-note">(รหัส ชื่อ จำนวนครั้ง จำนวนจ่าย มูลค่า เผยแพร่เสมอ)</span></legend>
+                            <label class="api-check api-check-all"><input type="checkbox" id="api-pub-all"> <strong>เลือกทั้งหมด</strong></label>
+                            <div id="api-pub-fields" class="api-check-grid"></div>
+                        </fieldset>
+                        <div class="api-row" style="margin-top:10px;">
+                            <button type="button" class="btn btn-primary" onclick="publishPublicApi()">🔄 เผยแพร่ / อัปเดต API สาธารณะ</button>
+                            <span class="api-note" style="margin:0;">สร้างสรุปจากข้อมูลที่โหลดอยู่ทุกเดือน แล้วอัปโหลดทับของเดิม (เฉพาะ super admin · ทำให้อัตโนมัติทุกครั้งที่อัปโหลดข้อมูลขึ้น Cloud ตามตัวเลือกนี้)</span>
+                        </div>
                     </div>
                     <div id="api-pub-info" class="api-note" role="status"></div>
                 </div>
@@ -4507,13 +4518,7 @@
             document.getElementById('api-pub-month').textContent = `${pubBase}/summary/<YYYY-MM>.json`;
             document.getElementById('api-pub-admin').hidden = !canPublishPublicApi();
             renderPartnerKeys();
-            const costBox = document.getElementById('api-pub-cost');
-            if (costBox && !costBox.dataset.bound) {
-                costBox.dataset.bound = '1';
-                costBox.checked = publicCostEnabled();
-                // remembered so automatic publishing after cloud uploads follows the same choice
-                costBox.addEventListener('change', () => { try { localStorage.setItem(PUBLIC_COST_KEY, costBox.checked ? '1' : '0'); } catch {} });
-            }
+            renderPublicFieldChoices();
             renderApiExamples('api-pub-examples', [
                 ['curl', `curl -s "${pubBase}/index.json"\ncurl -s "${pubBase}/summary/2026-09.json"`],
                 ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2026-09.json"))`],
@@ -4621,9 +4626,53 @@
         }
         const PUBLIC_MIN_CELL = 5;
         const PUBLIC_OTHERS = 'อื่นๆ (รวมยาที่จ่ายน้อยกว่า 5 ครั้งหรือ 5 คน)';
-        const PUBLIC_SCHEMA_VERSION = '1.5';
-        const PUBLIC_COST_KEY = 'rxmuk_public_api_cost';
-        function publicCostEnabled() { try { return localStorage.getItem(PUBLIC_COST_KEY) !== '0'; } catch { return true; } }
+        const PUBLIC_SCHEMA_VERSION = '1.6';
+        // Optional field groups and views the super admin can switch off; remembered for auto-publish
+        const PUBLIC_OPTIONS = [
+            { id: 'cost', label: 'ต้นทุน (cost, unit_cost)', cols: ['cost', 'unit_cost'] },
+            { id: 'unit_price', label: 'ราคาขายต่อหน่วย (unit_price)', cols: ['unit_price'] },
+            { id: 'patients', label: 'จำนวนผู้ป่วย (patients, value_per_patient, patients_per_1000)', cols: ['patients', 'value_per_patient', 'patients_per_1000'] },
+            { id: 'groups', label: 'กลุ่มยา / ยาปฏิชีวนะ / HAD / บัญชียาหลัก', cols: ['group', 'antibiotic', 'high_alert', 'ed_list'] },
+            { id: 'population', label: 'ค่าต่อประชากร (รายอำเภอ)', cols: ['population', 'value_per_capita', 'amount_per_1000'] },
+            { id: 'quality', label: 'คุณภาพข้อมูลรายหน่วย (quality_score)', cols: ['missing_did', 'invalid_did', 'zero_price', 'quality_score'] },
+            { id: 'district_drugs', label: 'ไฟล์รายยา × อำเภอ (district_drugs)', view: 'district_drugs' },
+            { id: 'hospital_drugs', label: 'ไฟล์รายยา × หน่วยบริการ (hospital_drugs)', view: 'hospital_drugs' }
+        ];
+        const PUBLIC_OPTS_KEY = 'rxmuk_public_api_options';
+        function publicOptions() {
+            const all = Object.fromEntries(PUBLIC_OPTIONS.map(o => [o.id, true]));
+            try {
+                const saved = JSON.parse(localStorage.getItem(PUBLIC_OPTS_KEY) || 'null');
+                if (saved && typeof saved === 'object') return { ...all, ...saved };
+                if (localStorage.getItem('rxmuk_public_api_cost') === '0') all.cost = false; // earlier cost-only setting
+            } catch { /* blocked storage: publish everything */ }
+            return all;
+        }
+        function savePublicOptions(o) { try { localStorage.setItem(PUBLIC_OPTS_KEY, JSON.stringify(o)); } catch {} }
+        function renderPublicFieldChoices() {
+            const box = document.getElementById('api-pub-fields');
+            const allBox = document.getElementById('api-pub-all');
+            if (!box || box.dataset.bound) return;
+            box.dataset.bound = '1';
+            const opts = publicOptions();
+            const sync = () => { allBox.checked = PUBLIC_OPTIONS.every(o => opts[o.id]); allBox.indeterminate = !allBox.checked && PUBLIC_OPTIONS.some(o => opts[o.id]); };
+            box.replaceChildren(...PUBLIC_OPTIONS.map(o => {
+                const label = document.createElement('label');
+                label.className = 'api-check';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox'; cb.checked = !!opts[o.id]; cb.dataset.opt = o.id;
+                cb.addEventListener('change', () => { opts[o.id] = cb.checked; savePublicOptions(opts); sync(); });
+                label.append(cb, ' ' + o.label);
+                return label;
+            }));
+            allBox.addEventListener('change', () => {
+                PUBLIC_OPTIONS.forEach(o => { opts[o.id] = allBox.checked; });
+                box.querySelectorAll('input[data-opt]').forEach(cb => { cb.checked = allBox.checked; });
+                savePublicOptions(opts);
+                sync();
+            });
+            sync();
+        }
         // CSV for Excel / Google Sheets IMPORTDATA: BOM for Thai, formula-leading text escaped
         function publicCsv(rows, cols) {
             const cell = v => {
@@ -4643,7 +4692,9 @@
             district_drugs: ['amp_code', 'amp_name', ...PU_DRUG, ...PU_UNIT, 'suppressed_items'],
             hospital_drugs: ['hospcode', 'hospname', 'amp_code', ...PU_DRUG, ...PU_UNIT, 'suppressed_items']
         };
-        const publicCols = (k, cost) => PUBLIC_COLS[k].filter(c => cost || (c !== 'cost' && c !== 'unit_cost'));
+        const publicCols = (k, drop) => PUBLIC_COLS[k].filter(c => !drop.has(c));
+        // Remove switched-off fields from every row (in place) before upload
+        const dropFields = (rows, drop) => { if (drop.size) for (const r of rows) for (const c of drop) delete r[c]; return rows; };
         function canPublishPublicApi() { return sbIsSignedIn() && rxProfile && rxProfile.role === 'province'; }
 
         async function publishPublicApi(opts = {}) {
@@ -4676,7 +4727,19 @@
                 const next = async () => { for (let job; (job = jobs.shift());) { await job(); done++; info.textContent = `⏳ เผยแพร่ ${done} ไฟล์...`; } };
                 await Promise.all(Array.from({ length: 6 }, next));
             };
-            const cost = publicCostEnabled();
+            const choice = publicOptions();
+            const cost = !!choice.cost;
+            const drop = new Set(PUBLIC_OPTIONS.filter(o => o.cols && !choice[o.id]).flatMap(o => o.cols));
+            const views = Object.keys(PUBLIC_COLS).filter(k => choice[k] !== false);
+            const offViews = Object.keys(PUBLIC_COLS).filter(k => choice[k] === false);
+            // Files of switched-off views are deleted for the months being published
+            const removeFiles = async (names) => {
+                if (!names.length) return;
+                const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/${PUBLIC_API_BUCKET}`, {
+                    method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: names })
+                });
+                if (!res.ok) throw new Error(`delete ${res.status}: ${await res.text()}`);
+            };
             try { await loadNedOnce(); } catch { /* ed_list stays null without a list */ }
             try {
                 const index = [];
@@ -4692,23 +4755,27 @@
                     const m = months[mi];
                     info.textContent = `⏳ สรุปเดือน ${m} (${mi + 1}/${months.length})...`;
                     const j = publicMonthData(m, by.get(m), { cost });
-                    const jobs = [() => putJson(`summary/${m}.json`,
-                        { month: j.month, rows: j.rows, patients: j.patients, amount: j.amount, value: j.value, cost: j.cost, drugs: j.drugs, districts: j.districts, hospitals: j.hospitals })];
-                    for (const k of Object.keys(PUBLIC_COLS)) {
-                        jobs.push(() => putJson(`${k}/${m}.json`, j[k]));
-                        jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], publicCols(k, cost)));
-                    }
-                    await runJobs(jobs);
+                    // trend uses value/amount/cost before any field is dropped
                     for (const d of j.drugs) {
                         const key = `${d.didstd}|${d.dname}`;
                         let t = trend.get(key);
                         if (!t) trend.set(key, t = { didstd: d.didstd, dname: d.dname, value: Array(months.length).fill(0), amount: Array(months.length).fill(0), cost: Array(months.length).fill(0) });
                         t.value[mi] = d.value; t.amount[mi] = d.amount; t.cost[mi] = d.cost;
                     }
+                    for (const k of Object.keys(PUBLIC_COLS)) dropFields(j[k], drop);
+                    if (drop.has('patients')) delete j.patients;
+                    const jobs = [() => putJson(`summary/${m}.json`,
+                        { month: j.month, rows: j.rows, patients: j.patients, amount: j.amount, value: j.value, cost: j.cost, drugs: j.drugs, districts: j.districts, hospitals: j.hospitals })];
+                    for (const k of views) {
+                        jobs.push(() => putJson(`${k}/${m}.json`, j[k]));
+                        jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], publicCols(k, drop)));
+                    }
+                    jobs.push(() => removeFiles(offViews.flatMap(k => [`${k}/${m}.json`, `${k}/${m}.csv`])));
+                    await runJobs(jobs);
                     index.push({
                         month: m, rows: j.rows, patients: j.patients, amount: j.amount, value: j.value, cost: j.cost,
                         url: `${pubBase}/summary/${m}.json`,
-                        files: Object.fromEntries(Object.keys(PUBLIC_COLS).map(k => [k, { json: `${pubBase}/${k}/${m}.json`, csv: `${pubBase}/${k}/${m}.csv` }]))
+                        files: Object.fromEntries(views.map(k => [k, { json: `${pubBase}/${k}/${m}.json`, csv: `${pubBase}/${k}/${m}.csv` }]))
                     });
                 }
                 const trendRows = [...trend.values()].sort((a, b) => b.value.reduce((x, y) => x + y, 0) - a.value.reduce((x, y) => x + y, 0));
@@ -4728,6 +4795,8 @@
                         + `รายการยาที่จ่ายน้อยกว่า ${PUBLIC_MIN_CELL} ครั้งต่อพื้นที่ถูกรวมเป็น "อื่นๆ" · ห้ามใช้เพื่อระบุตัวบุคคล · `
                         + 'อ้างอิงแหล่งที่มา: RxMuk จังหวัดมุกดาหาร',
                     includes_cost: cost,
+                    excluded_fields: [...drop],
+                    views,
                     min_cell: PUBLIC_MIN_CELL,
                     guide: 'https://thering999.github.io/rxmuk/api/guide.html',
                     trend: { json: `${pubBase}/trend/drugs.json`, csv: `${pubBase}/trend/drugs.csv`, months },
