@@ -3360,6 +3360,9 @@
                     </dl>
                     <div id="api-pub-examples"></div>
                     <div id="api-pub-admin" class="api-row" hidden>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer;">
+                            <input type="checkbox" id="api-pub-cost"> เผยแพร่ต้นทุน (cost, unit_cost)
+                        </label>
                         <button type="button" class="btn btn-primary" onclick="publishPublicApi()">🔄 เผยแพร่ / อัปเดต API สาธารณะ</button>
                         <span class="api-note" style="margin:0;">สร้างสรุปจากข้อมูลที่โหลดอยู่ทุกเดือน แล้วอัปโหลดทับของเดิม (เฉพาะ super admin · ทำให้อัตโนมัติทุกครั้งที่อัปโหลดข้อมูลขึ้น Cloud)</span>
                     </div>
@@ -4477,6 +4480,13 @@
             document.getElementById('api-pub-index').textContent = `${pubBase}/index.json`;
             document.getElementById('api-pub-month').textContent = `${pubBase}/summary/<YYYY-MM>.json`;
             document.getElementById('api-pub-admin').hidden = !canPublishPublicApi();
+            const costBox = document.getElementById('api-pub-cost');
+            if (costBox && !costBox.dataset.bound) {
+                costBox.dataset.bound = '1';
+                costBox.checked = publicCostEnabled();
+                // remembered so automatic publishing after cloud uploads follows the same choice
+                costBox.addEventListener('change', () => { try { localStorage.setItem(PUBLIC_COST_KEY, costBox.checked ? '1' : '0'); } catch {} });
+            }
             renderApiExamples('api-pub-examples', [
                 ['curl', `curl -s "${pubBase}/index.json"\ncurl -s "${pubBase}/summary/2026-09.json"`],
                 ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2026-09.json"))`],
@@ -4490,7 +4500,7 @@
         const PUBLIC_API_BUCKET = 'rxmuk-public';
         // Public month data: totals by drug, district, unit, and drug x district / drug x unit.
         // value = มูลค่า (ราคาขาย), cost = ต้นทุน, amount = จำนวน; unit_* = per unit dispensed. Aggregates only.
-        function publicMonthData(month, rows) {
+        function publicMonthData(month, rows, opts = { cost: true }) {
             const r2 = v => Math.round(v * 100) / 100;
             const groups = { drugs: new Map(), districts: new Map(), hospitals: new Map(), district_drugs: new Map(), hospital_drugs: new Map() };
             const add = (map, key, head, t) => {
@@ -4511,20 +4521,43 @@
                 add(groups.district_drugs, `${amp.amp_code}|${dk}`, { ...amp, ...drug }, t);
                 add(groups.hospital_drugs, `${hosp.hospcode}|${dk}`, { ...hosp, ...drug }, t);
             }
+            // Small-cell suppression: a drug given fewer than PUBLIC_MIN_CELL times in one area could point
+            // to a person (e.g. HIV or psychiatric drugs at a small unit). Fold those into one "others" row
+            // per area so area totals stay exact.
+            const suppress = (map, areaKeys) => {
+                const out = new Map(), others = new Map();
+                for (const [k, a] of map) {
+                    if (a.rows >= PUBLIC_MIN_CELL) { out.set(k, a); continue; }
+                    const ak = areaKeys.map(f => a[f]).join('|');
+                    let o = others.get(ak);
+                    if (!o) others.set(ak, o = { ...Object.fromEntries(areaKeys.map(f => [f, a[f]])), didstd: '', dname: PUBLIC_OTHERS, rows: 0, amount: 0, value: 0, cost: 0, suppressed_items: 0 });
+                    o.rows += a.rows; o.amount += a.amount; o.value += a.value; o.cost += a.cost; o.suppressed_items++;
+                }
+                for (const [ak, o] of others) out.set(`others|${ak}`, o);
+                return out;
+            };
             const finish = (map, perUnit) => [...map.values()].map(a => {
                 const o = { ...a, amount: r2(a.amount), value: r2(a.value), cost: r2(a.cost) };
                 if (perUnit) { o.unit_price = a.amount ? r2(a.value / a.amount) : null; o.unit_cost = a.amount ? r2(a.cost / a.amount) : null; }
+                if (!opts.cost) { delete o.cost; delete o.unit_cost; }
                 return o;
             }).sort((x, y) => y.value - x.value);
-            return {
+            const out = {
                 month, rows: tot.rows, amount: r2(tot.amount), value: r2(tot.value), cost: r2(tot.cost),
                 drugs: finish(groups.drugs, true),
                 districts: finish(groups.districts, false),
                 hospitals: finish(groups.hospitals, false),
-                district_drugs: finish(groups.district_drugs, true),
-                hospital_drugs: finish(groups.hospital_drugs, true)
+                district_drugs: finish(suppress(groups.district_drugs, ['amp_code', 'amp_name']), true),
+                hospital_drugs: finish(suppress(groups.hospital_drugs, ['hospcode', 'hospname', 'amp_code']), true)
             };
+            if (!opts.cost) delete out.cost;
+            return out;
         }
+        const PUBLIC_MIN_CELL = 5;
+        const PUBLIC_OTHERS = 'อื่นๆ (รวมยาที่จ่ายน้อยกว่า 5 ครั้ง)';
+        const PUBLIC_SCHEMA_VERSION = '1.3';
+        const PUBLIC_COST_KEY = 'rxmuk_public_api_cost';
+        function publicCostEnabled() { try { return localStorage.getItem(PUBLIC_COST_KEY) !== '0'; } catch { return true; } }
         // CSV for Excel / Google Sheets IMPORTDATA: BOM for Thai, formula-leading text escaped
         function publicCsv(rows, cols) {
             const cell = v => {
@@ -4540,9 +4573,10 @@
             drugs: ['didstd', 'dname', ...PU_UNIT],
             districts: ['amp_code', 'amp_name', ...PU_TOT],
             hospitals: ['hospcode', 'hospname', 'amp_code', ...PU_TOT],
-            district_drugs: ['amp_code', 'amp_name', 'didstd', 'dname', ...PU_UNIT],
-            hospital_drugs: ['hospcode', 'hospname', 'amp_code', 'didstd', 'dname', ...PU_UNIT]
+            district_drugs: ['amp_code', 'amp_name', 'didstd', 'dname', ...PU_UNIT, 'suppressed_items'],
+            hospital_drugs: ['hospcode', 'hospname', 'amp_code', 'didstd', 'dname', ...PU_UNIT, 'suppressed_items']
         };
+        const publicCols = (k, cost) => PUBLIC_COLS[k].filter(c => cost || (c !== 'cost' && c !== 'unit_cost'));
         function canPublishPublicApi() { return sbIsSignedIn() && rxProfile && rxProfile.role === 'province'; }
 
         async function publishPublicApi(opts = {}) {
@@ -4575,19 +4609,26 @@
                 const next = async () => { for (let job; (job = jobs.shift());) { await job(); done++; info.textContent = `⏳ เผยแพร่ ${done} ไฟล์...`; } };
                 await Promise.all(Array.from({ length: 6 }, next));
             };
+            const cost = publicCostEnabled();
             try {
                 const index = [];
                 const trend = new Map(); // didstd|dname -> { didstd, dname, value: [], amount: [], cost: [] }
+                // Keep months published earlier (e.g. older fiscal years not loaded in this browser)
+                let prevMonths = [];
+                try {
+                    const prev = await fetch(`${pubBase}/index.json`, { cache: 'no-store' });
+                    if (prev.ok) prevMonths = ((await prev.json()).months || []).filter(x => x && !by.has(x.month));
+                } catch { /* first publish: nothing to keep */ }
                 // One month at a time so the large drug x unit lists are freed before the next month
                 for (let mi = 0; mi < months.length; mi++) {
                     const m = months[mi];
                     info.textContent = `⏳ สรุปเดือน ${m} (${mi + 1}/${months.length})...`;
-                    const j = publicMonthData(m, by.get(m));
+                    const j = publicMonthData(m, by.get(m), { cost });
                     const jobs = [() => putJson(`summary/${m}.json`,
                         { month: j.month, rows: j.rows, amount: j.amount, value: j.value, cost: j.cost, drugs: j.drugs, districts: j.districts, hospitals: j.hospitals })];
                     for (const k of Object.keys(PUBLIC_COLS)) {
                         jobs.push(() => putJson(`${k}/${m}.json`, j[k]));
-                        jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], PUBLIC_COLS[k]));
+                        jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], publicCols(k, cost)));
                     }
                     await runJobs(jobs);
                     for (const d of j.drugs) {
@@ -4603,6 +4644,7 @@
                     });
                 }
                 const trendRows = [...trend.values()].sort((a, b) => b.value.reduce((x, y) => x + y, 0) - a.value.reduce((x, y) => x + y, 0));
+                if (!cost) trendRows.forEach(t => delete t.cost);
                 await runJobs([
                     () => putJson('trend/drugs.json', { months, drugs: trendRows }),
                     () => putCsv('trend/drugs.csv',
@@ -4611,9 +4653,17 @@
                 ]);
                 // index.json last so readers never see links to missing files
                 await putJson('index.json', {
-                    updated_at: new Date().toISOString(), source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร',
-                    trend: { json: `${pubBase}/trend/drugs.json`, csv: `${pubBase}/trend/drugs.csv` },
-                    months: index
+                    schema_version: PUBLIC_SCHEMA_VERSION,
+                    updated_at: new Date().toISOString(),
+                    source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร',
+                    terms: 'ข้อมูลสรุปจาก HDC ณ วันที่ updated_at อาจมีการแก้ไขภายหลัง · เป็นยอดรวม ไม่มีข้อมูลรายบุคคล · '
+                        + `รายการยาที่จ่ายน้อยกว่า ${PUBLIC_MIN_CELL} ครั้งต่อพื้นที่ถูกรวมเป็น "อื่นๆ" · ห้ามใช้เพื่อระบุตัวบุคคล · `
+                        + 'อ้างอิงแหล่งที่มา: RxMuk จังหวัดมุกดาหาร',
+                    includes_cost: cost,
+                    min_cell: PUBLIC_MIN_CELL,
+                    guide: 'https://thering999.github.io/rxmuk/api/guide.html',
+                    trend: { json: `${pubBase}/trend/drugs.json`, csv: `${pubBase}/trend/drugs.csv`, months },
+                    months: [...prevMonths, ...index].sort((a, b) => a.month.localeCompare(b.month))
                 });
                 info.textContent = `✅ เผยแพร่แล้ว ${months.length} เดือน (${done + 1} ไฟล์) — ${new Date().toLocaleString('th-TH')}`;
                 showToast(silent ? '🌐 อัปเดต API สาธารณะอัตโนมัติแล้ว' : '✅ อัปเดต API สาธารณะแล้ว', 'success');
