@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "RxMuk Public API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "สรุปข้อมูลการจ่ายยารายเดือน จังหวัดมุกดาหาร (HDC tmp_drug_opd)\n\n- เรียกได้ด้วย HTTP GET ธรรมดา ไม่ต้องมีบัญชี ไม่ต้องใช้ key\n- เป็นยอดรวมต่อตัวยา อำเภอ และหน่วยบริการเท่านั้น ไม่มีข้อมูลรายบุคคล\n- อัปเดตอัตโนมัติทุกครั้งที่ผู้ดูแลนำเข้าข้อมูลขึ้น Cloud\n- เดือนเป็น ค.ศ. เช่น 2026-09 = ก.ย. 2569\n- amount = จำนวนจ่าย (หน่วย), value = มูลค่า/ราคาขาย (บาท), cost = ต้นทุน (บาท), unit_price / unit_cost = ต่อหน่วย, rows = จำนวนแถวข้อมูล\n- วิเคราะห์รายพื้นที่: district_drugs (ยา x อำเภอ), hospital_drugs (ยา x หน่วยบริการ)\n\n**คู่มือภาษาไทยแบบละเอียด (Google Sheets / Excel / นักพัฒนา): [guide.html](guide.html)**\n- ใน district_drugs / hospital_drugs ยาที่จ่ายน้อยกว่า 5 ครั้งต่อพื้นที่ถูกรวมเป็น \"อื่นๆ\" · ห้ามใช้เพื่อระบุตัวบุคคล"
   },
   "servers": [
@@ -558,6 +558,16 @@
           "cost": {
             "type": "number",
             "description": "ต้นทุนรวม (บาท) (cost / unit_cost มีเมื่อ index.includes_cost = true)"
+          },
+          "patients": {
+            "type": "integer",
+            "nullable": true,
+            "description": "จำนวนผู้ป่วยไม่ซ้ำ; null = น้อยกว่า 5 คน"
+          },
+          "value_per_patient": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / patients"
           }
         }
       },
@@ -707,6 +717,16 @@
             "type": "boolean",
             "nullable": true,
             "description": "อยู่ในบัญชียาหลัก; null = ยังไม่ได้นำเข้าบัญชี"
+          },
+          "patients": {
+            "type": "integer",
+            "nullable": true,
+            "description": "จำนวนผู้ป่วยไม่ซ้ำ; null = น้อยกว่า 5 คน"
+          },
+          "value_per_patient": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / patients"
           }
         }
       },
@@ -743,6 +763,20 @@
             "nullable": true
           },
           "amount_per_1000": {
+            "type": "number",
+            "nullable": true
+          },
+          "patients": {
+            "type": "integer",
+            "nullable": true,
+            "description": "จำนวนผู้ป่วยไม่ซ้ำ; null = น้อยกว่า 5 คน"
+          },
+          "value_per_patient": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / patients"
+          },
+          "patients_per_1000": {
             "type": "number",
             "nullable": true
           }
@@ -788,6 +822,16 @@
             "type": "number",
             "nullable": true,
             "description": "0-100"
+          },
+          "patients": {
+            "type": "integer",
+            "nullable": true,
+            "description": "จำนวนผู้ป่วยไม่ซ้ำ; null = น้อยกว่า 5 คน"
+          },
+          "value_per_patient": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / patients"
           }
         }
       },
@@ -860,6 +904,16 @@
             "type": "boolean",
             "nullable": true,
             "description": "อยู่ในบัญชียาหลัก; null = ยังไม่ได้นำเข้าบัญชี"
+          },
+          "patients": {
+            "type": "integer",
+            "nullable": true,
+            "description": "จำนวนผู้ป่วยไม่ซ้ำ; null = น้อยกว่า 5 คน"
+          },
+          "value_per_patient": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / patients"
           }
         }
       },
@@ -935,6 +989,16 @@
             "type": "boolean",
             "nullable": true,
             "description": "อยู่ในบัญชียาหลัก; null = ยังไม่ได้นำเข้าบัญชี"
+          },
+          "patients": {
+            "type": "integer",
+            "nullable": true,
+            "description": "จำนวนผู้ป่วยไม่ซ้ำ; null = น้อยกว่า 5 คน"
+          },
+          "value_per_patient": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / patients"
           }
         }
       }

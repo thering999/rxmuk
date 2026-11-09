@@ -126,6 +126,9 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
         <tr><td><code>amp_code</code>, <code>amp_name</code></td><td>รหัสและชื่ออำเภอ</td></tr>
         <tr><td><code>hospcode</code>, <code>hospname</code></td><td>รหัส 5 หลักและชื่อหน่วยบริการ</td></tr>
         <tr><td><code>rows</code></td><td>จำนวนแถวข้อมูล (จำนวนครั้งที่บันทึกการจ่าย)</td></tr>
+        <tr><td><code>patients</code></td><td>จำนวนผู้ป่วยไม่ซ้ำ (นับจากรหัสผู้ป่วยในเดือนนั้น ไม่เปิดเผยรหัส) · ว่าง = น้อยกว่า 5 คน</td></tr>
+        <tr><td><code>value_per_patient</code></td><td>มูลค่าเฉลี่ยต่อผู้ป่วย 1 คน = value ÷ patients</td></tr>
+        <tr><td><code>patients_per_1000</code></td><td>(districts) ผู้ป่วยที่ได้รับยาต่อประชากร 1,000 คน</td></tr>
         <tr><td><code>amount</code></td><td>จำนวนที่จ่ายรวม (หน่วยของยานั้น)</td></tr>
         <tr><td><code>value</code></td><td>มูลค่า / ราคาขายรวม (บาท) ปัดทศนิยม 2 ตำแหน่ง</td></tr>
         <tr><td><code>cost</code></td><td>ต้นทุนรวม (บาท)</td></tr>
@@ -148,7 +151,7 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
     <ul>
         <li>เป็นข้อมูลสรุปจาก HDC ณ วันที่ใน <code>updated_at</code> และอาจมีการแก้ไขภายหลัง</li>
         <li>เป็นยอดรวมเท่านั้น ไม่มีข้อมูลรายบุคคล <strong>ห้ามนำไปใช้เพื่อระบุตัวบุคคล</strong></li>
-        <li>เพื่อคุ้มครองความเป็นส่วนตัว ในไฟล์ <code>district_drugs</code> และ <code>hospital_drugs</code> ยาที่จ่ายน้อยกว่า 5 ครั้งในพื้นที่นั้นจะถูกรวมเป็นแถว
+        <li>เพื่อคุ้มครองความเป็นส่วนตัว ในไฟล์ <code>district_drugs</code> และ <code>hospital_drugs</code> ยาที่จ่ายน้อยกว่า 5 ครั้ง หรือผู้ป่วยน้อยกว่า 5 คน ในพื้นที่นั้นจะถูกรวมเป็นแถว
             "อื่นๆ (รวมยาที่จ่ายน้อยกว่า 5 ครั้ง)" ยอดรวมของพื้นที่จึงยังถูกต้อง แต่จะไม่เห็นยาตัวนั้นแยกออกมา</li>
         <li>เมื่อนำไปใช้ โปรดอ้างอิงแหล่งที่มา: RxMuk จังหวัดมุกดาหาร</li>
     </ul>
@@ -158,6 +161,7 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
     <div class="table-wrap">
     <table>
         <tr><th>เวอร์ชัน</th><th>เปลี่ยนอะไร</th></tr>
+        <tr><td>1.5</td><td>เพิ่ม <code>patients</code>, <code>value_per_patient</code> ทุกไฟล์ และ <code>patients_per_1000</code> ใน districts · แถวรายยาในพื้นที่ต้องมีทั้ง ≥ 5 ครั้งและ ≥ 5 คน จึงแสดงแยก</td></tr>
         <tr><td>1.4</td><td>เพิ่ม <code>group</code>, <code>antibiotic</code>, <code>high_alert</code>, <code>ed_list</code> ในไฟล์รายยา · ค่าต่อประชากรใน districts · คะแนนคุณภาพข้อมูลใน hospitals (เพิ่มคอลัมน์เท่านั้น โค้ดเดิมใช้ต่อได้)</td></tr>
         <tr><td>1.3</td><td>รวมรายการที่น้อยกว่า 5 ครั้งเป็น "อื่นๆ" (<code>suppressed_items</code>), เพิ่ม <code>schema_version</code>, <code>terms</code>, <code>includes_cost</code> ใน index · เดือนที่เผยแพร่ไว้ก่อนยังอยู่ใน index</td></tr>
         <tr><td>1.2</td><td>เพิ่ม <code>cost</code>, <code>unit_price</code>, <code>unit_cost</code>, ไฟล์ <code>district_drugs</code> และ <code>hospital_drugs</code></td></tr>
