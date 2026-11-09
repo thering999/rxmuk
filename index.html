@@ -1350,6 +1350,7 @@
                 <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
                 <li><a class="tab-btn" data-tab="yoy">เทียบปีงบประมาณ</a></li>
                 <li><a class="tab-btn" data-tab="api">API / เชื่อมต่อระบบ</a></li>
+                <li><a class="tab-btn" data-tab="api-guide">คู่มือ API</a></li>
                 <li style="display:flex; align-items:center; gap:8px; margin-left:12px; padding:3px 10px; background:rgba(255,255,255,0.05); border-radius:16px; border:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
                     <span id="nav-data-count" style="font-size:0.72rem; color:var(--c-primary); font-weight:800; white-space:nowrap;">DATA: 0 rows</span>
                     <button class="btn" onclick="if(!sbIsSignedIn()){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding:2px 8px; font-size:0.62rem; background:rgba(239,68,68,0.2); color:var(--c-red); border:1px solid rgba(239,68,68,0.3); border-radius:4px; cursor:pointer; white-space:nowrap;">🔄 รีเซ็ตตัวกรอง</button>
@@ -3303,6 +3304,20 @@
     </div>
 
     <!-- TAB: RDU Monitoring (Phase 4) -->
+    <!-- Public guide: no login needed, the API itself is public -->
+    <div id="tab-api-guide" class="tab-content">
+        <section class="container">
+            <div class="panel" style="padding:12px;">
+                <div class="api-example-head" style="margin-bottom:10px;">
+                    <span>📖 คู่มือการใช้งาน RxMuk API</span>
+                    <a class="btn btn-secondary" href="api/guide.html" target="_blank" rel="noopener">เปิดเต็มจอ ↗</a>
+                </div>
+                <iframe id="api-guide-frame" title="คู่มือ RxMuk API" data-src="api/guide.html"
+                    style="width:100%; height:calc(100vh - 220px); min-height:520px; border:1px solid var(--card-border); border-radius:10px; background:#fff;"></iframe>
+            </div>
+        </section>
+    </div>
+
     <div id="tab-api" class="tab-content">
         <section class="container">
             <div class="secured-lock" style="display: none;"></div>
@@ -3713,6 +3728,10 @@
             "yoy": {
                 title: "📈 เปรียบเทียบข้ามปีงบประมาณ",
                 subtitle: "ดูแนวโน้มรายเดือนย้อนหลังหลายปีงบ เทียบมูลค่า จำนวนจ่าย รายอำเภอ และรายตัวยา"
+            },
+            "api-guide": {
+                title: "📖 คู่มือ RxMuk API",
+                subtitle: "วิธีดึงข้อมูลสรุปยาไปใช้ใน Google Sheets, Excel หรือระบบอื่น ไม่ต้องมีบัญชี ไม่ต้องใช้ key"
             },
             "api": {
                 title: "🔌 API / เชื่อมต่อระบบ",
@@ -4428,6 +4447,10 @@
             if (targetTab === 'yoy') renderYoy();
             if (targetTab === 'import') renderStockSection();
             if (targetTab === 'api') renderApiTab();
+            if (targetTab === 'api-guide') {
+                const f = document.getElementById('api-guide-frame');
+                if (f && !f.getAttribute('src')) f.src = f.dataset.src; // load only when opened
+            }
         }
 
         // ─── API / EXPORT TAB ───

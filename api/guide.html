@@ -32,7 +32,7 @@
 </head>
 <body>
 <main>
-    <div class="top"><a href="../index.html">← กลับหน้าหลัก RxMuk</a><a href="index.html">Swagger UI (ลองเรียก API)</a></div>
+    <div class="top" id="guide-top"><a href="../index.html">← กลับหน้าหลัก RxMuk</a><a href="index.html">Swagger UI (ลองเรียก API)</a></div>
     <h1>คู่มือ RxMuk API</h1>
     <p class="muted">ข้อมูลสรุปการจ่ายยารายเดือน จังหวัดมุกดาหาร จาก HDC (tmp_drug_opd) สำหรับนำไปใช้ใน Excel, Google Sheets หรือระบบอื่น</p>
 
@@ -138,5 +138,14 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
     <h3>ตัวเลขไม่ตรงกับ HDC</h3>
     <p>ตัวเลขมาจากไฟล์ที่นำเข้า RxMuk ณ วันที่ใน <code>updated_at</code> ถ้า HDC มีการแก้ข้อมูลภายหลัง ต้องรอให้ผู้ดูแลนำเข้ารอบใหม่</p>
 </main>
+<script>
+    // Embedded in the RxMuk "คู่มือ API" tab: hide the back bar, open page links in a new tab (in-page # links stay)
+    if (window.self !== window.top) {
+        document.getElementById('guide-top').style.display = 'none';
+        document.querySelectorAll('a[href]').forEach(a => {
+            if (!a.getAttribute('href').startsWith('#')) { a.target = '_blank'; a.rel = 'noopener'; }
+        });
+    }
+</script>
 </body>
 </html>
