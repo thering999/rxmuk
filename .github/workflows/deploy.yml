@@ -43,7 +43,7 @@ jobs:
         run: |
           mkdir -p _site/public _site/api
           cp index.html _site/
-          cp api/index.html api/openapi.json _site/api/
+          cp api/index.html api/openapi.json api/guide.html _site/api/
           cp public/hospitals_db.js public/rxmuk-config.json public/advanced-dashboard.html _site/public/
 
       - name: Upload deployment artifact
