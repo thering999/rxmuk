@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>คู่มือ RxMuk API</title>
+    <style>
+        :root { --bg: #f7f8fb; --card: #fff; --text: #1d2433; --muted: #5b6474; --line: #dfe3ea; --accent: #0b6bcb; --code: #f1f3f7; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #0b1528; --card: #111d33; --text: #e6ebf3; --muted: #9aa6b8; --line: #23324d; --accent: #60b8ff; --code: #0a1222; }
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 "Sarabun", "Noto Sans Thai", system-ui, sans-serif; }
+        main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+        h1 { font-size: 1.7rem; margin: 0 0 4px; }
+        h2 { font-size: 1.25rem; margin: 36px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+        h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+        p, li { color: var(--text); }
+        .muted { color: var(--muted); }
+        a { color: var(--accent); }
+        code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; overflow-wrap: anywhere; }
+        pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+        pre code { background: none; padding: 0; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 0.92rem; }
+        th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+        th { background: var(--code); }
+        .table-wrap { overflow-x: auto; }
+        .note { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+        nav ol { padding-left: 20px; }
+        .top { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.9rem; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+<main>
+    <div class="top"><a href="../index.html">← กลับหน้าหลัก RxMuk</a><a href="index.html">Swagger UI (ลองเรียก API)</a></div>
+    <h1>คู่มือ RxMuk API</h1>
+    <p class="muted">ข้อมูลสรุปการจ่ายยารายเดือน จังหวัดมุกดาหาร จาก HDC (tmp_drug_opd) สำหรับนำไปใช้ใน Excel, Google Sheets หรือระบบอื่น</p>
+
+    <div class="note">
+        <strong>สรุปสั้น:</strong> เปิดลิงก์ได้เลย ไม่ต้องมีบัญชี ไม่ต้องใช้ key ข้อมูลเป็นยอดรวมต่อตัวยา อำเภอ และหน่วยบริการ
+        <strong>ไม่มีข้อมูลรายบุคคล</strong> ข้อมูลอัปเดตเองทุกครั้งที่ผู้ดูแลนำเข้าข้อมูลเดือนใหม่
+    </div>
+
+    <nav>
+        <ol>
+            <li><a href="#urls">ลิงก์ข้อมูลทั้งหมด</a></li>
+            <li><a href="#sheets">ใช้กับ Google Sheets</a></li>
+            <li><a href="#excel">ใช้กับ Excel</a></li>
+            <li><a href="#dev">สำหรับนักพัฒนา (JSON)</a></li>
+            <li><a href="#fields">ความหมายของแต่ละคอลัมน์</a></li>
+            <li><a href="#faq">คำถามที่พบบ่อย</a></li>
+        </ol>
+    </nav>
+
+    <h2 id="urls">1. ลิงก์ข้อมูลทั้งหมด</h2>
+    <p>ทุกลิงก์ขึ้นต้นด้วย:</p>
+    <pre><code>https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public/</code></pre>
+    <p>แล้วต่อท้ายด้วยชื่อไฟล์ในตาราง <code>&lt;เดือน&gt;</code> คือปี-เดือน <strong>ค.ศ.</strong> เช่น <code>2026-09</code> = กันยายน 2569</p>
+    <div class="table-wrap">
+    <table>
+        <tr><th>ต้องการ</th><th>ชื่อไฟล์</th><th>รูปแบบ</th></tr>
+        <tr><td>รายการเดือนที่มี + ลิงก์ทุกไฟล์ (เริ่มที่นี่)</td><td><code>index.json</code></td><td>JSON</td></tr>
+        <tr><td>ยอดรวมต่อตัวยา</td><td><code>drugs/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
+        <tr><td>ยอดรวมต่ออำเภอ</td><td><code>districts/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
+        <tr><td>ยอดรวมต่อหน่วยบริการ</td><td><code>hospitals/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
+        <tr><td>ทุกอย่างของเดือนนั้นในไฟล์เดียว</td><td><code>summary/&lt;เดือน&gt;.json</code></td><td>JSON</td></tr>
+        <tr><td>แนวโน้มมูลค่ารายตัวยาทุกเดือน</td><td><code>trend/drugs.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
+    </table>
+    </div>
+    <p>ตัวอย่าง: ยอดรวมต่อหน่วยบริการ เดือนกันยายน 2569</p>
+    <pre><code>https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public/hospitals/2026-09.csv</code></pre>
+
+    <h2 id="sheets">2. ใช้กับ Google Sheets (ไม่ต้องเขียนโค้ด)</h2>
+    <ol>
+        <li>เปิด Google Sheets ใหม่ คลิกเซลล์ <code>A1</code></li>
+        <li>พิมพ์สูตรนี้ แล้วกด Enter
+            <pre><code>=IMPORTDATA("https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public/drugs/2026-09.csv")</code></pre>
+        </li>
+        <li>ข้อมูลจะเต็มตารางเอง และ Google Sheets จะดึงข้อมูลใหม่ให้เป็นระยะ</li>
+    </ol>
+    <p>เปลี่ยน <code>drugs</code> เป็น <code>districts</code> หรือ <code>hospitals</code> และเปลี่ยนเดือนได้ตามต้องการ ถ้าใช้ <code>trend/drugs.csv</code> จะได้ตารางยาคูณเดือน เอาไปทำกราฟได้ทันที</p>
+
+    <h2 id="excel">3. ใช้กับ Excel</h2>
+    <h3>วิธีง่าย: ดาวน์โหลดไฟล์</h3>
+    <p>เปิดลิงก์ <code>.csv</code> ในเบราว์เซอร์ ไฟล์จะดาวน์โหลดมา ดับเบิลคลิกเปิดด้วย Excel ได้เลย ภาษาไทยแสดงถูกต้อง</p>
+    <h3>วิธีที่อัปเดตได้: Power Query</h3>
+    <ol>
+        <li>Excel แท็บ <strong>Data</strong> &gt; <strong>From Web</strong></li>
+        <li>วางลิงก์ <code>.csv</code> ที่ต้องการ แล้วกด OK</li>
+        <li>กด <strong>Load</strong> ข้อมูลจะเป็นตาราง ครั้งต่อไปกด <strong>Data &gt; Refresh All</strong> เพื่อดึงข้อมูลล่าสุด</li>
+    </ol>
+
+    <h2 id="dev">4. สำหรับนักพัฒนา (JSON)</h2>
+    <p>เป็นไฟล์ JSON ธรรมดา เรียกด้วย HTTP GET อนุญาต CORS เรียกจากเบราว์เซอร์ได้ ดู schema ทั้งหมดและลองเรียกได้ที่ <a href="index.html">Swagger UI</a> (spec: <a href="openapi.json">openapi.json</a>)</p>
+    <h3>ขั้นตอนที่แนะนำ</h3>
+    <ol>
+        <li>อ่าน <code>index.json</code> เพื่อดูว่ามีเดือนไหน และ <code>updated_at</code> ล่าสุดเมื่อไร</li>
+        <li>ใช้ลิงก์ใน <code>months[].files</code> ดึงเฉพาะไฟล์ที่ต้องการ</li>
+        <li>ถ้าจะตรวจว่ามีข้อมูลใหม่ไหม ให้เทียบ <code>updated_at</code> ไม่ต้องดึงทุกไฟล์ซ้ำ</li>
+    </ol>
+    <pre><code>curl -s ".../rxmuk-public/index.json"
+
+// JavaScript
+const base = "https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public";
+const index = await (await fetch(`${base}/index.json`)).json();
+const latest = index.months.at(-1);
+const hospitals = await (await fetch(latest.files.hospitals.json)).json();
+
+# Python
+import requests
+base = "https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public"
+index = requests.get(f"{base}/index.json", timeout=30).json()
+drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).json()</code></pre>
+    <p class="muted">n8n: ใช้ node <em>HTTP Request</em> แบบ GET กับลิงก์ด้านบนได้เลย ไม่ต้องตั้งค่า credential</p>
+
+    <h2 id="fields">5. ความหมายของแต่ละคอลัมน์</h2>
+    <div class="table-wrap">
+    <table>
+        <tr><th>คอลัมน์</th><th>ความหมาย</th></tr>
+        <tr><td><code>didstd</code></td><td>รหัสยามาตรฐาน 24 หลัก</td></tr>
+        <tr><td><code>dname</code></td><td>ชื่อยา</td></tr>
+        <tr><td><code>amp_code</code>, <code>amp_name</code></td><td>รหัสและชื่ออำเภอ</td></tr>
+        <tr><td><code>hospcode</code>, <code>hospname</code></td><td>รหัส 5 หลักและชื่อหน่วยบริการ</td></tr>
+        <tr><td><code>rows</code></td><td>จำนวนแถวข้อมูล (จำนวนครั้งที่บันทึกการจ่าย)</td></tr>
+        <tr><td><code>value</code></td><td>มูลค่ารวม (บาท) ปัดทศนิยม 2 ตำแหน่ง</td></tr>
+        <tr><td><code>amount</code></td><td>จำนวนที่จ่ายรวม (หน่วยของยานั้น)</td></tr>
+        <tr><td><code>value_YYYY-MM</code></td><td>ในไฟล์แนวโน้ม: มูลค่าของเดือนนั้น (0 = ไม่มีการจ่าย)</td></tr>
+    </table>
+    </div>
+
+    <h2 id="faq">6. คำถามที่พบบ่อย</h2>
+    <h3>เปิดลิงก์แล้วขึ้น <code>Object not found</code> / error 400</h3>
+    <p>ยังไม่มีข้อมูลเดือนนั้น หรือพิมพ์เดือนเป็น พ.ศ. (ต้องเป็น ค.ศ. เช่น <code>2026-09</code>) ดูเดือนที่มีได้จาก <code>index.json</code></p>
+    <h3>ข้อมูลอัปเดตเมื่อไร</h3>
+    <p>ทุกครั้งที่ผู้ดูแลระบบนำเข้าข้อมูลขึ้น Cloud ดูเวลาล่าสุดได้จาก <code>updated_at</code> ใน <code>index.json</code> ไฟล์อาจถูกแคชไว้ไม่เกิน 5 นาที</p>
+    <h3>มีข้อมูลรายผู้ป่วยไหม</h3>
+    <p>ไม่มี API นี้มีเฉพาะยอดรวม ถ้าต้องการข้อมูลละเอียดกว่านี้ ติดต่อผู้ดูแลระบบ RxMuk</p>
+    <h3>ตัวเลขไม่ตรงกับ HDC</h3>
+    <p>ตัวเลขมาจากไฟล์ที่นำเข้า RxMuk ณ วันที่ใน <code>updated_at</code> ถ้า HDC มีการแก้ข้อมูลภายหลัง ต้องรอให้ผู้ดูแลนำเข้ารอบใหม่</p>
+</main>
+</body>
+</html>
