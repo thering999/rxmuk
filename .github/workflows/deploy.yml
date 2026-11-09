@@ -41,8 +41,9 @@ jobs:
       # configs in this repo were being served publicly when the whole repo was uploaded
       - name: Assemble site
         run: |
-          mkdir -p _site/public
+          mkdir -p _site/public _site/api
           cp index.html _site/
+          cp api/index.html api/openapi.json _site/api/
           cp public/hospitals_db.js public/rxmuk-config.json public/advanced-dashboard.html _site/public/
 
       - name: Upload deployment artifact

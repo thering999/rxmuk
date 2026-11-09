@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RxMuk Public API</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css" integrity="sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn" crossorigin="anonymous">
+    <style>
+        body { margin: 0; background: #fff; }
+        .rx-top { padding: 12px 16px; background: #0b1528; color: #fff; font-family: sans-serif; }
+        .rx-top a { color: #7dd3fc; }
+    </style>
+</head>
+<body>
+    <div class="rx-top">RxMuk Public API · ข้อมูลสรุป ไม่มีข้อมูลรายบุคคล · <a href="../index.html">กลับหน้าหลัก</a></div>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" integrity="sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep" crossorigin="anonymous"></script>
+    <script>
+        window.ui = SwaggerUIBundle({ url: 'openapi.json', dom_id: '#swagger-ui', deepLinking: true, tryItOutEnabled: true });
+    </script>
+</body>
+</html>

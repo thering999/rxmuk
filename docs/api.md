@@ -1,5 +1,19 @@
 # RxMuk API (F2)
 
+## 0. Public API (no account, no key)
+
+Monthly summaries only (totals per drug, district and unit; no patient-level rows).
+Swagger UI: `https://thering999.github.io/rxmuk/api/` · spec: `api/openapi.json`
+
+| Purpose | Request |
+|---|---|
+| List months | `GET $SB_URL/storage/v1/object/public/rxmuk-public/index.json` |
+| One month | `GET $SB_URL/storage/v1/object/public/rxmuk-public/summary/2569-10.json` |
+
+Setup once: run `supabase/migrations/20261109_03_public_api_bucket.sql`. To update, the super admin (role `province`) clicks "เผยแพร่ / อัปเดต API สาธารณะ" in the API tab.
+
+The sections below are the authenticated API (approved Supabase accounts).
+
 RxMuk has no server of its own. The API is Supabase's REST endpoints, and RLS decides who sees what.
 Every call needs an approved account (a row in `rxmuk_users`).
 
