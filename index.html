@@ -3326,6 +3326,23 @@
                 </div>
 
                 <div class="panel">
+                    <h3 class="panel-title"><span>🌐</span> API สาธารณะ (ไม่ต้องมีบัญชี / ไม่ต้องใช้ key)</h3>
+                    <p class="api-note">ระบบไหนก็เรียกได้ด้วย HTTP GET ธรรมดา ได้ข้อมูล JSON สรุปรายเดือน: ยอดรวมต่อตัวยา ต่ออำเภอ และต่อหน่วยบริการ (ไม่มีข้อมูลราย record)
+                        · <strong>ข้อมูลนี้เป็นสาธารณะ ใครมี URL ก็เปิดได้</strong>
+                        · <a href="api/index.html" target="_blank" rel="noopener">📘 เปิดคู่มือ Swagger UI (ลองเรียกได้ทันที)</a></p>
+                    <dl class="api-meta">
+                        <dt>รายการเดือน</dt><dd><code id="api-pub-index">-</code></dd>
+                        <dt>ข้อมูลรายเดือน</dt><dd><code id="api-pub-month">-</code></dd>
+                    </dl>
+                    <div id="api-pub-examples"></div>
+                    <div id="api-pub-admin" class="api-row" hidden>
+                        <button type="button" class="btn btn-primary" onclick="publishPublicApi()">🔄 เผยแพร่ / อัปเดต API สาธารณะ</button>
+                        <span class="api-note" style="margin:0;">สร้างสรุปจากข้อมูลที่โหลดอยู่ทุกเดือน แล้วอัปโหลดทับของเดิม (เฉพาะ super admin)</span>
+                    </div>
+                    <div id="api-pub-info" class="api-note" role="status"></div>
+                </div>
+
+                <div class="panel">
                     <h3 class="panel-title"><span>🔌</span> REST API (สำหรับนักพัฒนา / n8n)</h3>
                     <p class="api-note">ระบบอื่นเรียกข้อมูลผ่าน Supabase REST ได้โดยตรง ต้องใช้บัญชีที่ผู้ดูแลอนุมัติแล้ว (บัญชีรวม rxmuk ใช้ API ไม่ได้)
                         · คู่มือเต็ม: <a href="https://github.com/thering999/rxmuk/blob/main/docs/api.md" target="_blank" rel="noopener">docs/api.md</a></p>
@@ -4422,7 +4439,72 @@
                 ['3. ดาวน์โหลดไฟล์ (gzip JSON)', `curl -s "${base}/storage/v1/object/authenticated/rxmuk/<ชื่อไฟล์>" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN" | gunzip > data.json`],
                 ['4. ประวัติการนำเข้า', `curl -s "${base}/rest/v1/rxmuk_import_log?order=created_at.desc&limit=50" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN"`]
             ];
-            const box = document.getElementById('api-examples');
+            const pubBase = `${base}/storage/v1/object/public/${PUBLIC_API_BUCKET}`;
+            document.getElementById('api-pub-index').textContent = `${pubBase}/index.json`;
+            document.getElementById('api-pub-month').textContent = `${pubBase}/summary/<YYYY-MM>.json`;
+            document.getElementById('api-pub-admin').hidden = !(sbIsSignedIn() && rxProfile && rxProfile.role === 'province');
+            renderApiExamples('api-pub-examples', [
+                ['curl', `curl -s "${pubBase}/index.json"\ncurl -s "${pubBase}/summary/2569-10.json"`],
+                ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2569-10.json"))`],
+                ['Google Sheets (Apps Script)', `const r = UrlFetchApp.fetch("${pubBase}/summary/2569-10.json");\nconst data = JSON.parse(r.getContentText());`],
+                ['JavaScript', `const data = await (await fetch("${pubBase}/summary/2569-10.json")).json();`]
+            ]);
+            renderApiExamples('api-examples', ex);
+        }
+
+        const PUBLIC_API_BUCKET = 'rxmuk-public';
+        // Friendly field names for the public JSON (internal summaries are positional arrays)
+        function publicMonthJson(s) {
+            const obj = (keys) => a => Object.fromEntries(keys.map((k, i) => [k, a[i]]));
+            return {
+                month: s.month, rows: s.rows, value: s.value, amount: s.amount,
+                drugs: s.drugs.map(obj(['didstd', 'dname', 'rows', 'value', 'amount'])),
+                districts: s.amps.map(obj(['amp_code', 'amp_name', 'rows', 'value', 'amount'])),
+                hospitals: s.hosps.map(obj(['hospcode', 'hospname', 'amp_code', 'rows', 'value', 'amount']))
+            };
+        }
+        async function publishPublicApi() {
+            const cfg = sbGetConfig();
+            const info = document.getElementById('api-pub-info');
+            if (!cfg || !sbIsSignedIn()) { showToast('ต้องเข้าสู่ระบบด้วยบัญชี super admin', 'error'); return; }
+            if (!rawTransactions || !rawTransactions.length) { showToast('ยังไม่มีข้อมูลในเครื่อง', 'error'); return; }
+            const by = new Map();
+            for (const t of rawTransactions) {
+                if (!t || !/^\d{4}-\d{2}$/.test(t.month || '')) continue;
+                if (!by.has(t.month)) by.set(t.month, []);
+                by.get(t.month).push(t);
+            }
+            const months = [...by.keys()].sort();
+            const pubBase = `${cfg.url}/storage/v1/object/public/${PUBLIC_API_BUCKET}`;
+            const put = async (name, data) => {
+                const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/${PUBLIC_API_BUCKET}/${name}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-upsert': 'true', 'cache-control': 'max-age=300' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error(`${name} ${res.status}: ${await res.text()}`);
+            };
+            try {
+                const index = [];
+                for (let i = 0; i < months.length; i++) {
+                    const m = months[i];
+                    info.textContent = `⏳ เผยแพร่เดือน ${m} (${i + 1}/${months.length})...`;
+                    const s = buildMonthSummary(m, by.get(m));
+                    await put(`summary/${m}.json`, publicMonthJson(s));
+                    index.push({ month: m, rows: s.rows, value: s.value, amount: s.amount, url: `${pubBase}/summary/${m}.json` });
+                }
+                await put('index.json', { updated_at: new Date().toISOString(), source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร', months: index });
+                info.textContent = `✅ เผยแพร่แล้ว ${months.length} เดือน — ${new Date().toLocaleString('th-TH')}`;
+                showToast('✅ อัปเดต API สาธารณะแล้ว', 'success');
+            } catch (e) {
+                const hint = /bucket|not.?found|404/i.test(e.message) ? ' (ยังไม่ได้รัน SQL 03_public_api_bucket?)' : '';
+                info.textContent = '❌ ' + e.message + hint;
+                showToast('❌ เผยแพร่ไม่สำเร็จ', 'error');
+            }
+        }
+
+        function renderApiExamples(boxId, ex) {
+            const box = document.getElementById(boxId);
             box.replaceChildren(...ex.map(([label, code]) => {
                 const wrap = document.createElement('div');
                 wrap.className = 'api-example';
