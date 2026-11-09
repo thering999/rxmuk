@@ -3342,7 +3342,7 @@
 
                 <div class="panel">
                     <h3 class="panel-title"><span>🌐</span> API สาธารณะ (ไม่ต้องมีบัญชี / ไม่ต้องใช้ key)</h3>
-                    <p class="api-note">ระบบไหนก็เรียกได้ด้วย HTTP GET ธรรมดา ได้ข้อมูล JSON สรุปรายเดือน: ยอดรวมต่อตัวยา ต่ออำเภอ และต่อหน่วยบริการ (ไม่มีข้อมูลราย record)
+                    <p class="api-note">ระบบไหนก็เรียกได้ด้วย HTTP GET ธรรมดา ได้ข้อมูลสรุปรายเดือน (JSON/CSV): ชื่อยา จำนวน มูลค่า ต้นทุน ราคา/ต้นทุนต่อหน่วย แยกตามยา อำเภอ หน่วยบริการ และรายยาในแต่ละพื้นที่ (ไม่มีข้อมูลราย record)
                         · <strong>ข้อมูลนี้เป็นสาธารณะ ใครมี URL ก็เปิดได้</strong>
                         · เดือนเป็น ค.ศ. เช่น 2026-09 = ก.ย. 2569</p>
                     <div class="api-example-head" style="margin-top:12px;">
@@ -4482,21 +4482,47 @@
                 ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2026-09.json"))`],
                 ['Google Sheets (Apps Script)', `const r = UrlFetchApp.fetch("${pubBase}/summary/2026-09.json");\nconst data = JSON.parse(r.getContentText());`],
                 ['JavaScript', `const data = await (await fetch("${pubBase}/summary/2026-09.json")).json();`],
-                ['Google Sheets (สูตรในเซลล์ ไม่ต้องเขียนโค้ด)', `=IMPORTDATA("${pubBase}/drugs/2026-09.csv")\n=IMPORTDATA("${pubBase}/hospitals/2026-09.csv")\n=IMPORTDATA("${pubBase}/trend/drugs.csv")`]
+                ['Google Sheets (สูตรในเซลล์ ไม่ต้องเขียนโค้ด)', `=IMPORTDATA("${pubBase}/drugs/2026-09.csv")\n=IMPORTDATA("${pubBase}/district_drugs/2026-09.csv")\n=IMPORTDATA("${pubBase}/hospital_drugs/2026-09.csv")\n=IMPORTDATA("${pubBase}/trend/drugs.csv")`]
             ]);
             renderApiExamples('api-examples', ex);
         }
 
         const PUBLIC_API_BUCKET = 'rxmuk-public';
-        // Friendly field names for the public JSON (internal summaries are positional arrays)
-        function publicMonthJson(s) {
-            const r2 = v => typeof v === 'number' ? Math.round(v * 100) / 100 : v;
-            const obj = (keys) => a => Object.fromEntries(keys.map((k, i) => [k, r2(a[i])]));
+        // Public month data: totals by drug, district, unit, and drug x district / drug x unit.
+        // value = มูลค่า (ราคาขาย), cost = ต้นทุน, amount = จำนวน; unit_* = per unit dispensed. Aggregates only.
+        function publicMonthData(month, rows) {
+            const r2 = v => Math.round(v * 100) / 100;
+            const groups = { drugs: new Map(), districts: new Map(), hospitals: new Map(), district_drugs: new Map(), hospital_drugs: new Map() };
+            const add = (map, key, head, t) => {
+                let a = map.get(key);
+                if (!a) map.set(key, a = { ...head, rows: 0, amount: 0, value: 0, cost: 0 });
+                a.rows++; a.amount += +t.amount || 0; a.value += +t.price || 0; a.cost += +t.cost || 0;
+            };
+            const tot = { rows: 0, amount: 0, value: 0, cost: 0 };
+            for (const t of rows) {
+                tot.rows++; tot.amount += +t.amount || 0; tot.value += +t.price || 0; tot.cost += +t.cost || 0;
+                const drug = { didstd: t.didstd || '', dname: t.dname || '' };
+                const amp = { amp_code: t.amphurCode || '', amp_name: t.amphurName || '' };
+                const hosp = { hospcode: t.hospcode || '', hospname: t.hospname || '', amp_code: t.amphurCode || '' };
+                const dk = drug.didstd || drug.dname || '?';
+                add(groups.drugs, dk, drug, t);
+                add(groups.districts, amp.amp_code || '?', amp, t);
+                add(groups.hospitals, hosp.hospcode || '?', hosp, t);
+                add(groups.district_drugs, `${amp.amp_code}|${dk}`, { ...amp, ...drug }, t);
+                add(groups.hospital_drugs, `${hosp.hospcode}|${dk}`, { ...hosp, ...drug }, t);
+            }
+            const finish = (map, perUnit) => [...map.values()].map(a => {
+                const o = { ...a, amount: r2(a.amount), value: r2(a.value), cost: r2(a.cost) };
+                if (perUnit) { o.unit_price = a.amount ? r2(a.value / a.amount) : null; o.unit_cost = a.amount ? r2(a.cost / a.amount) : null; }
+                return o;
+            }).sort((x, y) => y.value - x.value);
             return {
-                month: s.month, rows: s.rows, value: r2(s.value), amount: r2(s.amount),
-                drugs: s.drugs.map(obj(['didstd', 'dname', 'rows', 'value', 'amount'])),
-                districts: s.amps.map(obj(['amp_code', 'amp_name', 'rows', 'value', 'amount'])),
-                hospitals: s.hosps.map(obj(['hospcode', 'hospname', 'amp_code', 'rows', 'value', 'amount']))
+                month, rows: tot.rows, amount: r2(tot.amount), value: r2(tot.value), cost: r2(tot.cost),
+                drugs: finish(groups.drugs, true),
+                districts: finish(groups.districts, false),
+                hospitals: finish(groups.hospitals, false),
+                district_drugs: finish(groups.district_drugs, true),
+                hospital_drugs: finish(groups.hospital_drugs, true)
             };
         }
         // CSV for Excel / Google Sheets IMPORTDATA: BOM for Thai, formula-leading text escaped
@@ -4508,10 +4534,14 @@
             };
             return '﻿' + [cols.join(','), ...rows.map(r => cols.map(c => cell(r[c])).join(','))].join('\r\n');
         }
+        const PU_TOT = ['rows', 'amount', 'value', 'cost'];
+        const PU_UNIT = [...PU_TOT, 'unit_price', 'unit_cost'];
         const PUBLIC_COLS = {
-            drugs: ['didstd', 'dname', 'rows', 'value', 'amount'],
-            districts: ['amp_code', 'amp_name', 'rows', 'value', 'amount'],
-            hospitals: ['hospcode', 'hospname', 'amp_code', 'rows', 'value', 'amount']
+            drugs: ['didstd', 'dname', ...PU_UNIT],
+            districts: ['amp_code', 'amp_name', ...PU_TOT],
+            hospitals: ['hospcode', 'hospname', 'amp_code', ...PU_TOT],
+            district_drugs: ['amp_code', 'amp_name', 'didstd', 'dname', ...PU_UNIT],
+            hospital_drugs: ['hospcode', 'hospname', 'amp_code', 'didstd', 'dname', ...PU_UNIT]
         };
         function canPublishPublicApi() { return sbIsSignedIn() && rxProfile && rxProfile.role === 'province'; }
 
@@ -4539,39 +4569,47 @@
             };
             const putJson = (name, data) => put(name, JSON.stringify(data), 'application/json');
             const putCsv = (name, rows, cols) => put(name, publicCsv(rows, cols), 'text/csv; charset=utf-8');
+            let done = 0;
+            // 6 uploads at a time
+            const runJobs = async (jobs) => {
+                const next = async () => { for (let job; (job = jobs.shift());) { await job(); done++; info.textContent = `⏳ เผยแพร่ ${done} ไฟล์...`; } };
+                await Promise.all(Array.from({ length: 6 }, next));
+            };
             try {
-                const index = [], jobs = [];
-                const trend = new Map(); // didstd|dname -> { didstd, dname, value: [], amount: [] }
-                months.forEach((m, mi) => {
-                    const j = publicMonthJson(buildMonthSummary(m, by.get(m)));
-                    jobs.push(() => putJson(`summary/${m}.json`, j));
+                const index = [];
+                const trend = new Map(); // didstd|dname -> { didstd, dname, value: [], amount: [], cost: [] }
+                // One month at a time so the large drug x unit lists are freed before the next month
+                for (let mi = 0; mi < months.length; mi++) {
+                    const m = months[mi];
+                    info.textContent = `⏳ สรุปเดือน ${m} (${mi + 1}/${months.length})...`;
+                    const j = publicMonthData(m, by.get(m));
+                    const jobs = [() => putJson(`summary/${m}.json`,
+                        { month: j.month, rows: j.rows, amount: j.amount, value: j.value, cost: j.cost, drugs: j.drugs, districts: j.districts, hospitals: j.hospitals })];
                     for (const k of Object.keys(PUBLIC_COLS)) {
                         jobs.push(() => putJson(`${k}/${m}.json`, j[k]));
                         jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], PUBLIC_COLS[k]));
                     }
+                    await runJobs(jobs);
                     for (const d of j.drugs) {
                         const key = `${d.didstd}|${d.dname}`;
                         let t = trend.get(key);
-                        if (!t) trend.set(key, t = { didstd: d.didstd, dname: d.dname, value: Array(months.length).fill(0), amount: Array(months.length).fill(0) });
-                        t.value[mi] = d.value; t.amount[mi] = d.amount;
+                        if (!t) trend.set(key, t = { didstd: d.didstd, dname: d.dname, value: Array(months.length).fill(0), amount: Array(months.length).fill(0), cost: Array(months.length).fill(0) });
+                        t.value[mi] = d.value; t.amount[mi] = d.amount; t.cost[mi] = d.cost;
                     }
-                    const f = `${pubBase}`;
                     index.push({
-                        month: m, rows: j.rows, value: j.value, amount: j.amount,
-                        url: `${f}/summary/${m}.json`,
-                        files: Object.fromEntries(Object.keys(PUBLIC_COLS).map(k => [k, { json: `${f}/${k}/${m}.json`, csv: `${f}/${k}/${m}.csv` }]))
+                        month: m, rows: j.rows, amount: j.amount, value: j.value, cost: j.cost,
+                        url: `${pubBase}/summary/${m}.json`,
+                        files: Object.fromEntries(Object.keys(PUBLIC_COLS).map(k => [k, { json: `${pubBase}/${k}/${m}.json`, csv: `${pubBase}/${k}/${m}.csv` }]))
                     });
-                });
+                }
                 const trendRows = [...trend.values()].sort((a, b) => b.value.reduce((x, y) => x + y, 0) - a.value.reduce((x, y) => x + y, 0));
-                jobs.push(() => putJson('trend/drugs.json', { months, drugs: trendRows }));
-                jobs.push(() => putCsv('trend/drugs.csv',
-                    trendRows.map(t => Object.fromEntries([['didstd', t.didstd], ['dname', t.dname], ...months.map((m, i) => [`value_${m}`, t.value[i]])])),
-                    ['didstd', 'dname', ...months.map(m => `value_${m}`)]));
-
-                // 6 uploads at a time; index.json last so readers never see links to missing files
-                let done = 0;
-                const next = async () => { for (let job; (job = jobs.shift());) { await job(); done++; info.textContent = `⏳ เผยแพร่ ${done} ไฟล์...`; } };
-                await Promise.all(Array.from({ length: 6 }, next));
+                await runJobs([
+                    () => putJson('trend/drugs.json', { months, drugs: trendRows }),
+                    () => putCsv('trend/drugs.csv',
+                        trendRows.map(t => Object.fromEntries([['didstd', t.didstd], ['dname', t.dname], ...months.map((m, i) => [`value_${m}`, t.value[i]])])),
+                        ['didstd', 'dname', ...months.map(m => `value_${m}`)])
+                ]);
+                // index.json last so readers never see links to missing files
                 await putJson('index.json', {
                     updated_at: new Date().toISOString(), source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร',
                     trend: { json: `${pubBase}/trend/drugs.json`, csv: `${pubBase}/trend/drugs.csv` },

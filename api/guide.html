@@ -37,7 +37,7 @@
     <p class="muted">ข้อมูลสรุปการจ่ายยารายเดือน จังหวัดมุกดาหาร จาก HDC (tmp_drug_opd) สำหรับนำไปใช้ใน Excel, Google Sheets หรือระบบอื่น</p>
 
     <div class="note">
-        <strong>สรุปสั้น:</strong> เปิดลิงก์ได้เลย ไม่ต้องมีบัญชี ไม่ต้องใช้ key ข้อมูลเป็นยอดรวมต่อตัวยา อำเภอ และหน่วยบริการ
+        <strong>สรุปสั้น:</strong> เปิดลิงก์ได้เลย ไม่ต้องมีบัญชี ไม่ต้องใช้ key ข้อมูลมีชื่อยา จำนวน มูลค่า ต้นทุน และราคาต่อหน่วย แยกตามยา อำเภอ หน่วยบริการ และรายยาในแต่ละพื้นที่ เป็นยอดรวม
         <strong>ไม่มีข้อมูลรายบุคคล</strong> ข้อมูลอัปเดตเองทุกครั้งที่ผู้ดูแลนำเข้าข้อมูลเดือนใหม่
     </div>
 
@@ -63,6 +63,8 @@
         <tr><td>ยอดรวมต่อตัวยา</td><td><code>drugs/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
         <tr><td>ยอดรวมต่ออำเภอ</td><td><code>districts/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
         <tr><td>ยอดรวมต่อหน่วยบริการ</td><td><code>hospitals/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
+        <tr><td><strong>รายยาในแต่ละอำเภอ</strong> (ยา x อำเภอ) สำหรับวิเคราะห์รายพื้นที่</td><td><code>district_drugs/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
+        <tr><td><strong>รายยาในแต่ละหน่วยบริการ</strong> (ยา x หน่วยบริการ) ไฟล์ใหญ่</td><td><code>hospital_drugs/&lt;เดือน&gt;.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
         <tr><td>ทุกอย่างของเดือนนั้นในไฟล์เดียว</td><td><code>summary/&lt;เดือน&gt;.json</code></td><td>JSON</td></tr>
         <tr><td>แนวโน้มมูลค่ารายตัวยาทุกเดือน</td><td><code>trend/drugs.csv</code> หรือ <code>.json</code></td><td>CSV / JSON</td></tr>
     </table>
@@ -78,7 +80,8 @@
         </li>
         <li>ข้อมูลจะเต็มตารางเอง และ Google Sheets จะดึงข้อมูลใหม่ให้เป็นระยะ</li>
     </ol>
-    <p>เปลี่ยน <code>drugs</code> เป็น <code>districts</code> หรือ <code>hospitals</code> และเปลี่ยนเดือนได้ตามต้องการ ถ้าใช้ <code>trend/drugs.csv</code> จะได้ตารางยาคูณเดือน เอาไปทำกราฟได้ทันที</p>
+    <p><strong>วิเคราะห์รายพื้นที่:</strong> ใช้ <code>district_drugs</code> แล้วทำ Pivot table (แถว = ยา, คอลัมน์ = อำเภอ, ค่า = value หรือ amount) จะเห็นว่ายาแต่ละตัวใช้ในอำเภอไหนมาก และราคาต่อหน่วยต่างกันแค่ไหน</p>
+    <p>เปลี่ยน <code>drugs</code> เป็น <code>districts</code>, <code>hospitals</code>, <code>district_drugs</code> หรือ <code>hospital_drugs</code> และเปลี่ยนเดือนได้ตามต้องการ ถ้าใช้ <code>trend/drugs.csv</code> จะได้ตารางยาคูณเดือน เอาไปทำกราฟได้ทันที</p>
 
     <h2 id="excel">3. ใช้กับ Excel</h2>
     <h3>วิธีง่าย: ดาวน์โหลดไฟล์</h3>
@@ -122,8 +125,11 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
         <tr><td><code>amp_code</code>, <code>amp_name</code></td><td>รหัสและชื่ออำเภอ</td></tr>
         <tr><td><code>hospcode</code>, <code>hospname</code></td><td>รหัส 5 หลักและชื่อหน่วยบริการ</td></tr>
         <tr><td><code>rows</code></td><td>จำนวนแถวข้อมูล (จำนวนครั้งที่บันทึกการจ่าย)</td></tr>
-        <tr><td><code>value</code></td><td>มูลค่ารวม (บาท) ปัดทศนิยม 2 ตำแหน่ง</td></tr>
         <tr><td><code>amount</code></td><td>จำนวนที่จ่ายรวม (หน่วยของยานั้น)</td></tr>
+        <tr><td><code>value</code></td><td>มูลค่า / ราคาขายรวม (บาท) ปัดทศนิยม 2 ตำแหน่ง</td></tr>
+        <tr><td><code>cost</code></td><td>ต้นทุนรวม (บาท)</td></tr>
+        <tr><td><code>unit_price</code></td><td>ราคาขายเฉลี่ยต่อหน่วย = value ÷ amount</td></tr>
+        <tr><td><code>unit_cost</code></td><td>ต้นทุนเฉลี่ยต่อหน่วย = cost ÷ amount (ว่าง = ไม่มีการจ่าย)</td></tr>
         <tr><td><code>value_YYYY-MM</code></td><td>ในไฟล์แนวโน้ม: มูลค่าของเดือนนั้น (0 = ไม่มีการจ่าย)</td></tr>
     </table>
     </div>

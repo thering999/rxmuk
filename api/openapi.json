@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "RxMuk Public API",
-    "version": "1.1.0",
-    "description": "สรุปข้อมูลการจ่ายยารายเดือน จังหวัดมุกดาหาร (HDC tmp_drug_opd)\n\n- เรียกได้ด้วย HTTP GET ธรรมดา ไม่ต้องมีบัญชี ไม่ต้องใช้ key\n- เป็นยอดรวมต่อตัวยา อำเภอ และหน่วยบริการเท่านั้น ไม่มีข้อมูลรายบุคคล\n- อัปเดตอัตโนมัติทุกครั้งที่ผู้ดูแลนำเข้าข้อมูลขึ้น Cloud\n- เดือนเป็น ค.ศ. เช่น 2026-09 = ก.ย. 2569\n- value = มูลค่า (บาท), amount = จำนวนจ่าย (หน่วย), rows = จำนวนแถวข้อมูล\n\n**คู่มือภาษาไทยแบบละเอียด (Google Sheets / Excel / นักพัฒนา): [guide.html](guide.html)**"
+    "version": "1.2.0",
+    "description": "สรุปข้อมูลการจ่ายยารายเดือน จังหวัดมุกดาหาร (HDC tmp_drug_opd)\n\n- เรียกได้ด้วย HTTP GET ธรรมดา ไม่ต้องมีบัญชี ไม่ต้องใช้ key\n- เป็นยอดรวมต่อตัวยา อำเภอ และหน่วยบริการเท่านั้น ไม่มีข้อมูลรายบุคคล\n- อัปเดตอัตโนมัติทุกครั้งที่ผู้ดูแลนำเข้าข้อมูลขึ้น Cloud\n- เดือนเป็น ค.ศ. เช่น 2026-09 = ก.ย. 2569\n- amount = จำนวนจ่าย (หน่วย), value = มูลค่า/ราคาขาย (บาท), cost = ต้นทุน (บาท), unit_price / unit_cost = ต่อหน่วย, rows = จำนวนแถวข้อมูล\n- วิเคราะห์รายพื้นที่: district_drugs (ยา x อำเภอ), hospital_drugs (ยา x หน่วยบริการ)\n\n**คู่มือภาษาไทยแบบละเอียด (Google Sheets / Excel / นักพัฒนา): [guide.html](guide.html)**"
   },
   "servers": [
     {
@@ -71,7 +71,7 @@
     },
     "/drugs/{month}.json": {
       "get": {
-        "summary": "ยอดรวมต่อตัวยา (JSON)",
+        "summary": "ต่อตัวยา (JSON)",
         "operationId": "drugsJson",
         "tags": [
           "รายเดือน"
@@ -91,28 +91,13 @@
         ],
         "responses": {
           "200": {
-            "description": "array",
+            "description": "array เรียงตามมูลค่ามากไปน้อย",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/Totals"
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "didstd": {
-                            "type": "string"
-                          },
-                          "dname": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    ]
+                    "$ref": "#/components/schemas/drugs"
                   }
                 }
               }
@@ -126,7 +111,7 @@
     },
     "/drugs/{month}.csv": {
       "get": {
-        "summary": "ยอดรวมต่อตัวยา (CSV สำหรับ Excel / Google Sheets IMPORTDATA)",
+        "summary": "ต่อตัวยา (CSV)",
         "operationId": "drugsCsv",
         "tags": [
           "รายเดือน"
@@ -146,7 +131,7 @@
         ],
         "responses": {
           "200": {
-            "description": "CSV UTF-8 คอลัมน์: didstd, dname, rows, value, amount",
+            "description": "CSV UTF-8 คอลัมน์: didstd, dname, rows, amount, value, cost, unit_price, unit_cost",
             "content": {
               "text/csv": {
                 "schema": {
@@ -163,7 +148,7 @@
     },
     "/districts/{month}.json": {
       "get": {
-        "summary": "ยอดรวมต่ออำเภอ (JSON)",
+        "summary": "ต่ออำเภอ (JSON)",
         "operationId": "districtsJson",
         "tags": [
           "รายเดือน"
@@ -183,28 +168,13 @@
         ],
         "responses": {
           "200": {
-            "description": "array",
+            "description": "array เรียงตามมูลค่ามากไปน้อย",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/Totals"
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "amp_code": {
-                            "type": "string"
-                          },
-                          "amp_name": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    ]
+                    "$ref": "#/components/schemas/districts"
                   }
                 }
               }
@@ -218,7 +188,7 @@
     },
     "/districts/{month}.csv": {
       "get": {
-        "summary": "ยอดรวมต่ออำเภอ (CSV สำหรับ Excel / Google Sheets IMPORTDATA)",
+        "summary": "ต่ออำเภอ (CSV)",
         "operationId": "districtsCsv",
         "tags": [
           "รายเดือน"
@@ -238,7 +208,7 @@
         ],
         "responses": {
           "200": {
-            "description": "CSV UTF-8 คอลัมน์: amp_code, amp_name, rows, value, amount",
+            "description": "CSV UTF-8 คอลัมน์: amp_code, amp_name, rows, amount, value, cost",
             "content": {
               "text/csv": {
                 "schema": {
@@ -255,7 +225,7 @@
     },
     "/hospitals/{month}.json": {
       "get": {
-        "summary": "ยอดรวมต่อหน่วยบริการ (JSON)",
+        "summary": "ต่อหน่วยบริการ (JSON)",
         "operationId": "hospitalsJson",
         "tags": [
           "รายเดือน"
@@ -275,31 +245,13 @@
         ],
         "responses": {
           "200": {
-            "description": "array",
+            "description": "array เรียงตามมูลค่ามากไปน้อย",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/Totals"
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "hospcode": {
-                            "type": "string"
-                          },
-                          "hospname": {
-                            "type": "string"
-                          },
-                          "amp_code": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    ]
+                    "$ref": "#/components/schemas/hospitals"
                   }
                 }
               }
@@ -313,7 +265,7 @@
     },
     "/hospitals/{month}.csv": {
       "get": {
-        "summary": "ยอดรวมต่อหน่วยบริการ (CSV สำหรับ Excel / Google Sheets IMPORTDATA)",
+        "summary": "ต่อหน่วยบริการ (CSV)",
         "operationId": "hospitalsCsv",
         "tags": [
           "รายเดือน"
@@ -333,7 +285,7 @@
         ],
         "responses": {
           "200": {
-            "description": "CSV UTF-8 คอลัมน์: hospcode, hospname, amp_code, rows, value, amount",
+            "description": "CSV UTF-8 คอลัมน์: hospcode, hospname, amp_code, rows, amount, value, cost",
             "content": {
               "text/csv": {
                 "schema": {
@@ -391,6 +343,12 @@
                             "items": {
                               "type": "number"
                             }
+                          },
+                          "cost": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
                           }
                         }
                       }
@@ -423,6 +381,160 @@
           }
         }
       }
+    },
+    "/district_drugs/{month}.json": {
+      "get": {
+        "summary": "รายยาในแต่ละอำเภอ (ยา x อำเภอ) (JSON)",
+        "operationId": "district_drugsJson",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "array เรียงตามมูลค่ามากไปน้อย",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/district_drugs"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/district_drugs/{month}.csv": {
+      "get": {
+        "summary": "รายยาในแต่ละอำเภอ (ยา x อำเภอ) (CSV)",
+        "operationId": "district_drugsCsv",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV UTF-8 คอลัมน์: amp_code, amp_name, didstd, dname, rows, amount, value, cost, unit_price, unit_cost",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/hospital_drugs/{month}.json": {
+      "get": {
+        "summary": "รายยาในแต่ละหน่วยบริการ (ยา x หน่วยบริการ) ไฟล์ใหญ่ (JSON)",
+        "operationId": "hospital_drugsJson",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "array เรียงตามมูลค่ามากไปน้อย",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/hospital_drugs"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/hospital_drugs/{month}.csv": {
+      "get": {
+        "summary": "รายยาในแต่ละหน่วยบริการ (ยา x หน่วยบริการ) ไฟล์ใหญ่ (CSV)",
+        "operationId": "hospital_drugsCsv",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV UTF-8 คอลัมน์: hospcode, hospname, amp_code, didstd, dname, rows, amount, value, cost, unit_price, unit_cost",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -433,13 +545,17 @@
           "rows": {
             "type": "integer"
           },
-          "value": {
-            "type": "number",
-            "description": "บาท"
-          },
           "amount": {
             "type": "number",
-            "description": "หน่วย"
+            "description": "จำนวนที่จ่าย (หน่วย)"
+          },
+          "value": {
+            "type": "number",
+            "description": "มูลค่า/ราคาขายรวม (บาท)"
+          },
+          "cost": {
+            "type": "number",
+            "description": "ต้นทุนรวม (บาท)"
           }
         }
       },
@@ -492,72 +608,202 @@
               "drugs": {
                 "type": "array",
                 "items": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/Totals"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "didstd": {
-                          "type": "string"
-                        },
-                        "dname": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/drugs"
                 }
               },
               "districts": {
                 "type": "array",
                 "items": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/Totals"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "amp_code": {
-                          "type": "string"
-                        },
-                        "amp_name": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/districts"
                 }
               },
               "hospitals": {
                 "type": "array",
                 "items": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/Totals"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "hospcode": {
-                          "type": "string"
-                        },
-                        "hospname": {
-                          "type": "string"
-                        },
-                        "amp_code": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/hospitals"
                 }
               }
             }
           }
         ]
+      },
+      "drugs": {
+        "type": "object",
+        "properties": {
+          "didstd": {
+            "type": "string"
+          },
+          "dname": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number",
+            "description": "จำนวนที่จ่าย (หน่วย)"
+          },
+          "value": {
+            "type": "number",
+            "description": "มูลค่า/ราคาขายรวม (บาท)"
+          },
+          "cost": {
+            "type": "number",
+            "description": "ต้นทุนรวม (บาท)"
+          },
+          "unit_price": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / amount"
+          },
+          "unit_cost": {
+            "type": "number",
+            "nullable": true,
+            "description": "cost / amount"
+          }
+        }
+      },
+      "districts": {
+        "type": "object",
+        "properties": {
+          "amp_code": {
+            "type": "string"
+          },
+          "amp_name": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number",
+            "description": "จำนวนที่จ่าย (หน่วย)"
+          },
+          "value": {
+            "type": "number",
+            "description": "มูลค่า/ราคาขายรวม (บาท)"
+          },
+          "cost": {
+            "type": "number",
+            "description": "ต้นทุนรวม (บาท)"
+          }
+        }
+      },
+      "hospitals": {
+        "type": "object",
+        "properties": {
+          "hospcode": {
+            "type": "string"
+          },
+          "hospname": {
+            "type": "string"
+          },
+          "amp_code": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number",
+            "description": "จำนวนที่จ่าย (หน่วย)"
+          },
+          "value": {
+            "type": "number",
+            "description": "มูลค่า/ราคาขายรวม (บาท)"
+          },
+          "cost": {
+            "type": "number",
+            "description": "ต้นทุนรวม (บาท)"
+          }
+        }
+      },
+      "district_drugs": {
+        "type": "object",
+        "properties": {
+          "amp_code": {
+            "type": "string"
+          },
+          "amp_name": {
+            "type": "string"
+          },
+          "didstd": {
+            "type": "string"
+          },
+          "dname": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number",
+            "description": "จำนวนที่จ่าย (หน่วย)"
+          },
+          "value": {
+            "type": "number",
+            "description": "มูลค่า/ราคาขายรวม (บาท)"
+          },
+          "cost": {
+            "type": "number",
+            "description": "ต้นทุนรวม (บาท)"
+          },
+          "unit_price": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / amount"
+          },
+          "unit_cost": {
+            "type": "number",
+            "nullable": true,
+            "description": "cost / amount"
+          }
+        }
+      },
+      "hospital_drugs": {
+        "type": "object",
+        "properties": {
+          "hospcode": {
+            "type": "string"
+          },
+          "hospname": {
+            "type": "string"
+          },
+          "amp_code": {
+            "type": "string"
+          },
+          "didstd": {
+            "type": "string"
+          },
+          "dname": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "number",
+            "description": "จำนวนที่จ่าย (หน่วย)"
+          },
+          "value": {
+            "type": "number",
+            "description": "มูลค่า/ราคาขายรวม (บาท)"
+          },
+          "cost": {
+            "type": "number",
+            "description": "ต้นทุนรวม (บาท)"
+          },
+          "unit_price": {
+            "type": "number",
+            "nullable": true,
+            "description": "value / amount"
+          },
+          "unit_cost": {
+            "type": "number",
+            "nullable": true,
+            "description": "cost / amount"
+          }
+        }
       }
     }
   }
