@@ -145,7 +145,7 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
         <tr><td><code>quality_score</code></td><td>(hospitals) คะแนนคุณภาพข้อมูล 0-100 = แถวที่ถูกต้อง ÷ ทั้งหมด</td></tr>
     </table>
     </div>
-    <p class="muted">คอลัมน์ <code>cost</code> และ <code>unit_cost</code> จะมีเมื่อผู้ดูแลเลือกเผยแพร่ต้นทุน ดูได้จาก <code>includes_cost</code> ใน <code>index.json</code></p>
+    <p class="muted">ผู้ดูแลเลือกได้ว่าจะเผยแพร่คอลัมน์กลุ่มไหน (เช่น ต้นทุน จำนวนผู้ป่วย) และไฟล์ไหน คอลัมน์ที่ไม่ได้เผยแพร่จะไม่มีในไฟล์เลย ดูรายการได้จาก <code>excluded_fields</code> และไฟล์ที่มีจาก <code>views</code> ใน <code>index.json</code> โค้ดที่อ่านข้อมูลควรรองรับกรณีคอลัมน์หายไป</p>
 
     <h2 id="terms">เงื่อนไขการใช้ข้อมูล</h2>
     <ul>
@@ -161,6 +161,7 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
     <div class="table-wrap">
     <table>
         <tr><th>เวอร์ชัน</th><th>เปลี่ยนอะไร</th></tr>
+        <tr><td>1.6</td><td>ผู้ดูแลเลือกเผยแพร่บางกลุ่มฟิลด์หรือบางไฟล์ได้ ดูว่าอะไรไม่ได้เผยแพร่จาก <code>excluded_fields</code> และไฟล์ที่มีจาก <code>views</code> ใน <code>index.json</code></td></tr>
         <tr><td>1.5</td><td>เพิ่ม <code>patients</code>, <code>value_per_patient</code> ทุกไฟล์ และ <code>patients_per_1000</code> ใน districts · แถวรายยาในพื้นที่ต้องมีทั้ง ≥ 5 ครั้งและ ≥ 5 คน จึงแสดงแยก</td></tr>
         <tr><td>1.4</td><td>เพิ่ม <code>group</code>, <code>antibiotic</code>, <code>high_alert</code>, <code>ed_list</code> ในไฟล์รายยา · ค่าต่อประชากรใน districts · คะแนนคุณภาพข้อมูลใน hospitals (เพิ่มคอลัมน์เท่านั้น โค้ดเดิมใช้ต่อได้)</td></tr>
         <tr><td>1.3</td><td>รวมรายการที่น้อยกว่า 5 ครั้งเป็น "อื่นๆ" (<code>suppressed_items</code>), เพิ่ม <code>schema_version</code>, <code>terms</code>, <code>includes_cost</code> ใน index · เดือนที่เผยแพร่ไว้ก่อนยังอยู่ใน index</td></tr>
