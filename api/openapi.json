@@ -2,11 +2,13 @@
   "openapi": "3.0.3",
   "info": {
     "title": "RxMuk Public API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "สรุปข้อมูลการจ่ายยารายเดือน จังหวัดมุกดาหาร (HDC tmp_drug_opd)\n\n- เรียกได้ด้วย HTTP GET ธรรมดา ไม่ต้องมีบัญชี ไม่ต้องใช้ key\n- เป็นยอดรวมต่อตัวยา อำเภอ และหน่วยบริการเท่านั้น ไม่มีข้อมูลรายบุคคล\n- อัปเดตเมื่อผู้ดูแลกดเผยแพร่ในแท็บ API ของ RxMuk\n- value = มูลค่า (บาท), amount = จำนวนจ่าย (หน่วย), rows = จำนวนแถวข้อมูล"
   },
   "servers": [
-    { "url": "https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public" }
+    {
+      "url": "https://vbxijqbgwgippdrhsjnb.supabase.co/storage/v1/object/public/rxmuk-public"
+    }
   ],
   "paths": {
     "/index.json": {
@@ -16,9 +18,18 @@
         "responses": {
           "200": {
             "description": "รายการเดือนพร้อมยอดรวม",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Index" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Index"
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": [
+          "เริ่มที่นี่"
+        ]
       }
     },
     "/summary/{month}.json": {
@@ -27,17 +38,389 @@
         "operationId": "getMonth",
         "parameters": [
           {
-            "name": "month", "in": "path", "required": true,
+            "name": "month",
+            "in": "path",
+            "required": true,
             "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
-            "schema": { "type": "string", "pattern": "^\\d{4}-\\d{2}$", "example": "2026-09" }
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "ยอดรวมต่อตัวยา อำเภอ และหน่วยบริการ",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MonthSummary" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthSummary"
+                }
+              }
+            }
           },
-          "400": { "description": "ไม่มีข้อมูลเดือนนี้ (Supabase ตอบ 400 Object not found)" }
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้ (Supabase ตอบ 400 Object not found)"
+          }
+        },
+        "tags": [
+          "รายเดือน"
+        ]
+      }
+    },
+    "/drugs/{month}.json": {
+      "get": {
+        "summary": "ยอดรวมต่อตัวยา (JSON)",
+        "operationId": "drugsJson",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/Totals"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "didstd": {
+                            "type": "string"
+                          },
+                          "dname": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/drugs/{month}.csv": {
+      "get": {
+        "summary": "ยอดรวมต่อตัวยา (CSV สำหรับ Excel / Google Sheets IMPORTDATA)",
+        "operationId": "drugsCsv",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV UTF-8 คอลัมน์: didstd, dname, rows, value, amount",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/districts/{month}.json": {
+      "get": {
+        "summary": "ยอดรวมต่ออำเภอ (JSON)",
+        "operationId": "districtsJson",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/Totals"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "amp_code": {
+                            "type": "string"
+                          },
+                          "amp_name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/districts/{month}.csv": {
+      "get": {
+        "summary": "ยอดรวมต่ออำเภอ (CSV สำหรับ Excel / Google Sheets IMPORTDATA)",
+        "operationId": "districtsCsv",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV UTF-8 คอลัมน์: amp_code, amp_name, rows, value, amount",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/hospitals/{month}.json": {
+      "get": {
+        "summary": "ยอดรวมต่อหน่วยบริการ (JSON)",
+        "operationId": "hospitalsJson",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/Totals"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "hospcode": {
+                            "type": "string"
+                          },
+                          "hospname": {
+                            "type": "string"
+                          },
+                          "amp_code": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/hospitals/{month}.csv": {
+      "get": {
+        "summary": "ยอดรวมต่อหน่วยบริการ (CSV สำหรับ Excel / Google Sheets IMPORTDATA)",
+        "operationId": "hospitalsCsv",
+        "tags": [
+          "รายเดือน"
+        ],
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "description": "ปี-เดือน ค.ศ. รูปแบบ YYYY-MM (เช่น 2026-09 = กันยายน 2569) ดูเดือนที่มีได้จาก /index.json",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-09"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV UTF-8 คอลัมน์: hospcode, hospname, amp_code, rows, value, amount",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ไม่มีข้อมูลเดือนนี้"
+          }
+        }
+      }
+    },
+    "/trend/drugs.json": {
+      "get": {
+        "summary": "แนวโน้มมูลค่า/จำนวนรายตัวยาทุกเดือน (JSON)",
+        "operationId": "trendJson",
+        "tags": [
+          "แนวโน้ม"
+        ],
+        "responses": {
+          "200": {
+            "description": "value[i] / amount[i] ตรงกับ months[i]",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "months": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "drugs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "didstd": {
+                            "type": "string"
+                          },
+                          "dname": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "amount": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trend/drugs.csv": {
+      "get": {
+        "summary": "แนวโน้มมูลค่ารายตัวยา (CSV คอลัมน์ละเดือน)",
+        "operationId": "trendCsv",
+        "tags": [
+          "แนวโน้ม"
+        ],
+        "responses": {
+          "200": {
+            "description": "didstd, dname, value_YYYY-MM ...",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -47,22 +430,48 @@
       "Totals": {
         "type": "object",
         "properties": {
-          "rows": { "type": "integer" },
-          "value": { "type": "number", "description": "บาท" },
-          "amount": { "type": "number", "description": "หน่วย" }
+          "rows": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number",
+            "description": "บาท"
+          },
+          "amount": {
+            "type": "number",
+            "description": "หน่วย"
+          }
         }
       },
       "Index": {
         "type": "object",
         "properties": {
-          "updated_at": { "type": "string", "format": "date-time" },
-          "source": { "type": "string" },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          },
           "months": {
             "type": "array",
             "items": {
               "allOf": [
-                { "$ref": "#/components/schemas/Totals" },
-                { "type": "object", "properties": { "month": { "type": "string", "example": "2026-09" }, "url": { "type": "string" } } }
+                {
+                  "$ref": "#/components/schemas/Totals"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "string",
+                      "example": "2026-09"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  }
+                }
               ]
             }
           }
@@ -70,22 +479,81 @@
       },
       "MonthSummary": {
         "allOf": [
-          { "$ref": "#/components/schemas/Totals" },
+          {
+            "$ref": "#/components/schemas/Totals"
+          },
           {
             "type": "object",
             "properties": {
-              "month": { "type": "string", "example": "2026-09" },
+              "month": {
+                "type": "string",
+                "example": "2026-09"
+              },
               "drugs": {
                 "type": "array",
-                "items": { "allOf": [ { "$ref": "#/components/schemas/Totals" }, { "type": "object", "properties": { "didstd": { "type": "string" }, "dname": { "type": "string" } } } ] }
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Totals"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "didstd": {
+                          "type": "string"
+                        },
+                        "dname": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
               },
               "districts": {
                 "type": "array",
-                "items": { "allOf": [ { "$ref": "#/components/schemas/Totals" }, { "type": "object", "properties": { "amp_code": { "type": "string" }, "amp_name": { "type": "string" } } } ] }
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Totals"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "amp_code": {
+                          "type": "string"
+                        },
+                        "amp_name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
               },
               "hospitals": {
                 "type": "array",
-                "items": { "allOf": [ { "$ref": "#/components/schemas/Totals" }, { "type": "object", "properties": { "hospcode": { "type": "string" }, "hospname": { "type": "string" }, "amp_code": { "type": "string" } } } ] }
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Totals"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "hospcode": {
+                          "type": "string"
+                        },
+                        "hospname": {
+                          "type": "string"
+                        },
+                        "amp_code": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
               }
             }
           }

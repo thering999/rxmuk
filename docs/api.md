@@ -7,10 +7,14 @@ Swagger UI: `https://thering999.github.io/rxmuk/api/` · spec: `api/openapi.json
 
 | Purpose | Request |
 |---|---|
-| List months | `GET $SB_URL/storage/v1/object/public/rxmuk-public/index.json` |
-| One month | `GET $SB_URL/storage/v1/object/public/rxmuk-public/summary/2026-09.json` |
+| List months and file links | `GET .../rxmuk-public/index.json` |
+| One month, everything | `GET .../rxmuk-public/summary/2026-09.json` |
+| One view, JSON or CSV | `GET .../rxmuk-public/{drugs,districts,hospitals}/2026-09.{json,csv}` |
+| Monthly trend per drug | `GET .../rxmuk-public/trend/drugs.{json,csv}` |
 
-Setup once: run `supabase/migrations/20261109_03_public_api_bucket.sql`. To update, the super admin (role `province`) clicks "เผยแพร่ / อัปเดต API สาธารณะ" in the API tab.
+`...` = `$SB_URL/storage/v1/object/public`. Months are CE (`2026-09` = Sep 2569). CSV is UTF-8 with BOM; Google Sheets: `=IMPORTDATA("<csv url>")`.
+
+Setup once: run `supabase/migrations/20261109_03_public_api_bucket.sql`. Files refresh automatically after the super admin (role `province`) uploads data to the cloud, or on demand with "เผยแพร่ / อัปเดต API สาธารณะ" in the API tab.
 
 The sections below are the authenticated API (approved Supabase accounts).
 
