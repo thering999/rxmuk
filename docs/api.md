@@ -23,6 +23,23 @@ Privacy and policy (schema 1.3):
 - Republishing keeps months listed in the previous `index.json` that are not loaded in this browser (older fiscal years).
 - Usage: Supabase dashboard > Logs > Storage, filter `rxmuk-public`, shows which files are read and how often.
 
+## Partner API (record-level, approved agencies only)
+
+Rows without patient ids (optional salted `pid_hash`), via a per-agency key that expires, can be revoked, and logs every call.
+Approval first: `docs/approval/rxmuk-api-data-sharing-request.md` (memo for the director and DPO, plus DSA checklist).
+
+Setup once:
+
+1. SQL Editor: run `supabase/migrations/20261109_04_partner_api.sql`.
+2. Deploy the function (CLI): `supabase functions deploy rxmuk-partner-api --no-verify-jwt --project-ref vbxijqbgwgippdrhsjnb`
+   or Dashboard > Edge Functions > Create, paste `supabase/functions/rxmuk-partner-api/index.ts`, turn off "Verify JWT".
+3. Only if some key needs `pid_hash`: Edge Functions > Secrets, add `RXMUK_PID_SALT` (32+ random characters, never change it or hashes stop matching).
+4. Super admin creates keys in the API tab ("API สำหรับหน่วยงานที่ได้รับอนุญาต"). The key is shown once.
+
+Call: `GET $SB_URL/functions/v1/rxmuk-partner-api?month=2026-09[&hospcode=][&amp_code=][&didstd=][&limit=5000][&offset=0]` with `X-API-Key: rxk_...`.
+Returns `{ month, total, offset, limit, next_offset, rows: [{ month, date, hospcode, hospname, amp_code, amp_name, didstd, dname, amount, value, cost, pid_hash? }] }`. Max limit 50,000; page with `next_offset`.
+Errors: 401 bad key format, 403 revoked/expired, 400 bad month, 404 no data. Logs: table `rxmuk_api_log` (readable by role `province`).
+
 The sections below are the authenticated API (approved Supabase accounts).
 
 RxMuk has no server of its own. The API is Supabase's REST endpoints, and RLS decides who sees what.

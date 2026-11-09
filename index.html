@@ -3369,6 +3369,32 @@
                     <div id="api-pub-info" class="api-note" role="status"></div>
                 </div>
 
+                <div class="panel" id="partner-panel" hidden>
+                    <h3 class="panel-title"><span>🔐</span> API สำหรับหน่วยงานที่ได้รับอนุญาต (ข้อมูลราย record)</h3>
+                    <p class="api-note">ออก key ให้เฉพาะหน่วยงานที่ทำข้อตกลงแบ่งปันข้อมูลกับ สสจ. แล้วเท่านั้น · ไม่ส่งรหัสผู้ป่วย (pid) ออกไป ·
+                        ทุกการเรียกถูกบันทึก · key แสดงครั้งเดียวตอนสร้าง (เฉพาะ super admin)</p>
+                    <div class="api-row">
+                        <label>ชื่อหน่วยงาน / ระบบ
+                            <input id="partner-name" class="select-control" maxlength="200" placeholder="เช่น ระบบคลังยา รพ.มุกดาหาร">
+                        </label>
+                        <label>อายุ key (วัน)
+                            <input id="partner-days" class="select-control" type="number" min="1" max="730" value="365" style="width:110px;">
+                        </label>
+                        <label style="flex-direction:row; align-items:center; gap:6px;">
+                            <input type="checkbox" id="partner-pidhash"> ให้รหัสผู้ป่วยแบบเข้ารหัสทางเดียว (นับคนได้ แต่ไม่รู้ว่าใคร)
+                        </label>
+                        <button type="button" class="btn btn-primary" onclick="createPartnerKey()">➕ สร้าง key</button>
+                    </div>
+                    <div id="partner-newkey" class="api-example" hidden></div>
+                    <div class="table-container" style="margin-top:12px;">
+                        <table class="data-table">
+                            <thead><tr><th>หน่วยงาน</th><th>key</th><th>หมดอายุ</th><th>ใช้ล่าสุด</th><th>เรียก 30 วัน</th><th>สถานะ</th><th></th></tr></thead>
+                            <tbody id="partner-keys"><tr><td colspan="7">-</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div id="partner-info" class="api-note" role="status"></div>
+                </div>
+
                 <div class="panel">
                     <h3 class="panel-title"><span>🔌</span> REST API (สำหรับนักพัฒนา / n8n)</h3>
                     <p class="api-note">ระบบอื่นเรียกข้อมูลผ่าน Supabase REST ได้โดยตรง ต้องใช้บัญชีที่ผู้ดูแลอนุมัติแล้ว (บัญชีรวม rxmuk ใช้ API ไม่ได้)
@@ -4480,6 +4506,7 @@
             document.getElementById('api-pub-index').textContent = `${pubBase}/index.json`;
             document.getElementById('api-pub-month').textContent = `${pubBase}/summary/<YYYY-MM>.json`;
             document.getElementById('api-pub-admin').hidden = !canPublishPublicApi();
+            renderPartnerKeys();
             const costBox = document.getElementById('api-pub-cost');
             if (costBox && !costBox.dataset.bound) {
                 costBox.dataset.bound = '1';
@@ -4705,6 +4732,72 @@
                 showToast('❌ เผยแพร่ API สาธารณะไม่สำเร็จ', 'error');
                 console.warn('Public API publish failed:', e);
             }
+        }
+
+        // ─── Partner API keys (super admin) ───
+        async function partnerRpc(name, body) {
+            const cfg = sbGetConfig();
+            const res = await sbFetch(cfg, `${cfg.url}/rest/v1/rpc/${name}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {})
+            });
+            const text = await res.text();
+            if (!res.ok) throw new Error(/does not exist|PGRST202/i.test(text) ? 'ยังไม่ได้รัน SQL 04_partner_api' : `${res.status}: ${text.slice(0, 200)}`);
+            return text ? JSON.parse(text) : null;
+        }
+        async function renderPartnerKeys() {
+            const panel = document.getElementById('partner-panel');
+            panel.hidden = !canPublishPublicApi();
+            if (panel.hidden) return;
+            const body = document.getElementById('partner-keys');
+            const info = document.getElementById('partner-info');
+            const d = v => v ? new Date(v).toLocaleDateString('th-TH') : '-';
+            try {
+                const keys = await partnerRpc('rxmuk_list_api_keys');
+                info.textContent = '';
+                if (!keys.length) { body.innerHTML = '<tr><td colspan="7">ยังไม่มี key</td></tr>'; return; }
+                body.replaceChildren(...keys.map(k => {
+                    const tr = document.createElement('tr');
+                    const expired = k.expires_at && new Date(k.expires_at) < new Date();
+                    const status = k.revoked_at ? 'ยกเลิกแล้ว' : expired ? 'หมดอายุ' : 'ใช้งาน';
+                    [k.name + (k.allow_pid_hash ? ' (pid hash)' : ''), k.key_prefix + '…', d(k.expires_at), d(k.last_used_at), String(k.calls_30d), status]
+                        .forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+                    const td = document.createElement('td');
+                    if (!k.revoked_at) {
+                        const b = document.createElement('button');
+                        b.type = 'button'; b.className = 'btn btn-secondary'; b.textContent = 'ยกเลิก';
+                        b.addEventListener('click', () => revokePartnerKey(k.id, k.name));
+                        td.appendChild(b);
+                    }
+                    tr.appendChild(td);
+                    return tr;
+                }));
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="7">-</td></tr>';
+                info.textContent = '❌ ' + e.message;
+            }
+        }
+        async function createPartnerKey() {
+            const name = document.getElementById('partner-name').value.trim();
+            const days = parseInt(document.getElementById('partner-days').value, 10);
+            if (!name) { showToast('กรอกชื่อหน่วยงาน', 'error'); return; }
+            if (!(days >= 1 && days <= 730)) { showToast('อายุ key 1-730 วัน', 'error'); return; }
+            try {
+                const key = await partnerRpc('rxmuk_create_api_key', { p_name: name, p_days: days, p_allow_pid_hash: document.getElementById('partner-pidhash').checked });
+                const box = document.getElementById('partner-newkey');
+                box.hidden = false;
+                const cfg = sbGetConfig();
+                renderApiExamples('partner-newkey', [[
+                    `🔑 key ของ "${name}" — คัดลอกเก็บไว้ตอนนี้ จะไม่แสดงอีก`,
+                    `${key}\n\ncurl -s "${cfg.url}/functions/v1/rxmuk-partner-api?month=2026-09&limit=100" -H "X-API-Key: ${key}"`
+                ]]);
+                document.getElementById('partner-name').value = '';
+                renderPartnerKeys();
+            } catch (e) { showToast('❌ ' + e.message, 'error'); }
+        }
+        async function revokePartnerKey(id, name) {
+            if (!confirm(`ยกเลิก key ของ "${name}"? ระบบที่ใช้ key นี้จะเรียกข้อมูลไม่ได้ทันที`)) return;
+            try { await partnerRpc('rxmuk_revoke_api_key', { p_id: id }); showToast('ยกเลิก key แล้ว', 'success'); renderPartnerKeys(); }
+            catch (e) { showToast('❌ ' + e.message, 'error'); }
         }
 
         function renderApiExamples(boxId, ex) {
