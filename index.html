@@ -3343,7 +3343,7 @@
                     <div id="api-pub-examples"></div>
                     <div id="api-pub-admin" class="api-row" hidden>
                         <button type="button" class="btn btn-primary" onclick="publishPublicApi()">🔄 เผยแพร่ / อัปเดต API สาธารณะ</button>
-                        <span class="api-note" style="margin:0;">สร้างสรุปจากข้อมูลที่โหลดอยู่ทุกเดือน แล้วอัปโหลดทับของเดิม (เฉพาะ super admin)</span>
+                        <span class="api-note" style="margin:0;">สร้างสรุปจากข้อมูลที่โหลดอยู่ทุกเดือน แล้วอัปโหลดทับของเดิม (เฉพาะ super admin · ทำให้อัตโนมัติทุกครั้งที่อัปโหลดข้อมูลขึ้น Cloud)</span>
                     </div>
                     <div id="api-pub-info" class="api-note" role="status"></div>
                 </div>
@@ -4450,12 +4450,13 @@
             const pubBase = `${base}/storage/v1/object/public/${PUBLIC_API_BUCKET}`;
             document.getElementById('api-pub-index').textContent = `${pubBase}/index.json`;
             document.getElementById('api-pub-month').textContent = `${pubBase}/summary/<YYYY-MM>.json`;
-            document.getElementById('api-pub-admin').hidden = !(sbIsSignedIn() && rxProfile && rxProfile.role === 'province');
+            document.getElementById('api-pub-admin').hidden = !canPublishPublicApi();
             renderApiExamples('api-pub-examples', [
                 ['curl', `curl -s "${pubBase}/index.json"\ncurl -s "${pubBase}/summary/2026-09.json"`],
                 ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2026-09.json"))`],
                 ['Google Sheets (Apps Script)', `const r = UrlFetchApp.fetch("${pubBase}/summary/2026-09.json");\nconst data = JSON.parse(r.getContentText());`],
-                ['JavaScript', `const data = await (await fetch("${pubBase}/summary/2026-09.json")).json();`]
+                ['JavaScript', `const data = await (await fetch("${pubBase}/summary/2026-09.json")).json();`],
+                ['Google Sheets (สูตรในเซลล์ ไม่ต้องเขียนโค้ด)', `=IMPORTDATA("${pubBase}/drugs/2026-09.csv")\n=IMPORTDATA("${pubBase}/hospitals/2026-09.csv")\n=IMPORTDATA("${pubBase}/trend/drugs.csv")`]
             ]);
             renderApiExamples('api-examples', ex);
         }
@@ -4472,11 +4473,28 @@
                 hospitals: s.hosps.map(obj(['hospcode', 'hospname', 'amp_code', 'rows', 'value', 'amount']))
             };
         }
-        async function publishPublicApi() {
+        // CSV for Excel / Google Sheets IMPORTDATA: BOM for Thai, formula-leading text escaped
+        function publicCsv(rows, cols) {
+            const cell = v => {
+                let s = v == null ? '' : String(v);
+                if (/^[=+\-@\t\r]/.test(s) && isNaN(Number(s))) s = "'" + s;
+                return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            return '﻿' + [cols.join(','), ...rows.map(r => cols.map(c => cell(r[c])).join(','))].join('\r\n');
+        }
+        const PUBLIC_COLS = {
+            drugs: ['didstd', 'dname', 'rows', 'value', 'amount'],
+            districts: ['amp_code', 'amp_name', 'rows', 'value', 'amount'],
+            hospitals: ['hospcode', 'hospname', 'amp_code', 'rows', 'value', 'amount']
+        };
+        function canPublishPublicApi() { return sbIsSignedIn() && rxProfile && rxProfile.role === 'province'; }
+
+        async function publishPublicApi(opts = {}) {
+            const silent = !!opts.silent;
             const cfg = sbGetConfig();
-            const info = document.getElementById('api-pub-info');
-            if (!cfg || !sbIsSignedIn()) { showToast('ต้องเข้าสู่ระบบด้วยบัญชี super admin', 'error'); return; }
-            if (!rawTransactions || !rawTransactions.length) { showToast('ยังไม่มีข้อมูลในเครื่อง', 'error'); return; }
+            const info = document.getElementById('api-pub-info') || { textContent: '' };
+            if (!cfg || !sbIsSignedIn()) { if (!silent) showToast('ต้องเข้าสู่ระบบด้วยบัญชี super admin', 'error'); return; }
+            if (!rawTransactions || !rawTransactions.length) { if (!silent) showToast('ยังไม่มีข้อมูลในเครื่อง', 'error'); return; }
             const by = new Map();
             for (const t of rawTransactions) {
                 if (!t || !/^\d{4}-\d{2}$/.test(t.month || '')) continue;
@@ -4485,30 +4503,61 @@
             }
             const months = [...by.keys()].sort();
             const pubBase = `${cfg.url}/storage/v1/object/public/${PUBLIC_API_BUCKET}`;
-            const put = async (name, data) => {
+            const put = async (name, body, type) => {
                 const res = await sbFetch(cfg, `${cfg.url}/storage/v1/object/${PUBLIC_API_BUCKET}/${name}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-upsert': 'true', 'cache-control': 'max-age=300' },
-                    body: JSON.stringify(data)
+                    headers: { 'Content-Type': type, 'x-upsert': 'true', 'cache-control': 'max-age=300' },
+                    body
                 });
                 if (!res.ok) throw new Error(`${name} ${res.status}: ${await res.text()}`);
             };
+            const putJson = (name, data) => put(name, JSON.stringify(data), 'application/json');
+            const putCsv = (name, rows, cols) => put(name, publicCsv(rows, cols), 'text/csv; charset=utf-8');
             try {
-                const index = [];
-                for (let i = 0; i < months.length; i++) {
-                    const m = months[i];
-                    info.textContent = `⏳ เผยแพร่เดือน ${m} (${i + 1}/${months.length})...`;
-                    const s = buildMonthSummary(m, by.get(m));
-                    await put(`summary/${m}.json`, publicMonthJson(s));
-                    index.push({ month: m, rows: s.rows, value: Math.round(s.value * 100) / 100, amount: Math.round(s.amount * 100) / 100, url: `${pubBase}/summary/${m}.json` });
-                }
-                await put('index.json', { updated_at: new Date().toISOString(), source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร', months: index });
-                info.textContent = `✅ เผยแพร่แล้ว ${months.length} เดือน — ${new Date().toLocaleString('th-TH')}`;
-                showToast('✅ อัปเดต API สาธารณะแล้ว', 'success');
+                const index = [], jobs = [];
+                const trend = new Map(); // didstd|dname -> { didstd, dname, value: [], amount: [] }
+                months.forEach((m, mi) => {
+                    const j = publicMonthJson(buildMonthSummary(m, by.get(m)));
+                    jobs.push(() => putJson(`summary/${m}.json`, j));
+                    for (const k of Object.keys(PUBLIC_COLS)) {
+                        jobs.push(() => putJson(`${k}/${m}.json`, j[k]));
+                        jobs.push(() => putCsv(`${k}/${m}.csv`, j[k], PUBLIC_COLS[k]));
+                    }
+                    for (const d of j.drugs) {
+                        const key = `${d.didstd}|${d.dname}`;
+                        let t = trend.get(key);
+                        if (!t) trend.set(key, t = { didstd: d.didstd, dname: d.dname, value: Array(months.length).fill(0), amount: Array(months.length).fill(0) });
+                        t.value[mi] = d.value; t.amount[mi] = d.amount;
+                    }
+                    const f = `${pubBase}`;
+                    index.push({
+                        month: m, rows: j.rows, value: j.value, amount: j.amount,
+                        url: `${f}/summary/${m}.json`,
+                        files: Object.fromEntries(Object.keys(PUBLIC_COLS).map(k => [k, { json: `${f}/${k}/${m}.json`, csv: `${f}/${k}/${m}.csv` }]))
+                    });
+                });
+                const trendRows = [...trend.values()].sort((a, b) => b.value.reduce((x, y) => x + y, 0) - a.value.reduce((x, y) => x + y, 0));
+                jobs.push(() => putJson('trend/drugs.json', { months, drugs: trendRows }));
+                jobs.push(() => putCsv('trend/drugs.csv',
+                    trendRows.map(t => Object.fromEntries([['didstd', t.didstd], ['dname', t.dname], ...months.map((m, i) => [`value_${m}`, t.value[i]])])),
+                    ['didstd', 'dname', ...months.map(m => `value_${m}`)]));
+
+                // 6 uploads at a time; index.json last so readers never see links to missing files
+                let done = 0;
+                const next = async () => { for (let job; (job = jobs.shift());) { await job(); done++; info.textContent = `⏳ เผยแพร่ ${done} ไฟล์...`; } };
+                await Promise.all(Array.from({ length: 6 }, next));
+                await putJson('index.json', {
+                    updated_at: new Date().toISOString(), source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร',
+                    trend: { json: `${pubBase}/trend/drugs.json`, csv: `${pubBase}/trend/drugs.csv` },
+                    months: index
+                });
+                info.textContent = `✅ เผยแพร่แล้ว ${months.length} เดือน (${done + 1} ไฟล์) — ${new Date().toLocaleString('th-TH')}`;
+                showToast(silent ? '🌐 อัปเดต API สาธารณะอัตโนมัติแล้ว' : '✅ อัปเดต API สาธารณะแล้ว', 'success');
             } catch (e) {
                 const hint = /bucket|not.?found|404/i.test(e.message) ? ' (ยังไม่ได้รัน SQL 03_public_api_bucket?)' : '';
                 info.textContent = '❌ ' + e.message + hint;
-                showToast('❌ เผยแพร่ไม่สำเร็จ', 'error');
+                showToast('❌ เผยแพร่ API สาธารณะไม่สำเร็จ', 'error');
+                console.warn('Public API publish failed:', e);
             }
         }
 
@@ -11840,6 +11889,8 @@ SELECT * FROM drugitems WHERE (did IS NULL OR LENGTH(did) < 24) AND istatus='Y';
                 localStorage.setItem('rxmuk_sb_last_push', Date.now());
                 setInfo(`✅ อัปโหลดสำเร็จ ${rawTransactions.length.toLocaleString()} แถว (${meta.sizeMB}MB) — ${new Date().toLocaleTimeString('th-TH')}`);
                 showToast(`✅ Cloud sync สำเร็จ ${rawTransactions.length.toLocaleString()} แถว`, 'success');
+                // keep the public summary API in step with the data just uploaded
+                if (canPublishPublicApi()) publishPublicApi({ silent: true });
             } catch(e) {
                 setInfo('❌ ' + e.message);
                 showToast('❌ Upload ล้มเหลว: ' + e.message, 'error');
