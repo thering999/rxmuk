@@ -563,6 +563,27 @@
             header.nav-open .nav-links a { display: block; white-space: normal; font-size: 0.95rem; padding: 11px 14px; border-radius: 10px; }
         }
 
+        /* Desktop: tabs get their own wrapping row so every tab stays visible */
+        @media (min-width: 769px) {
+            .navbar { flex-wrap: wrap; }
+            .navbar-top { display: flex; align-items: center; gap: 10px; width: 100%; }
+            .logo { margin-right: auto; }
+            .nav-scroll-wrap { order: 4; flex: 0 0 100%; border: none; border-top: 1px solid rgba(255,255,255,0.07); }
+            .nav-scroll-wrap::before, .nav-scroll-wrap::after { display: none; }
+            .nav-links { flex-wrap: wrap; overflow: visible; gap: 4px 2px; }
+        }
+
+        .api-note { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 12px; }
+        .api-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .api-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-muted); }
+        .api-meta { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.85rem; margin: 0 0 16px; }
+        .api-meta dt { color: var(--text-muted); }
+        .api-meta dd { margin: 0; overflow-wrap: anywhere; }
+        .api-example { margin-bottom: 14px; }
+        .api-example-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+        .api-example-head .btn { padding: 4px 10px; font-size: 0.75rem; }
+        .api-example pre { background: rgba(0,0,0,0.35); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 12px; font-size: 0.78rem; overflow-x: auto; white-space: pre; margin: 0; }
+
         body:has(header.nav-open) #cloud-load-overlay { display: none; }
         @media (max-width: 430px) {
             #login-status-pill { max-width: none; padding: 8px; }
@@ -1328,6 +1349,7 @@
                 <li><a class="tab-btn" data-tab="access-index">ดัชนีเข้าถึงยา</a></li>
                 <li><a class="tab-btn" data-tab="rdu">RDU Monitoring</a></li>
                 <li><a class="tab-btn" data-tab="yoy">เทียบปีงบประมาณ</a></li>
+                <li><a class="tab-btn" data-tab="api">API / เชื่อมต่อระบบ</a></li>
                 <li style="display:flex; align-items:center; gap:8px; margin-left:12px; padding:3px 10px; background:rgba(255,255,255,0.05); border-radius:16px; border:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
                     <span id="nav-data-count" style="font-size:0.72rem; color:var(--c-primary); font-weight:800; white-space:nowrap;">DATA: 0 rows</span>
                     <button class="btn" onclick="if(!sbIsSignedIn()){alert('กรุณา Login ก่อนใช้งาน');return;}resetAllFilters();" style="padding:2px 8px; font-size:0.62rem; background:rgba(239,68,68,0.2); color:var(--c-red); border:1px solid rgba(239,68,68,0.3); border-radius:4px; cursor:pointer; white-space:nowrap;">🔄 รีเซ็ตตัวกรอง</button>
@@ -3281,6 +3303,43 @@
     </div>
 
     <!-- TAB: RDU Monitoring (Phase 4) -->
+    <div id="tab-api" class="tab-content">
+        <section class="container">
+            <div class="secured-lock" style="display: none;"></div>
+            <div class="secured-content" style="display: none;">
+                <div class="panel">
+                    <h3 class="panel-title"><span>📤</span> ส่งออกข้อมูลยา (ไฟล์)</h3>
+                    <p class="api-note">ส่งออกข้อมูลที่โหลดอยู่ในเครื่องนี้ เพื่อนำเข้าระบบอื่น เช่น Excel, Google Sheets, HOSxP หรือระบบคลังยา</p>
+                    <div class="api-row">
+                        <label>เดือน
+                            <select id="api-export-month" class="select-control"></select>
+                        </label>
+                        <label>รูปแบบ
+                            <select id="api-export-format" class="select-control">
+                                <option value="csv">CSV (เปิดด้วย Excel ได้)</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </label>
+                        <button type="button" class="btn btn-primary" onclick="apiExportData()">⬇️ ดาวน์โหลด</button>
+                    </div>
+                    <div id="api-export-info" class="api-note" role="status"></div>
+                </div>
+
+                <div class="panel">
+                    <h3 class="panel-title"><span>🔌</span> REST API (สำหรับนักพัฒนา / n8n)</h3>
+                    <p class="api-note">ระบบอื่นเรียกข้อมูลผ่าน Supabase REST ได้โดยตรง ต้องใช้บัญชีที่ผู้ดูแลอนุมัติแล้ว (บัญชีรวม rxmuk ใช้ API ไม่ได้)
+                        · คู่มือเต็ม: <a href="https://github.com/thering999/rxmuk/blob/main/docs/api.md" target="_blank" rel="noopener">docs/api.md</a></p>
+                    <dl class="api-meta">
+                        <dt>Base URL</dt><dd><code id="api-base-url">-</code></dd>
+                        <dt>Bucket</dt><dd><code>rxmuk</code></dd>
+                        <dt>apikey</dt><dd>publishable key ในเมนูตั้งค่า Supabase (ใส่แทน <code>$SB_KEY</code>)</dd>
+                    </dl>
+                    <div id="api-examples"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <div id="tab-yoy" class="tab-content">
         <section class="container">
             <div class="secured-content">
@@ -3628,6 +3687,10 @@
             "yoy": {
                 title: "📈 เปรียบเทียบข้ามปีงบประมาณ",
                 subtitle: "ดูแนวโน้มรายเดือนย้อนหลังหลายปีงบ เทียบมูลค่า จำนวนจ่าย รายอำเภอ และรายตัวยา"
+            },
+            "api": {
+                title: "🔌 API / เชื่อมต่อระบบ",
+                subtitle: "ส่งออกข้อมูลยาเป็น CSV/JSON และวิธีเรียกข้อมูลจากระบบอื่นผ่าน REST API"
             }
         };
 
@@ -4338,6 +4401,79 @@
             if (targetTab === 'rdu') renderRduMonitoring();
             if (targetTab === 'yoy') renderYoy();
             if (targetTab === 'import') renderStockSection();
+            if (targetTab === 'api') renderApiTab();
+        }
+
+        // ─── API / EXPORT TAB ───
+        function renderApiTab() {
+            const sel = document.getElementById('api-export-month');
+            const months = [...new Set((rawTransactions || []).map(t => t && t.month).filter(Boolean))].sort().reverse();
+            const prev = sel.value;
+            sel.replaceChildren(new Option(`ทุกเดือน (${(rawTransactions || []).length.toLocaleString()} แถว)`, 'all'),
+                ...months.map(m => new Option(m, m)));
+            if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+
+            const cfg = sbGetConfig();
+            const base = cfg ? cfg.url : 'https://<project>.supabase.co';
+            document.getElementById('api-base-url').textContent = base;
+            const ex = [
+                ['1. ขอ token (อายุ 1 ชั่วโมง)', `curl -s "${base}/auth/v1/token?grant_type=password" \\\n  -H "apikey: $SB_KEY" -H "Content-Type: application/json" \\\n  -d '{"email":"you@example.com","password":"..."}'`],
+                ['2. รายชื่อไฟล์ข้อมูล', `curl -s -X POST "${base}/storage/v1/object/list/rxmuk" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN" \\\n  -H "Content-Type: application/json" -d '{"prefix":""}'`],
+                ['3. ดาวน์โหลดไฟล์ (gzip JSON)', `curl -s "${base}/storage/v1/object/authenticated/rxmuk/<ชื่อไฟล์>" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN" | gunzip > data.json`],
+                ['4. ประวัติการนำเข้า', `curl -s "${base}/rest/v1/rxmuk_import_log?order=created_at.desc&limit=50" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN"`]
+            ];
+            const box = document.getElementById('api-examples');
+            box.replaceChildren(...ex.map(([label, code]) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'api-example';
+                const head = document.createElement('div');
+                head.className = 'api-example-head';
+                const t = document.createElement('span');
+                t.textContent = label;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-secondary';
+                btn.textContent = '📋 คัดลอก';
+                btn.addEventListener('click', () => navigator.clipboard.writeText(code)
+                    .then(() => showToast('คัดลอกแล้ว', 'success'))
+                    .catch(() => showToast('คัดลอกไม่ได้ ให้เลือกข้อความเอง', 'error')));
+                head.append(t, btn);
+                const pre = document.createElement('pre');
+                pre.textContent = code;
+                wrap.append(head, pre);
+                return wrap;
+            }));
+        }
+
+        function apiExportData() {
+            const month = document.getElementById('api-export-month').value;
+            const fmt = document.getElementById('api-export-format').value;
+            const rows = (rawTransactions || []).filter(t => t && (month === 'all' || t.month === month));
+            const info = document.getElementById('api-export-info');
+            if (!rows.length) { showToast('ไม่มีข้อมูลให้ส่งออก', 'error'); return; }
+            const cols = [...rows.slice(0, 500).reduce((s, r) => { Object.keys(r).forEach(k => s.add(k)); return s; }, new Set())];
+            let blob;
+            if (fmt === 'json') {
+                blob = new Blob([JSON.stringify(rows)], { type: 'application/json' });
+            } else {
+                // Leading = + - @ would run as a formula in Excel: prefix with ' (CSV injection)
+                const cell = v => {
+                    let s = v == null ? '' : String(v);
+                    if (/^[=+\-@\t\r]/.test(s) && isNaN(Number(s))) s = "'" + s;
+                    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+                };
+                const lines = [cols.join(',')];
+                for (const r of rows) lines.push(cols.map(c => cell(r[c])).join(','));
+                blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+            }
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `rxmuk_${month}.${fmt}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+            info.textContent = `ส่งออก ${rows.length.toLocaleString()} แถว · ${cols.length} คอลัมน์ · ${(blob.size / 1048576).toFixed(1)} MB`;
         }
 
         function activeTabName() {
