@@ -7050,12 +7050,15 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
         // Shared legacy account kept at the owner's request. It is a client-side check only (visible in page source):
         // it unlocks the UI and reads cloud data with the publishable key, so it stops loading data once
         // 02_lock_bucket.sql runs. Real accounts (super admin) sign in through Supabase Auth below.
-        const LEGACY_LOGIN = { user: 'rxmuk', pass: 'admin', key: 'rxmuk_legacy_login' };
-        function isLegacyLogin() { try { return localStorage.getItem(LEGACY_LOGIN.key) === '1'; } catch { return false; } }
+        // Same shared accounts as the pre-Supabase login: rxmuk / 123456 and admin / 123456
+        const LEGACY_LOGIN = { users: ['rxmuk', 'admin'], pass: '123456', key: 'rxmuk_legacy_login' };
+        function isLegacyLogin() { try { return !!localStorage.getItem(LEGACY_LOGIN.key); } catch { return false; } }
+        function legacyUser() { try { return localStorage.getItem(LEGACY_LOGIN.key) || ''; } catch { return ''; } }
 
         async function rxmukSignIn(email, password, remember, btn, passwordInput) {
-            if (email === LEGACY_LOGIN.user && password === LEGACY_LOGIN.pass) {
-                try { localStorage.setItem(LEGACY_LOGIN.key, '1'); localStorage.setItem('rxmuk_auth_user', LEGACY_LOGIN.user); } catch {}
+            const legacyName = (email || '').toLowerCase();
+            if (LEGACY_LOGIN.users.includes(legacyName) && password === LEGACY_LOGIN.pass) {
+                try { localStorage.setItem(LEGACY_LOGIN.key, legacyName); localStorage.setItem('rxmuk_auth_user', legacyName); } catch {}
                 if (passwordInput) passwordInput.value = '';
                 checkAuthState();
                 const loaded = await loadFromStorage();
@@ -7098,7 +7101,7 @@ ${data.forecastLine ? `<p>${e(data.forecastLine)}</p>` : ''}</section>
                 if (!window._rxSnapOpened) { window._rxSnapOpened = true; openShareSnapshotFromUrl(); }
             }
             const loggedInUser = session ? (session.email || localStorage.getItem('rxmuk_auth_user') || 'ผู้ใช้')
-                : legacy ? LEGACY_LOGIN.user : null;
+                : legacy ? (LEGACY_LOGIN.users.includes(legacyUser()) ? legacyUser() : 'rxmuk') : null;
 
             const userDisplayName = document.getElementById('user-display-name');
             const loginStatusPill = document.getElementById('login-status-pill');
