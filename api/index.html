@@ -12,7 +12,8 @@
     </style>
 </head>
 <body>
-    <div class="rx-top">RxMuk Public API · ข้อมูลสรุป ไม่มีข้อมูลรายบุคคล · <a href="../index.html">กลับหน้าหลัก</a></div>
+    <div class="rx-top" id="rx-top">RxMuk Public API · ข้อมูลสรุป ไม่มีข้อมูลรายบุคคล · <a href="../index.html">กลับหน้าหลัก</a></div>
+    <script>if (window.self !== window.top) document.getElementById('rx-top').hidden = true; // embedded in the API tab</script>
     <div id="swagger-ui"></div>
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" integrity="sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep" crossorigin="anonymous"></script>
     <script>

@@ -3329,7 +3329,13 @@
                     <h3 class="panel-title"><span>🌐</span> API สาธารณะ (ไม่ต้องมีบัญชี / ไม่ต้องใช้ key)</h3>
                     <p class="api-note">ระบบไหนก็เรียกได้ด้วย HTTP GET ธรรมดา ได้ข้อมูล JSON สรุปรายเดือน: ยอดรวมต่อตัวยา ต่ออำเภอ และต่อหน่วยบริการ (ไม่มีข้อมูลราย record)
                         · <strong>ข้อมูลนี้เป็นสาธารณะ ใครมี URL ก็เปิดได้</strong>
-                        · <a href="api/index.html" target="_blank" rel="noopener">📘 เปิดคู่มือ Swagger UI (ลองเรียกได้ทันที)</a></p>
+                        · เดือนเป็น ค.ศ. เช่น 2026-09 = ก.ย. 2569</p>
+                    <div class="api-example-head" style="margin-top:12px;">
+                        <span>📘 คู่มือ API (Swagger UI) — กด GET แล้ว "Try it out" เพื่อลองเรียก</span>
+                        <a class="btn btn-secondary" href="api/index.html" target="_blank" rel="noopener">เปิดเต็มจอ ↗</a>
+                    </div>
+                    <iframe id="api-swagger-frame" title="RxMuk API Swagger UI" data-src="api/index.html" loading="lazy"
+                        style="width:100%; height:640px; border:1px solid var(--card-border); border-radius:10px; background:#fff; margin-bottom:12px;"></iframe>
                     <dl class="api-meta">
                         <dt>รายการเดือน</dt><dd><code id="api-pub-index">-</code></dd>
                         <dt>ข้อมูลรายเดือน</dt><dd><code id="api-pub-month">-</code></dd>
@@ -4439,15 +4445,17 @@
                 ['3. ดาวน์โหลดไฟล์ (gzip JSON)', `curl -s "${base}/storage/v1/object/authenticated/rxmuk/<ชื่อไฟล์>" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN" | gunzip > data.json`],
                 ['4. ประวัติการนำเข้า', `curl -s "${base}/rest/v1/rxmuk_import_log?order=created_at.desc&limit=50" \\\n  -H "apikey: $SB_KEY" -H "Authorization: Bearer $TOKEN"`]
             ];
+            const frame = document.getElementById('api-swagger-frame');
+            if (frame && !frame.src) frame.src = frame.dataset.src; // load Swagger only when the tab opens
             const pubBase = `${base}/storage/v1/object/public/${PUBLIC_API_BUCKET}`;
             document.getElementById('api-pub-index').textContent = `${pubBase}/index.json`;
             document.getElementById('api-pub-month').textContent = `${pubBase}/summary/<YYYY-MM>.json`;
             document.getElementById('api-pub-admin').hidden = !(sbIsSignedIn() && rxProfile && rxProfile.role === 'province');
             renderApiExamples('api-pub-examples', [
-                ['curl', `curl -s "${pubBase}/index.json"\ncurl -s "${pubBase}/summary/2569-10.json"`],
-                ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2569-10.json"))`],
-                ['Google Sheets (Apps Script)', `const r = UrlFetchApp.fetch("${pubBase}/summary/2569-10.json");\nconst data = JSON.parse(r.getContentText());`],
-                ['JavaScript', `const data = await (await fetch("${pubBase}/summary/2569-10.json")).json();`]
+                ['curl', `curl -s "${pubBase}/index.json"\ncurl -s "${pubBase}/summary/2026-09.json"`],
+                ['Excel / Power Query', `= Json.Document(Web.Contents("${pubBase}/summary/2026-09.json"))`],
+                ['Google Sheets (Apps Script)', `const r = UrlFetchApp.fetch("${pubBase}/summary/2026-09.json");\nconst data = JSON.parse(r.getContentText());`],
+                ['JavaScript', `const data = await (await fetch("${pubBase}/summary/2026-09.json")).json();`]
             ]);
             renderApiExamples('api-examples', ex);
         }
@@ -4455,9 +4463,10 @@
         const PUBLIC_API_BUCKET = 'rxmuk-public';
         // Friendly field names for the public JSON (internal summaries are positional arrays)
         function publicMonthJson(s) {
-            const obj = (keys) => a => Object.fromEntries(keys.map((k, i) => [k, a[i]]));
+            const r2 = v => typeof v === 'number' ? Math.round(v * 100) / 100 : v;
+            const obj = (keys) => a => Object.fromEntries(keys.map((k, i) => [k, r2(a[i])]));
             return {
-                month: s.month, rows: s.rows, value: s.value, amount: s.amount,
+                month: s.month, rows: s.rows, value: r2(s.value), amount: r2(s.amount),
                 drugs: s.drugs.map(obj(['didstd', 'dname', 'rows', 'value', 'amount'])),
                 districts: s.amps.map(obj(['amp_code', 'amp_name', 'rows', 'value', 'amount'])),
                 hospitals: s.hosps.map(obj(['hospcode', 'hospname', 'amp_code', 'rows', 'value', 'amount']))
@@ -4491,7 +4500,7 @@
                     info.textContent = `⏳ เผยแพร่เดือน ${m} (${i + 1}/${months.length})...`;
                     const s = buildMonthSummary(m, by.get(m));
                     await put(`summary/${m}.json`, publicMonthJson(s));
-                    index.push({ month: m, rows: s.rows, value: s.value, amount: s.amount, url: `${pubBase}/summary/${m}.json` });
+                    index.push({ month: m, rows: s.rows, value: Math.round(s.value * 100) / 100, amount: Math.round(s.amount * 100) / 100, url: `${pubBase}/summary/${m}.json` });
                 }
                 await put('index.json', { updated_at: new Date().toISOString(), source: 'RxMuk (HDC tmp_drug_opd), จังหวัดมุกดาหาร', months: index });
                 info.textContent = `✅ เผยแพร่แล้ว ${months.length} เดือน — ${new Date().toLocaleString('th-TH')}`;

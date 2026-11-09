@@ -8,7 +8,7 @@ Swagger UI: `https://thering999.github.io/rxmuk/api/` · spec: `api/openapi.json
 | Purpose | Request |
 |---|---|
 | List months | `GET $SB_URL/storage/v1/object/public/rxmuk-public/index.json` |
-| One month | `GET $SB_URL/storage/v1/object/public/rxmuk-public/summary/2569-10.json` |
+| One month | `GET $SB_URL/storage/v1/object/public/rxmuk-public/summary/2026-09.json` |
 
 Setup once: run `supabase/migrations/20261109_03_public_api_bucket.sql`. To update, the super admin (role `province`) clicks "เผยแพร่ / อัปเดต API สาธารณะ" in the API tab.
 
