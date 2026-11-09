@@ -16,6 +16,13 @@ Swagger UI: `https://thering999.github.io/rxmuk/api/` · spec: `api/openapi.json
 
 Setup once: run `supabase/migrations/20261109_03_public_api_bucket.sql`. Files refresh automatically after the super admin (role `province`) uploads data to the cloud, or on demand with "เผยแพร่ / อัปเดต API สาธารณะ" in the API tab.
 
+Privacy and policy (schema 1.3):
+
+- `district_drugs` / `hospital_drugs`: drugs given fewer than 5 times in an area are folded into one "อื่นๆ" row per area (`suppressed_items` = how many). Area totals stay exact.
+- Cost columns are optional: the super admin's "เผยแพร่ต้นทุน" checkbox (also used by auto-publish). `index.json.includes_cost` tells readers. Months not republished keep whatever they were published with.
+- Republishing keeps months listed in the previous `index.json` that are not loaded in this browser (older fiscal years).
+- Usage: Supabase dashboard > Logs > Storage, filter `rxmuk-public`, shows which files are read and how often.
+
 The sections below are the authenticated API (approved Supabase accounts).
 
 RxMuk has no server of its own. The API is Supabase's REST endpoints, and RLS decides who sees what.

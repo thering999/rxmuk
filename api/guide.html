@@ -48,6 +48,7 @@
             <li><a href="#excel">ใช้กับ Excel</a></li>
             <li><a href="#dev">สำหรับนักพัฒนา (JSON)</a></li>
             <li><a href="#fields">ความหมายของแต่ละคอลัมน์</a></li>
+            <li><a href="#terms">เงื่อนไขการใช้ข้อมูล</a> · <a href="#changes">เวอร์ชัน</a></li>
             <li><a href="#faq">คำถามที่พบบ่อย</a></li>
         </ol>
     </nav>
@@ -131,6 +132,29 @@ drugs = requests.get(index["months"][-1]["files"]["drugs"]["json"], timeout=30).
         <tr><td><code>unit_price</code></td><td>ราคาขายเฉลี่ยต่อหน่วย = value ÷ amount</td></tr>
         <tr><td><code>unit_cost</code></td><td>ต้นทุนเฉลี่ยต่อหน่วย = cost ÷ amount (ว่าง = ไม่มีการจ่าย)</td></tr>
         <tr><td><code>value_YYYY-MM</code></td><td>ในไฟล์แนวโน้ม: มูลค่าของเดือนนั้น (0 = ไม่มีการจ่าย)</td></tr>
+        <tr><td><code>suppressed_items</code></td><td>เฉพาะแถว "อื่นๆ": จำนวนรายการยาที่ถูกรวมไว้ในแถวนี้</td></tr>
+    </table>
+    </div>
+    <p class="muted">คอลัมน์ <code>cost</code> และ <code>unit_cost</code> จะมีเมื่อผู้ดูแลเลือกเผยแพร่ต้นทุน ดูได้จาก <code>includes_cost</code> ใน <code>index.json</code></p>
+
+    <h2 id="terms">เงื่อนไขการใช้ข้อมูล</h2>
+    <ul>
+        <li>เป็นข้อมูลสรุปจาก HDC ณ วันที่ใน <code>updated_at</code> และอาจมีการแก้ไขภายหลัง</li>
+        <li>เป็นยอดรวมเท่านั้น ไม่มีข้อมูลรายบุคคล <strong>ห้ามนำไปใช้เพื่อระบุตัวบุคคล</strong></li>
+        <li>เพื่อคุ้มครองความเป็นส่วนตัว ในไฟล์ <code>district_drugs</code> และ <code>hospital_drugs</code> ยาที่จ่ายน้อยกว่า 5 ครั้งในพื้นที่นั้นจะถูกรวมเป็นแถว
+            "อื่นๆ (รวมยาที่จ่ายน้อยกว่า 5 ครั้ง)" ยอดรวมของพื้นที่จึงยังถูกต้อง แต่จะไม่เห็นยาตัวนั้นแยกออกมา</li>
+        <li>เมื่อนำไปใช้ โปรดอ้างอิงแหล่งที่มา: RxMuk จังหวัดมุกดาหาร</li>
+    </ul>
+
+    <h2 id="changes">เวอร์ชันและการเปลี่ยนแปลง</h2>
+    <p>ระบบที่ดึงข้อมูลอัตโนมัติควรตรวจ <code>schema_version</code> ใน <code>index.json</code> ถ้าเลขหน้าจุดเปลี่ยน แปลว่าโครงสร้างเปลี่ยนแบบที่อาจกระทบโค้ดเดิม</p>
+    <div class="table-wrap">
+    <table>
+        <tr><th>เวอร์ชัน</th><th>เปลี่ยนอะไร</th></tr>
+        <tr><td>1.3</td><td>รวมรายการที่น้อยกว่า 5 ครั้งเป็น "อื่นๆ" (<code>suppressed_items</code>), เพิ่ม <code>schema_version</code>, <code>terms</code>, <code>includes_cost</code> ใน index · เดือนที่เผยแพร่ไว้ก่อนยังอยู่ใน index</td></tr>
+        <tr><td>1.2</td><td>เพิ่ม <code>cost</code>, <code>unit_price</code>, <code>unit_cost</code>, ไฟล์ <code>district_drugs</code> และ <code>hospital_drugs</code></td></tr>
+        <tr><td>1.1</td><td>ไฟล์แยกตามมุมมอง JSON/CSV และไฟล์แนวโน้ม</td></tr>
+        <tr><td>1.0</td><td>เริ่มต้น: <code>index.json</code> และ <code>summary/</code></td></tr>
     </table>
     </div>
 
